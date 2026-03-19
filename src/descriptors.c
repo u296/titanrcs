@@ -40,14 +40,6 @@ bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout, 
     return false;
 }
 
-
-
-
-
-
-
-
-
 typedef struct DescriptorPoolCleanup {
     VkDevice dev;
     VkDescriptorPool dpool;
