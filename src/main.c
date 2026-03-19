@@ -113,7 +113,7 @@ LoopStatus do_renderloop(
 				break;
 			case VK_SUBOPTIMAL_KHR:
 			case VK_ERROR_OUT_OF_DATE_KHR:
-				*ctx->metadata.framebuf_resized = false;
+				ctx->backend.fb_resized = false;
 				return REMAKE_SWAPCHAIN;
 				break;
 			default:
@@ -121,8 +121,8 @@ LoopStatus do_renderloop(
 				break;
 		}
 
-		if (*ctx->metadata.framebuf_resized) {
-			*ctx->metadata.framebuf_resized = false;
+		if (ctx->backend.fb_resized) {
+			ctx->backend.fb_resized = false;
 			return REMAKE_SWAPCHAIN;
 		}
 
@@ -273,6 +273,13 @@ int main() {
 			tri
 		}
 	};
+
+	ctx.renderobjects = {
+			tri.pipeline,
+			my_renderpass,
+			my_desc_sets,
+			tri
+		};
 
 	do {
 		// this is the loop that owns the swapchain and recreates it whenever the renderloop exits because the swapchain needs renewal

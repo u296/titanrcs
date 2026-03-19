@@ -6,7 +6,6 @@ typedef struct RenderContext {
 	struct {
 		u32 i_current_frame;
 		clock_t last_frame_time;
-		bool* framebuf_resized;
 	} metadata;
 	struct {
 		u32 max_inflight_frames;
