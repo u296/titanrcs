@@ -57,6 +57,7 @@ add_executable(titanrcs
     src/linalg.c
     src/descriptors.c
     src/vma_impl.cpp
+    src/render.c
     )
 
 set_source_files_properties(src/vma_impl.cpp PROPERTIES LANGUAGE CXX)
