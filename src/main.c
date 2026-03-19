@@ -50,11 +50,6 @@ int main() {
 
     struct Error e = {.code=0,.origin=""};
 
-	constexpr u32 n_max_inflight = 2;
-
-	//RenderBackend my_rendbackend;
-
-	//SwapchainContext my_swpctx;
 
 	VkDescriptorSetLayout my_desc_set_layout;
 	Renderable tri;
@@ -90,13 +85,13 @@ int main() {
 
 	
 
-	f = make_descriptor_pool(n_max_inflight,ctx.backend.dev,&my_dpool,&e,&cs);
+	f = make_descriptor_pool(ctx.resources.n_inflight_frames,ctx.backend.dev,&my_dpool,&e,&cs);
 	MAINCHECK
 
 	f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_descriptor_sets(n_max_inflight,ctx.backend.dev,my_dpool,ctx.resources.ubufs,my_desc_set_layout,&ctx.framegraph.desc_sets,&e,&cs);
+	f = make_descriptor_sets(ctx.resources.n_inflight_frames,ctx.backend.dev,my_dpool,ctx.resources.ubufs,my_desc_set_layout,&ctx.framegraph.desc_sets,&e,&cs);
 	MAINCHECK
 
 	
@@ -149,7 +144,7 @@ int main() {
 
 	ctx.metadata.i_current_frame = 0;
 	ctx.metadata.last_frame_time = last_time;
-	ctx.config.max_inflight_frames = n_max_inflight;
+	//ctx.config.max_inflight_frames = n_max_inflight;
 	ctx.config.n_frameratecheck_interval = n_frameratecheck;
 
 	//ctx.backend = my_rendbackend;
