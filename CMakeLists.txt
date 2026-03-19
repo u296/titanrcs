@@ -44,6 +44,7 @@ add_executable(titanrcs
     src/cleanup.c
     src/backend/instance.c
     src/backend/device.c
+    src/backend/allocator.c
     src/backend/backend.c
     src/swapchaincontext/swapchain.c
     src/swapchaincontext/renderpass.c

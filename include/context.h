@@ -22,7 +22,6 @@ typedef struct RenderContext {
 		clock_t last_frame_time;
 	} metadata;
 	struct {
-		u32 max_inflight_frames;
 		u32 n_frameratecheck_interval;
 	} config;
 	RenderBackend backend;

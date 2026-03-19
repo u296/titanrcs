@@ -165,7 +165,7 @@ LoopStatus do_renderloop(
 		glfwPollEvents();
 
 
-		const u64 i_frame_modn = ctx->metadata.i_current_frame % ctx->config.max_inflight_frames;
+		const u64 i_frame_modn = ctx->metadata.i_current_frame % ctx->resources.n_inflight_frames;
 
 		vkWaitForFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn], VK_TRUE, UINT32_MAX);
 

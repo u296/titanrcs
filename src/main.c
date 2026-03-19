@@ -31,8 +31,6 @@
 
 #include "context.h"
 
-bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommandBuffer cmdbuf, VkRenderPass renderpass, VkDescriptorSet desc_set, Renderable ren, struct Error* e_out);
-
 
 
 

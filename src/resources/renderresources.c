@@ -42,6 +42,7 @@ bool make_renderresources(RenderContext* ctx, CleanupStack* cs) {
     Error e;
 
     constexpr u32 n_max_inflight = 2;
+    ctx->resources.n_inflight_frames = n_max_inflight;
 
     f = make_commandpool(ctx->backend.dev, ctx->backend.queues, &ctx->resources.cmd_pool, &e, cs);
 	CHECK

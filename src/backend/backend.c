@@ -4,6 +4,7 @@
 
 #include "backend/instance.h"
 #include "backend/device.h"
+#include "backend/allocator.h"
 
 
 #define CHECK assert(f == false)
@@ -62,4 +63,6 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
 	CHECK;
 
 	volkLoadDevice(rb->dev);
+
+	make_allocator(rb->inst, rb->physdev, rb->dev, &rb->alloc);
 }

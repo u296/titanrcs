@@ -3,6 +3,7 @@
 #include "common.h"
 #include "cleanupstack.h"
 #include<GLFW/glfw3.h>
+#include "vk_mem_alloc.h"
 
 typedef struct Queues {
 	VkQueue graphics_queue;
@@ -22,6 +23,7 @@ typedef struct RenderBackend {
     VkPhysicalDevice physdev;
     VkDevice dev;
     Queues queues;
+    VmaAllocator alloc;
 
 } RenderBackend;
 
