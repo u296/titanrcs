@@ -1,7 +1,7 @@
 #include "commandpool.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include "device.h"
+#include "backend/backend.h"
 #include "vulkan/vulkan_core.h"
 #include<stdlib.h>
 
@@ -15,7 +15,7 @@ void destroy_commandpool(void* obj) {
     vkDestroyCommandPool(cc->dev, cc->pool, NULL);
 }
 
-bool make_commandpool(VkDevice dev, struct Queues queues, VkCommandPool* pool, struct Error* e_out, CleanupStack* cs) {
+bool make_commandpool(VkDevice dev, Queues queues, VkCommandPool* pool, struct Error* e_out, CleanupStack* cs) {
     VkCommandPoolCreateInfo cpi = {};
     cpi.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cpi.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;

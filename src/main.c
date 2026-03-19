@@ -12,8 +12,6 @@
 #include "common.h"
 #include "cleanupstack.h"
 #include "descriptors.h"
-#include "instance.h"
-#include "device.h"
 #include "linalg.h"
 #include "swapchain.h"
 #include "renderpass.h"
@@ -23,33 +21,9 @@
 #include "buffers.h"
 #include "vulkan/vulkan_core.h" // having this here doesn't hurt and  prevents intellisense from adding it at the top which would break compilation
 
+#include "backend/backend.h"
 
 
-
-
-
-
-
-constexpr usize WIDTH = 800;
-constexpr usize HEIGHT = 600;
-
-
-bool make_window(GLFWwindow** window) {
-	glfwInit();
-
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-	*window = glfwCreateWindow(WIDTH, HEIGHT, "TitanRCS", NULL, NULL);
-
-	return false;
-}
-
-void destroy_window(void* obj) {
-	GLFWwindow** window = (GLFWwindow**)obj;
-	glfwDestroyWindow(*window);
-	glfwTerminate();
-}
 
 #define MAINCHECK    if(f) {\
         printf("Error, code=%d: %s\n",e.code,e.origin);\
@@ -61,46 +35,7 @@ typedef enum LoopStatus {
 	EXIT_PROGRAM
 } LoopStatus;
 
-typedef struct RenderContext {
-	struct {
-		u32 i_current_frame;
-		clock_t last_frame_time;
-		bool* framebuf_resized;
-	} metadata;
-	struct {
-		u32 max_inflight_frames;
-		u32 n_frameratecheck_interval;
-	} config;
-	struct {
-		GLFWwindow* wnd;
-		VkInstance inst;
-		VkDevice dev;
-		Queues queues;
-	} backend;
-	struct {
-		VkSwapchainKHR swpch;
-		VkExtent2D swpch_ext;
-		u32 n_swpch_img;
-		VkImage* swpch_imgs;
-		VkImageView* swpch_imgvs;
-		VkFramebuffer* fbufs;
-	} rendertarget;
-	struct {
-		VkCommandBuffer* cmd_bufs;
-		VkSemaphore* img_ready_sems;
-		VkSemaphore* render_finished_sems;
-		VkFence* inflight_fncs;
-		void** ubuf_mappings;
-	} resources;
-	struct {
-		VkPipeline pipeline;
-		VkRenderPass renderpass;
-		VkDescriptorSet* desc_sets;
-		Renderable the_object;
-
-	} renderobjects;
-	
-} RenderContext;
+#include "context.h"
 
 LoopStatus do_renderloop(
 	RenderContext* ctx
@@ -209,12 +144,6 @@ fail:
 }
 
 
-void fb_resize_callback(GLFWwindow* wnd, int width, int height) {
-	bool* fbresize = (bool*)glfwGetWindowUserPointer(wnd);
-	*fbresize = true;
-}
-
-
 
 int main() {
 
@@ -228,14 +157,7 @@ int main() {
 
 	constexpr u32 n_max_inflight = 2;
 
-	GLFWwindow* my_window;
-	bool fb_resized = false;
-    VkInstance my_instance;
-	VkDebugUtilsMessengerEXT debug_messenger;
-	VkSurfaceKHR my_surf;
-	VkPhysicalDevice my_physdev;
-	VkDevice my_device;
-	struct Queues my_queues = {};
+	RenderBackend my_rendbackend;
 	VkSwapchainKHR my_swapchain;
 	VkFormat swapchain_format;
 	VkExtent2D swapchain_extent;
@@ -258,82 +180,54 @@ int main() {
 
 
 
-	make_window(&my_window);
-	CLEANUP_START_ONORES(GLFWwindow*)
-	my_window
-	CLEANUP_END_O(window)
-
-	glfwSetWindowUserPointer(my_window, &fb_resized);
-	glfwSetFramebufferSizeCallback(my_window, fb_resize_callback);
-
-	//cs_push(&cs, &my_window, sizeof(my_window), destroy_window);
-
-    f = make_instance(&my_instance, &e, &cs);
-	MAINCHECK
-	
-
-	volkLoadInstance(my_instance);
-
-	f = make_debugger(my_instance, &debug_messenger, &e, &cs);
-	MAINCHECK
-	
-
-	f = make_surface(my_instance, my_window, &my_surf, &e, &cs);
-	MAINCHECK
-	
-
-	f = make_device(my_instance, my_surf, &my_physdev, &my_device, &my_queues, &e, &cs);
-	MAINCHECK
-	
-
-	volkLoadDevice(my_device);
+	init_backend(&my_rendbackend, &cs);
 
 	CleanupStack swp_cs = {};
 	cs_init(&swp_cs);
 
-	f = make_swapchain(my_physdev, my_device, my_queues, my_surf, my_window, &my_swapchain, &swapchain_format, &swapchain_extent,&n_swapchain_images,&swapchain_images, &e, &swp_cs);
+	f = make_swapchain(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_rendbackend.surf, my_rendbackend.wnd, &my_swapchain, &swapchain_format, &swapchain_extent,&n_swapchain_images,&swapchain_images, &e, &swp_cs);
 	MAINCHECK
 
-	f = make_swapchain_imageviews(my_device, n_swapchain_images, swapchain_images, swapchain_format, &my_imageviews, &e, &swp_cs);
+	f = make_swapchain_imageviews(my_rendbackend.dev, n_swapchain_images, swapchain_images, swapchain_format, &my_imageviews, &e, &swp_cs);
 	MAINCHECK
 
-	f = make_renderpass(my_device, swapchain_format, &my_renderpass, &e, &cs);
+	f = make_renderpass(my_rendbackend.dev, swapchain_format, &my_renderpass, &e, &cs);
 	MAINCHECK
 
-	f = make_descriptorsetlayout(my_device, &my_desc_set_layout, &cs);
+	f = make_descriptorsetlayout(my_rendbackend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_graphicspipeline(my_device, swapchain_extent,my_renderpass,my_desc_set_layout, &tri.pipeline_layout,&tri.pipeline,&e,&cs);
+	f = make_graphicspipeline(my_rendbackend.dev, swapchain_extent,my_renderpass,my_desc_set_layout, &tri.pipeline_layout,&tri.pipeline,&e,&cs);
 	MAINCHECK
 
-	f = make_framebuffers(my_device, swapchain_extent, n_swapchain_images, my_imageviews, my_renderpass, &my_framebuffers, &e,&swp_cs);
+	f = make_framebuffers(my_rendbackend.dev, swapchain_extent, n_swapchain_images, my_imageviews, my_renderpass, &my_framebuffers, &e,&swp_cs);
 	MAINCHECK
 
-	f = make_commandpool(my_device, my_queues, &my_pool, &e, &cs);
+	f = make_commandpool(my_rendbackend.dev, my_rendbackend.queues, &my_pool, &e, &cs);
 	MAINCHECK
 
-	f = make_vertexbuffer(my_physdev, my_device, my_queues, my_pool, &tri.vertexbuf, &e, &cs);
+	f = make_vertexbuffer(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_pool, &tri.vertexbuf, &e, &cs);
 	MAINCHECK
 
-	f = make_indexbuffer(my_physdev, my_device, my_queues, my_pool, &tri.indexbuf, &e, &cs);
+	f = make_indexbuffer(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_pool, &tri.indexbuf, &e, &cs);
 	MAINCHECK
 
-	f = make_uniform_buffers(n_max_inflight, my_physdev, my_device, &my_ubufs, &my_ubuf_mappings, &e, &cs);
+	f = make_uniform_buffers(n_max_inflight, my_rendbackend.physdev, my_rendbackend.dev, &my_ubufs, &my_ubuf_mappings, &e, &cs);
 	MAINCHECK
 
-	f = make_descriptor_pool(n_max_inflight,my_device,&my_dpool,&e,&cs);
+	f = make_descriptor_pool(n_max_inflight,my_rendbackend.dev,&my_dpool,&e,&cs);
 	MAINCHECK
 
-	f = make_descriptorsetlayout(my_device, &my_desc_set_layout, &cs);
+	f = make_descriptorsetlayout(my_rendbackend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_descriptor_sets(n_max_inflight,my_device,my_dpool,my_ubufs,my_desc_set_layout,&my_desc_sets,&e,&cs);
+	f = make_descriptor_sets(n_max_inflight,my_rendbackend.dev,my_dpool,my_ubufs,my_desc_set_layout,&my_desc_sets,&e,&cs);
 	MAINCHECK
 
-	f = make_commandbuffers(my_device,my_pool,n_max_inflight,&my_commandbufs, &e, &cs);
+	f = make_commandbuffers(my_rendbackend.dev,my_pool,n_max_inflight,&my_commandbufs, &e, &cs);
 	MAINCHECK
 
-	f = make_sync_objects(my_device, n_max_inflight,  &sem_imgready, &sem_rendfinish, &fen_inflight, &e,&cs);
+	f = make_sync_objects(my_rendbackend.dev, n_max_inflight,  &sem_imgready, &sem_rendfinish, &fen_inflight, &e,&cs);
 	MAINCHECK
 
 	u64 i_frame = 0;
@@ -351,18 +245,12 @@ int main() {
 		.metadata={
 			0,
 			last_time,
-			&fb_resized
 		},
 		.config={
 			n_max_inflight,
 			n_frameratecheck
 		},
-		.backend={
-			my_window,
-			my_instance,
-			my_device,
-			my_queues
-		},
+		.backend = my_rendbackend,
 		.rendertarget={
 			my_swapchain,
 			swapchain_extent,
@@ -393,20 +281,20 @@ int main() {
 
 			int width = 0, height = 0;
 			
-			glfwGetFramebufferSize(my_window, &width, &height);
+			glfwGetFramebufferSize(my_rendbackend.wnd, &width, &height);
 			while (width == 0 || height == 0) {
-				glfwGetFramebufferSize(my_window, &width, &height);
+				glfwGetFramebufferSize(my_rendbackend.wnd, &width, &height);
 				glfwWaitEvents();
 			}
 
 			// if we get here it means the swapchain needs to be recreated
 			cs_init(&swp_cs);
 
-			make_swapchain(my_physdev, my_device, my_queues, my_surf, my_window, &my_swapchain, &swapchain_format, &swapchain_extent, &n_swapchain_images, &swapchain_images, &e, &swp_cs);
+			make_swapchain(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_rendbackend.surf, my_rendbackend.wnd, &my_swapchain, &swapchain_format, &swapchain_extent, &n_swapchain_images, &swapchain_images, &e, &swp_cs);
 
-			make_swapchain_imageviews(my_device, n_swapchain_images, swapchain_images, swapchain_format, &my_imageviews, &e, &swp_cs);
+			make_swapchain_imageviews(my_rendbackend.dev, n_swapchain_images, swapchain_images, swapchain_format, &my_imageviews, &e, &swp_cs);
 
-			make_framebuffers(my_device, swapchain_extent, n_swapchain_images, my_imageviews, my_renderpass, &my_framebuffers, &e, &swp_cs);
+			make_framebuffers(my_rendbackend.dev, swapchain_extent, n_swapchain_images, my_imageviews, my_renderpass, &my_framebuffers, &e, &swp_cs);
 			printf("remade swapchain\n");
 		}
 		
@@ -417,7 +305,7 @@ int main() {
 		&ctx
 		);
 
-		vkDeviceWaitIdle(my_device);
+		vkDeviceWaitIdle(my_rendbackend.dev);
 		cs_consume(&swp_cs);
 
 		switch (l) {
@@ -433,7 +321,7 @@ int main() {
 	} while (!shouldclose);
 	
 
-	vkDeviceWaitIdle(my_device);
+	vkDeviceWaitIdle(my_rendbackend.dev);
 
 	cs_consume(&cs);
 	return 0;

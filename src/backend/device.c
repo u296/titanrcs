@@ -36,15 +36,15 @@ bool physical_device_has_req_extensions(VkPhysicalDevice dev) {
     return true;
 }
 
-bool physical_device_find_queuefams(VkPhysicalDevice dev, VkSurfaceKHR surf, struct Queues* fams) {
+bool physical_device_find_queuefams(VkPhysicalDevice dev, VkSurfaceKHR surf, Queues* fams) {
     u32 n_qfam = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(dev, &n_qfam, NULL);
 
 	VkQueueFamilyProperties* qfams = malloc(n_qfam*sizeof(VkQueueFamilyProperties));
 	vkGetPhysicalDeviceQueueFamilyProperties(dev,&n_qfam,qfams);
 
-	struct Queues sqf = {};
-	struct Queues set_if_found = {};
+	Queues sqf = {};
+	Queues set_if_found = {};
 
 
 	printf("queue families of selected device (%u total):\n", n_qfam);
@@ -76,7 +76,7 @@ void destroy_device(void* obj) {
 	vkDestroyDevice(*dev,NULL);
 }
 
-bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physdev, VkDevice* device, struct Queues* queues, struct Error* e_out, CleanupStack* cs) {
+bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physdev, VkDevice* device, Queues* queues, struct Error* e_out, CleanupStack* cs) {
 
 	u32 n_dev = 0;
 	VkPhysicalDevice* devs = NULL;
@@ -102,7 +102,7 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
 
 	// just select device 0
     
-    struct Queues sqf = {};
+    Queues sqf = {};
 
 	u32 i_sel = UINT32_MAX;
     for (u32 i = 0; i < n_dev; i++) {

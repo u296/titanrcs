@@ -40,8 +40,9 @@ FetchContent_MakeAvailable(vma)
 add_executable(titanrcs 
     src/main.c
     src/cleanup.c
-    src/instance.c
-    src/device.c
+    src/backend/instance.c
+    src/backend/device.c
+    src/backend/backend.c
     src/swapchain.c
     src/renderpass.c
     src/pipeline.c
@@ -55,6 +56,8 @@ add_executable(titanrcs
     )
 
 set_source_files_properties(src/vma_impl.cpp PROPERTIES LANGUAGE CXX)
+set_source_files_properties(src/vma_impl.cpp PROPERTIES COMPILE_FLAGS "-Wno-all")
+
 
 set_target_properties(titanrcs PROPERTIES
     BUILD_RPATH "/usr/local/lib"
@@ -62,6 +65,9 @@ set_target_properties(titanrcs PROPERTIES
     COMPILE_FLAGS "-Wall"
     C_STANDARD 23
 )
+
+set_source_files_properties(src/vma_impl.cpp PROPERTIES COMPILE_FLAGS "-w")
+
 
 target_link_libraries(titanrcs PRIVATE volk::volk glfw VulkanMemoryAllocator)
 
@@ -78,4 +84,4 @@ if(APPLE)
 endif()
 
 
-
+target_include_directories(titanrcs PRIVATE "${CMAKE_SOURCE_DIR}/include")

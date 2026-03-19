@@ -8,7 +8,7 @@
 
 
 
-bool make_swapchain(VkPhysicalDevice physdev, VkDevice dev, struct Queues queues, VkSurfaceKHR surf, GLFWwindow* wnd, VkSwapchainKHR* swapchain, VkFormat*swapchain_format,VkExtent2D* swapchain_extent, u32* n_swap_images, VkImage** images, struct Error* e_out, CleanupStack* cs);
+bool make_swapchain(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkSurfaceKHR surf, GLFWwindow* wnd, VkSwapchainKHR* swapchain, VkFormat*swapchain_format,VkExtent2D* swapchain_extent, u32* n_swap_images, VkImage** images, struct Error* e_out, CleanupStack* cs);
 
 
 

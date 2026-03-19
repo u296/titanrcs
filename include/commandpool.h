@@ -2,11 +2,11 @@
 #define COMMANDPOOL_H
 #include "cleanupstack.h"
 #include "common.h"
-#include "device.h"
+#include "backend/backend.h"
 
 
 
-bool make_commandpool(VkDevice dev, struct Queues queues, VkCommandPool* pool, struct Error* e_out, CleanupStack*cs);
+bool make_commandpool(VkDevice dev, Queues queues, VkCommandPool* pool, struct Error* e_out, CleanupStack*cs);
 
 
 
