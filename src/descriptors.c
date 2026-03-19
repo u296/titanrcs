@@ -44,26 +44,7 @@ bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout, 
 
 
 
-bool make_uniform_buffers(const u32 n_max_inflight, VkPhysicalDevice physdev, VkDevice dev, Buffer** ubufs, void*** ubuf_mappings, Error* e_out, CleanupStack* cs) {
 
-
-    * ubufs = malloc(sizeof(Buffer) * n_max_inflight);
-    *ubuf_mappings = malloc(sizeof(void*) * n_max_inflight);
-
-    for (u32 i = 0; i < n_max_inflight; i++) {
-        make_buffer(physdev, dev, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &(*ubufs)[i], e_out, cs);
-        vkMapMemory(dev, (*ubufs)[i].mem, 0, sizeof(UniformBufferObject), 0, &(*ubuf_mappings)[i]);
-    }
-
-    CLEANUP_START_NORES(void*)
-    *ubufs
-    CLEANUP_END(memfree)
-    CLEANUP_START_NORES(void*)
-    *ubuf_mappings
-    CLEANUP_END(memfree)
-
-    return false;
-}
 
 void update_uniformbuffer(u64 frame, VkExtent2D swp_ext,void* ubufmap) {
     UniformBufferObject u = {};

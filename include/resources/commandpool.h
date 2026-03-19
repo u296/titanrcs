@@ -12,7 +12,5 @@ bool make_commandpool(VkDevice dev, Queues queues, VkCommandPool* pool, struct E
 
 bool make_commandbuffers(VkDevice dev, VkCommandPool pool, u32 n_max_inflight, VkCommandBuffer** cmdbufs, struct Error* e_out, CleanupStack*cs);
 
-bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommandBuffer cmdbuf, VkRenderPass renderpass, VkDescriptorSet desc_set, Renderable ren, struct Error* e_out);
-
 
 #endif

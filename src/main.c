@@ -8,15 +8,14 @@
 #include<GLFW/glfw3.h>
 
 
-#include "commandpool.h"
 #include "common.h"
 #include "cleanupstack.h"
 #include "descriptors.h"
 #include "linalg.h"
 
 #include "pipeline.h"
-#include "sync.h"
 #include "buffers.h"
+#include "resources/renderresources.h"
 #include "vulkan/vulkan_core.h" // having this here doesn't hurt and  prevents intellisense from adding it at the top which would break compilation
 
 
@@ -32,6 +31,9 @@ typedef enum LoopStatus {
 } LoopStatus;
 
 #include "context.h"
+
+bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommandBuffer cmdbuf, VkRenderPass renderpass, VkDescriptorSet desc_set, Renderable ren, struct Error* e_out);
+
 
 LoopStatus do_renderloop(
 	RenderContext* ctx
@@ -161,14 +163,7 @@ int main() {
 
 	VkDescriptorSetLayout my_desc_set_layout;
 	Renderable tri;
-	Buffer* my_ubufs;
-	void** my_ubuf_mappings;
 	VkDescriptorPool my_dpool;
-	VkCommandPool my_pool;
-	VkCommandBuffer* my_commandbufs;
-	VkSemaphore* sem_imgready;
-	VkSemaphore* sem_rendfinish;
-	VkFence* fen_inflight;
 
 
 
@@ -180,6 +175,7 @@ int main() {
 	make_swapchain_context(ctx.backend, &ctx.swapchain, &swp_cs);
 
 	
+	make_renderresources(&ctx, &cs);
 
 	f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
@@ -189,17 +185,15 @@ int main() {
 
 	
 
-	f = make_commandpool(ctx.backend.dev, ctx.backend.queues, &my_pool, &e, &cs);
+	
+
+	f = make_vertexbuffer(ctx.backend.physdev, ctx.backend.dev, ctx.backend.queues, ctx.resources.cmd_pool, &tri.vertexbuf, &e, &cs);
 	MAINCHECK
 
-	f = make_vertexbuffer(ctx.backend.physdev, ctx.backend.dev, ctx.backend.queues, my_pool, &tri.vertexbuf, &e, &cs);
+	f = make_indexbuffer(ctx.backend.physdev, ctx.backend.dev, ctx.backend.queues, ctx.resources.cmd_pool, &tri.indexbuf, &e, &cs);
 	MAINCHECK
 
-	f = make_indexbuffer(ctx.backend.physdev, ctx.backend.dev, ctx.backend.queues, my_pool, &tri.indexbuf, &e, &cs);
-	MAINCHECK
-
-	f = make_uniform_buffers(n_max_inflight, ctx.backend.physdev, ctx.backend.dev, &my_ubufs, &my_ubuf_mappings, &e, &cs);
-	MAINCHECK
+	
 
 	f = make_descriptor_pool(n_max_inflight,ctx.backend.dev,&my_dpool,&e,&cs);
 	MAINCHECK
@@ -207,14 +201,12 @@ int main() {
 	f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_descriptor_sets(n_max_inflight,ctx.backend.dev,my_dpool,my_ubufs,my_desc_set_layout,&ctx.framegraph.desc_sets,&e,&cs);
+	f = make_descriptor_sets(n_max_inflight,ctx.backend.dev,my_dpool,ctx.resources.ubufs,my_desc_set_layout,&ctx.framegraph.desc_sets,&e,&cs);
 	MAINCHECK
 
-	f = make_commandbuffers(ctx.backend.dev,my_pool,n_max_inflight,&my_commandbufs, &e, &cs);
-	MAINCHECK
+	
 
-	f = make_sync_objects(ctx.backend.dev, n_max_inflight,  &sem_imgready, &sem_rendfinish, &fen_inflight, &e,&cs);
-	MAINCHECK
+	
 
 	//u64 i_frame = 0;
 	constexpr u64 n_frameratecheck = 100;
@@ -267,13 +259,6 @@ int main() {
 
 	//ctx.backend = my_rendbackend;
 	//ctx.swapchain = my_swpctx;
-	ctx.resources = (RenderResources){
-		.cmd_bufs = my_commandbufs,
-		sem_imgready,
-		sem_rendfinish,
-		fen_inflight,
-		my_ubuf_mappings
-		};
 	ctx.framegraph.pipeline=tri.pipeline;
 	ctx.framegraph.the_object=tri;
 

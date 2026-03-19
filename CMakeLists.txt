@@ -49,9 +49,10 @@ add_executable(titanrcs
     src/swapchaincontext/renderpass.c
     src/swapchaincontext/framebuffers.c
     src/swapchaincontext/swapchaincontext.c
+    src/resources/commandpool.c
+    src/resources/sync.c
+    src/resources/renderresources.c
     src/pipeline.c
-    src/commandpool.c
-    src/sync.c
     src/buffers.c
     src/linalg.c
     src/descriptors.c

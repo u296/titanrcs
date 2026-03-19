@@ -3,17 +3,12 @@
 #include <time.h>
 #include "backend/backend.h"
 #include "swapchaincontext/swapchaincontext.h"
+#include "resources/renderresources.h"
 
 
 
 
-typedef struct RenderResources {
-	VkCommandBuffer* cmd_bufs;
-	VkSemaphore* img_ready_sems;
-	VkSemaphore* render_finished_sems;
-	VkFence* inflight_fncs;
-	void** ubuf_mappings;
-} RenderResources;
+
 
 typedef struct FrameGraph {
 	VkPipeline pipeline;

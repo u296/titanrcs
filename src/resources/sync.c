@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "sync.h"
+#include "resources/sync.h"
 #include "cleanupstack.h"
 #include "common.h"
 #include "vulkan/vulkan_core.h"
