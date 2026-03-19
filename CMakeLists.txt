@@ -45,10 +45,11 @@ add_executable(titanrcs
     src/backend/instance.c
     src/backend/device.c
     src/backend/backend.c
-    src/swapchain.c
-    src/renderpass.c
+    src/swapchaincontext/swapchain.c
+    src/swapchaincontext/renderpass.c
+    src/swapchaincontext/framebuffers.c
+    src/swapchaincontext/swapchaincontext.c
     src/pipeline.c
-    src/framebuffers.c
     src/commandpool.c
     src/sync.c
     src/buffers.c

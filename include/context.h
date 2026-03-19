@@ -1,19 +1,11 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
+#include <time.h>
 #include "backend/backend.h"
-#include <vulkan/vulkan_core.h>
+#include "swapchaincontext/swapchaincontext.h"
 
 
-typedef struct SwapchainContext {
-	VkSwapchainKHR swpch;
-	VkExtent2D swpch_ext;
-	u32 n_swpch_img;
-	VkFormat format;
-	VkImage* swpch_imgs;
-	VkImageView* swpch_imgvs;
-	VkRenderPass renderpass;
-	VkFramebuffer* fbufs;
-} SwapchainContext;
+
 
 typedef struct RenderResources {
 	VkCommandBuffer* cmd_bufs;
