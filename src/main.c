@@ -52,7 +52,7 @@ LoopStatus do_renderloop(
 		vkWaitForFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn], VK_TRUE, UINT32_MAX);
 
     	u32 i_image = UINT32_MAX;
-    	VkResult img_ac_res = vkAcquireNextImageKHR(ctx->backend.dev, ctx->rendertarget.swpch, UINT64_MAX, ctx->resources.img_ready_sems[i_frame_modn], VK_NULL_HANDLE, &i_image);
+    	VkResult img_ac_res = vkAcquireNextImageKHR(ctx->backend.dev, ctx->swapchain.swpch, UINT64_MAX, ctx->resources.img_ready_sems[i_frame_modn], VK_NULL_HANDLE, &i_image);
 
 		switch (img_ac_res) {
 			case VK_ERROR_OUT_OF_DATE_KHR:
@@ -69,9 +69,9 @@ LoopStatus do_renderloop(
 		vkResetFences(ctx->backend.dev, 1,&ctx->resources.inflight_fncs[i_frame_modn]);
     	vkResetCommandBuffer(ctx->resources.cmd_bufs[i_frame_modn], 0);
 
-		update_uniformbuffer(ctx->metadata.i_current_frame, ctx->rendertarget.swpch_ext, ctx->resources.ubuf_mappings[i_frame_modn]);
+		update_uniformbuffer(ctx->metadata.i_current_frame, ctx->swapchain.swpch_ext, ctx->resources.ubuf_mappings[i_frame_modn]);
 
-    	f = recordcommandbuffer(ctx->rendertarget.swpch_ext, ctx->rendertarget.fbufs[i_image], ctx->resources.cmd_bufs[i_frame_modn], ctx->renderobjects.renderpass, ctx->renderobjects.desc_sets[i_frame_modn], ctx->renderobjects.the_object, &e);
+    	f = recordcommandbuffer(ctx->swapchain.swpch_ext, ctx->swapchain.fbufs[i_image], ctx->resources.cmd_bufs[i_frame_modn], ctx->swapchain.renderpass, ctx->framegraph.desc_sets[i_frame_modn], ctx->framegraph.the_object, &e);
 		MAINCHECK
 		
 
@@ -102,7 +102,7 @@ LoopStatus do_renderloop(
 		pi.waitSemaphoreCount = 1;
 		pi.pWaitSemaphores = signalsems;
 		pi.swapchainCount = 1;
-		pi.pSwapchains = &ctx->rendertarget.swpch;
+		pi.pSwapchains = &ctx->swapchain.swpch;
 		pi.pImageIndices = &i_image;
 		pi.pResults = NULL;
 
@@ -147,6 +147,8 @@ fail:
 
 int main() {
 
+	RenderContext ctx = {};
+
 	struct CleanupStack cs = {};
 	cs_init(&cs);
 
@@ -158,20 +160,14 @@ int main() {
 	constexpr u32 n_max_inflight = 2;
 
 	RenderBackend my_rendbackend;
-	VkSwapchainKHR my_swapchain;
-	VkFormat swapchain_format;
-	VkExtent2D swapchain_extent;
-	u32 n_swapchain_images = 0;
-	VkImage* swapchain_images;
-	VkImageView* my_imageviews;
-	VkRenderPass my_renderpass;
+
+	SwapchainContext my_swpctx;
+
 	VkDescriptorSetLayout my_desc_set_layout;
 	Renderable tri;
 	Buffer* my_ubufs;
 	void** my_ubuf_mappings;
 	VkDescriptorPool my_dpool;
-	VkDescriptorSet* my_desc_sets;
-	VkFramebuffer* my_framebuffers;
 	VkCommandPool my_pool;
 	VkCommandBuffer* my_commandbufs;
 	VkSemaphore* sem_imgready;
@@ -185,22 +181,22 @@ int main() {
 	CleanupStack swp_cs = {};
 	cs_init(&swp_cs);
 
-	f = make_swapchain(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_rendbackend.surf, my_rendbackend.wnd, &my_swapchain, &swapchain_format, &swapchain_extent,&n_swapchain_images,&swapchain_images, &e, &swp_cs);
+	f = make_swapchain(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_rendbackend.surf, my_rendbackend.wnd, &my_swpctx.swpch, &my_swpctx.format, &my_swpctx.swpch_ext,&my_swpctx.n_swpch_img,&my_swpctx.swpch_imgs, &e, &swp_cs);
 	MAINCHECK
 
-	f = make_swapchain_imageviews(my_rendbackend.dev, n_swapchain_images, swapchain_images, swapchain_format, &my_imageviews, &e, &swp_cs);
+	f = make_swapchain_imageviews(my_rendbackend.dev, my_swpctx.n_swpch_img, my_swpctx.swpch_imgs, my_swpctx.format, &my_swpctx.swpch_imgvs, &e, &swp_cs);
 	MAINCHECK
 
-	f = make_renderpass(my_rendbackend.dev, swapchain_format, &my_renderpass, &e, &cs);
+	f = make_renderpass(my_rendbackend.dev, my_swpctx.format, &my_swpctx.renderpass, &e, &cs);
 	MAINCHECK
 
 	f = make_descriptorsetlayout(my_rendbackend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_graphicspipeline(my_rendbackend.dev, swapchain_extent,my_renderpass,my_desc_set_layout, &tri.pipeline_layout,&tri.pipeline,&e,&cs);
+	f = make_graphicspipeline(my_rendbackend.dev, my_swpctx.swpch_ext,my_swpctx.renderpass,my_desc_set_layout, &tri.pipeline_layout,&tri.pipeline,&e,&cs);
 	MAINCHECK
 
-	f = make_framebuffers(my_rendbackend.dev, swapchain_extent, n_swapchain_images, my_imageviews, my_renderpass, &my_framebuffers, &e,&swp_cs);
+	f = make_framebuffers(my_rendbackend.dev, my_swpctx.swpch_ext, my_swpctx.n_swpch_img, my_swpctx.swpch_imgvs, my_swpctx.renderpass, &my_swpctx.fbufs, &e,&swp_cs);
 	MAINCHECK
 
 	f = make_commandpool(my_rendbackend.dev, my_rendbackend.queues, &my_pool, &e, &cs);
@@ -221,7 +217,7 @@ int main() {
 	f = make_descriptorsetlayout(my_rendbackend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_descriptor_sets(n_max_inflight,my_rendbackend.dev,my_dpool,my_ubufs,my_desc_set_layout,&my_desc_sets,&e,&cs);
+	f = make_descriptor_sets(n_max_inflight,my_rendbackend.dev,my_dpool,my_ubufs,my_desc_set_layout,&ctx.framegraph.desc_sets,&e,&cs);
 	MAINCHECK
 
 	f = make_commandbuffers(my_rendbackend.dev,my_pool,n_max_inflight,&my_commandbufs, &e, &cs);
@@ -230,7 +226,7 @@ int main() {
 	f = make_sync_objects(my_rendbackend.dev, n_max_inflight,  &sem_imgready, &sem_rendfinish, &fen_inflight, &e,&cs);
 	MAINCHECK
 
-	u64 i_frame = 0;
+	//u64 i_frame = 0;
 	constexpr u64 n_frameratecheck = 100;
 
 	clock_t last_time = clock();
@@ -240,7 +236,7 @@ int main() {
 	bool shouldclose = false;
 
 	// make rendercontext here
-
+/*
 	RenderContext ctx = {
 		.metadata={
 			0,
@@ -251,7 +247,7 @@ int main() {
 			n_frameratecheck
 		},
 		.backend = my_rendbackend,
-		.rendertarget={
+		.swapchain={
 			my_swapchain,
 			swapchain_extent,
 			n_swapchain_images,
@@ -266,20 +262,32 @@ int main() {
 			fen_inflight,
 			my_ubuf_mappings
 		},
-		.renderobjects={
+		.framegraph={
 			tri.pipeline,
 			my_renderpass,
 			my_desc_sets,
 			tri
 		}
-	};
+	};*/
 
-	ctx.renderobjects = {
-			tri.pipeline,
-			my_renderpass,
-			my_desc_sets,
-			tri
+	ctx.metadata.i_current_frame = 0;
+	ctx.metadata.last_frame_time = last_time;
+	ctx.config.max_inflight_frames = n_max_inflight;
+	ctx.config.n_frameratecheck_interval = n_frameratecheck;
+
+	ctx.backend = my_rendbackend;
+	ctx.swapchain = my_swpctx;
+	ctx.resources = (RenderResources){
+		.cmd_bufs = my_commandbufs,
+		sem_imgready,
+		sem_rendfinish,
+		fen_inflight,
+		my_ubuf_mappings
 		};
+	ctx.framegraph.pipeline=tri.pipeline;
+	ctx.framegraph.the_object=tri;
+
+
 
 	do {
 		// this is the loop that owns the swapchain and recreates it whenever the renderloop exits because the swapchain needs renewal
@@ -297,11 +305,11 @@ int main() {
 			// if we get here it means the swapchain needs to be recreated
 			cs_init(&swp_cs);
 
-			make_swapchain(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_rendbackend.surf, my_rendbackend.wnd, &my_swapchain, &swapchain_format, &swapchain_extent, &n_swapchain_images, &swapchain_images, &e, &swp_cs);
+			make_swapchain(my_rendbackend.physdev, my_rendbackend.dev, my_rendbackend.queues, my_rendbackend.surf, my_rendbackend.wnd, &ctx.swapchain.swpch, &ctx.swapchain.format, &ctx.swapchain.swpch_ext, &ctx.swapchain.n_swpch_img, &ctx.swapchain.swpch_imgs, &e, &swp_cs);
 
-			make_swapchain_imageviews(my_rendbackend.dev, n_swapchain_images, swapchain_images, swapchain_format, &my_imageviews, &e, &swp_cs);
+			make_swapchain_imageviews(my_rendbackend.dev, ctx.swapchain.n_swpch_img, ctx.swapchain.swpch_imgs, ctx.swapchain.format, &ctx.swapchain.swpch_imgvs, &e, &swp_cs);
 
-			make_framebuffers(my_rendbackend.dev, swapchain_extent, n_swapchain_images, my_imageviews, my_renderpass, &my_framebuffers, &e, &swp_cs);
+			make_framebuffers(my_rendbackend.dev, ctx.swapchain.swpch_ext, ctx.swapchain.n_swpch_img, ctx.swapchain.swpch_imgvs, ctx.swapchain.renderpass, &ctx.swapchain.fbufs, &e, &swp_cs);
 			printf("remade swapchain\n");
 		}
 		

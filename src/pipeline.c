@@ -11,6 +11,13 @@ void read_file(const char* filename, usize* bufsize, u8** buf) {
 
     FILE* fp = fopen(filename, "rb");
 
+    if (fp == NULL) {
+        printf("FILE DOES NOT EXIST: ");
+        puts(filename);
+        putchar('\n');
+        abort();
+    }
+
     fseek(fp, 0, SEEK_END);
     *bufsize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
@@ -64,10 +71,10 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(dev, "/Users/todd/Code/diddytron/shaders/uniforms_vert.spv", &vertexshader);
+    VkResult r = make_shadermodule(dev, "shaders/uniforms_vert.spv", &vertexshader);
     VERIFY("vert shader", r)
     
-    r = make_shadermodule(dev, "/Users/todd/Code/diddytron/shaders/frag.spv", &fragshader);
+    r = make_shadermodule(dev, "shaders/frag.spv", &fragshader);
     VERIFY("frag shader", r)
 
     VkPipelineShaderStageCreateInfo vsi = {};
@@ -201,6 +208,8 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
 
     vkDestroyShaderModule(dev, vertexshader, NULL);
     vkDestroyShaderModule(dev, fragshader, NULL);
+
+    return false;
 }
 
 
