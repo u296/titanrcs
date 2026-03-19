@@ -2,8 +2,8 @@
 #include "cleanupstack.h"
 #include <assert.h>
 
-#include "instance.h"
-#include "device.h"
+#include "backend/instance.h"
+#include "backend/device.h"
 
 
 #define CHECK assert(f == false)

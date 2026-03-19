@@ -1,7 +1,7 @@
 #include "buffers.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include "device.h"
+#include "backend/backend.h"
 #include "vulkan/vulkan_core.h"
 #include <stdlib.h>
 #include <stdio.h>

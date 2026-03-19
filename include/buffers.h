@@ -2,7 +2,7 @@
 #define VERTEXBUF_H
 #include "cleanupstack.h"
 #include "common.h"
-#include "device.h"
+#include "backend/backend.h"
 
 typedef struct Vec2 {
     float x;
