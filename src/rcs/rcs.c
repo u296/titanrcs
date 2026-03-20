@@ -45,7 +45,7 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
     VkPipeline rcs_pipeline;
     Image rcs_depthimg;
     Image rendtargets[N_RENDTARGETS];
-    VkFramebuffer* framebuffers;
+    VkFramebuffer framebuffer;
 
     make_rcs_renderpass(rb, &renderpass, &e, cs);
 
@@ -55,7 +55,7 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
 
     make_rcs_descset_layout(rb->dev, &rcs_descset_layout, cs);
 
-    make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, renderpass, &framebuffers, &e, cs);
+    make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, rcs_depthimg, renderpass, &framebuffer, &e, cs);
 
     RcsResources res = {ext,
                         renderpass,
@@ -64,7 +64,7 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
                         rcs_pipeline,
                         rcs_depthimg,
                         {rendtargets[0], rendtargets[1], rendtargets[2]},
-                        {framebuffers[0], framebuffers[1], framebuffers[2]}};
+                       framebuffer};
 
     *out_res = res;
     return false;

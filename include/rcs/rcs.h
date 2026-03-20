@@ -14,7 +14,7 @@ typedef struct RcsResources {
     VkPipeline pipeline;
     Image depthimg;
     Image rendtargets[3];
-    VkFramebuffer framebuffers[3];
+    VkFramebuffer framebuffer;
 
 } RcsResources;
 

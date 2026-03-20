@@ -25,4 +25,11 @@ typedef struct FramebuffersCleanup {
 
 void destroy_framebuffers(void* obj);
 
+typedef struct FramebufferCleanup {
+    VkDevice dev;
+    VkFramebuffer framebuffers;
+} FramebufferCleanup;
+
+void destroy_framebuffer(void* obj);
+
 #endif
