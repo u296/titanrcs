@@ -1,6 +1,7 @@
 #include "cleanupstack.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define INIT_CS_SIZE 16
 void cs_init(struct CleanupStack* cs) {
@@ -14,6 +15,13 @@ void cs_push(struct CleanupStack* cs, void* ctx, usize ctxsize, void (*destructo
         cs->entries = realloc(cs->entries, cs->cap * 2 * sizeof(struct CleanupEntry));
         cs->cap *= 2;
     }
+    if (ctxsize > sizeof(cs->entries[cs->n].blob)) {
+        // this is a sanity check to prevent buffer overflow in the blob
+        // if this triggers, increase CLEANUP_BLOB_PTRS
+        printf("ERROR: CLEANUP CONTEXT TOO LARGE FOR BLOB, size=%zu, blobsize=%zu\n", ctxsize, sizeof(cs->entries[cs->n].blob));
+        abort();
+    }
+
     memcpy(&cs->entries[cs->n].blob, ctx, ctxsize);
     cs->entries[cs->n].destroy = destructor;
 

@@ -36,7 +36,7 @@ called destroy_pipeline
     cs_push(&cs, &cleanup_context, sizeof(cleanup_context), destroy_##varname);                    \
     }
 
-#define CLEANUP_BLOB_PTRS 4
+#define CLEANUP_BLOB_PTRS 5
 
 typedef struct CleanupEntry {
     void (*destroy)(void*);
