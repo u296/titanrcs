@@ -68,7 +68,7 @@ int main() {
 	f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
 	MAINCHECK
 
-	f = make_graphicspipeline(ctx.backend.dev, ctx.swapchain.swpch_ext,ctx.swapchain.renderpass,my_desc_set_layout, &tri.pipeline_layout,&tri.pipeline,&e,&cs);
+	f = make_graphicspipeline(ctx.backend.dev, ctx.swapchain.swpch_ext,ctx.swapchain.renderpass,my_desc_set_layout, &ctx.framegraph.pipeline_layout,&ctx.framegraph.pipeline,&e,&cs);
 	MAINCHECK
 
 	
@@ -147,7 +147,7 @@ int main() {
 
 	//ctx.backend = my_rendbackend;
 	//ctx.swapchain = my_swpctx;
-	ctx.framegraph.pipeline=tri.pipeline;
+	//ctx.framegraph.pipeline=tri.pipeline;
 	ctx.framegraph.the_object=tri;
 
 

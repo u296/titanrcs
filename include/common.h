@@ -40,8 +40,6 @@ typedef struct Buffer {
 typedef struct Renderable {
 	Buffer vertexbuf;
     Buffer indexbuf;
-	VkPipeline pipeline;
-    VkPipelineLayout pipeline_layout;
 } Renderable;
 
 #endif
