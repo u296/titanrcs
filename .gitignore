@@ -1,5 +1,6 @@
 .*
 !.gitignore
+!.clang-format
 build
 shaders/*.spv
 compile_commands.json
