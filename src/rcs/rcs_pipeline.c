@@ -1,18 +1,22 @@
 #include "rcs/rcs_pipeline.h"
+#include "cleanupdb.h"
+#include "cleanupstack.h"
 #include "common.h"
 #include "context.h"
+#include <vulkan/vulkan_core.h>
 
 VkResult make_shadermodule(VkDevice dev, const char* path, VkShaderModule* sm);
 
-void make_rcs_pipeline(RenderContext* ctx, Error* e_out) {
+bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout descset_layout,
+                       VkRenderPass renderpass, VkPipelineLayout* pipeline_layout,
+                       VkPipeline* pipeline, Error* e_out, CleanupStack* cs) {
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(ctx->backend.dev, "shaders/rcs/uniforms_vert.spv",
-                                   &vertexshader);
+    VkResult r = make_shadermodule(rb->dev, "shaders/rcs/uniforms_vert.spv", &vertexshader);
     // VERIFY("vert shader", r)
 
-    r = make_shadermodule(ctx->backend.dev, "shaders/rcs/frag.spv", &fragshader);
+    r = make_shadermodule(rb->dev, "shaders/rcs/frag.spv", &fragshader);
     // VERIFY("frag shader", r)
 
     VkPipelineShaderStageCreateInfo vsi = {};
@@ -47,14 +51,14 @@ void make_rcs_pipeline(RenderContext* ctx, Error* e_out) {
     VkViewport viewport = {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)swapchainextent.width;
-    viewport.height = (float)swapchainextent.height;
+    viewport.width = (float)ext.width;
+    viewport.height = (float)ext.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor = {};
     scissor.offset = (struct VkOffset2D){0, 0};
-    scissor.extent = swapchainextent;
+    scissor.extent = ext;
 
     VkPipelineViewportStateCreateInfo vpsci = {};
     vpsci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -104,14 +108,24 @@ void make_rcs_pipeline(RenderContext* ctx, Error* e_out) {
     dsci.dynamicStateCount = 2;
     dsci.pDynamicStates = dynstate;
 
+
+    VkPipelineDepthStencilStateCreateInfo dci = {};
+    dci.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    dci.depthTestEnable = VK_TRUE;
+    dci.depthWriteEnable = VK_TRUE;
+    dci.depthCompareOp = VK_COMPARE_OP_LESS;
+    dci.depthBoundsTestEnable = VK_FALSE;
+    dci.stencilTestEnable = VK_FALSE;
+
+
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.setLayoutCount = 1;
-    plci.pSetLayouts = &desc_set_layout;
+    plci.pSetLayouts = &descset_layout;
 
-    r = vkCreatePipelineLayout(dev, &plci, NULL, pipeline_layout);
+    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, pipeline_layout);
 
-    CLEANUP_START(PipelineLayoutCleanup){dev, *pipeline_layout} CLEANUP_END(pipelinelayout)
+    CLEANUP_START(PipelineLayoutCleanup){rb->dev, *pipeline_layout} CLEANUP_END(pipelinelayout)
 
         VERIFY("pipeline layout", r);
 
@@ -124,7 +138,7 @@ void make_rcs_pipeline(RenderContext* ctx, Error* e_out) {
     gpci.pViewportState = &vpsci;
     gpci.pRasterizationState = &rci;
     gpci.pMultisampleState = &msci;
-    gpci.pDepthStencilState = NULL;
+    gpci.pDepthStencilState = &dci;
     gpci.pColorBlendState = &bci;
     gpci.pDynamicState = &dsci;
     gpci.layout = *pipeline_layout;
@@ -133,12 +147,14 @@ void make_rcs_pipeline(RenderContext* ctx, Error* e_out) {
     gpci.basePipelineHandle = VK_NULL_HANDLE;
     gpci.basePipelineIndex = -1;
 
-    r = vkCreateGraphicsPipelines(dev, VK_NULL_HANDLE, 1, &gpci, NULL, pipeline);
+    r = vkCreateGraphicsPipelines(rb->dev, VK_NULL_HANDLE, 1, &gpci, NULL, pipeline);
 
-    CLEANUP_START(PipelineCleanup){dev, *pipeline} CLEANUP_END(pipeline)
+    CLEANUP_START(PipelineCleanup){rb->dev, *pipeline} CLEANUP_END(pipeline)
 
         VERIFY("pipeline", r)
 
-            vkDestroyShaderModule(dev, vertexshader, NULL);
-    vkDestroyShaderModule(dev, fragshader, NULL);
+            vkDestroyShaderModule(rb->dev, vertexshader, NULL);
+    vkDestroyShaderModule(rb->dev, fragshader, NULL);
+
+    return false;
 }

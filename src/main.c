@@ -50,7 +50,7 @@ int main() {
 
     make_renderresources(&ctx, &cs);
 
-    make_rcs_setup(&ctx.backend, &cs);
+    make_rcs_setup(&ctx.backend, &ctx.rcs_resources, &cs);
 
     f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
     MAINCHECK

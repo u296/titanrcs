@@ -62,5 +62,5 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
 
     volkLoadDevice(rb->dev);
 
-    make_allocator(rb->inst, rb->physdev, rb->dev, &rb->alloc);
+    make_allocator(rb);
 }

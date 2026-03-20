@@ -4,6 +4,7 @@
 #include "resources/renderresources.h"
 #include "swapchaincontext/swapchaincontext.h"
 #include <time.h>
+#include "rcs/rcs.h"
 
 typedef struct FrameGraph {
     VkPipeline pipeline;
@@ -24,6 +25,8 @@ typedef struct RenderContext {
     SwapchainContext swapchain;
     RenderResources resources;
     FrameGraph framegraph;
+    RcsResources rcs_resources;
+
 
 } RenderContext;
 

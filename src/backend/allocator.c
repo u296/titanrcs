@@ -1,13 +1,14 @@
+#include "backend/backend.h"
 #include <assert.h>
 #include <volk.h>
 
 #include <vk_mem_alloc.h>
 
-void make_allocator(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev) {
+bool make_allocator(RenderBackend*rb) {
     VmaAllocatorCreateInfo aci = {};
-    aci.instance = inst;
-    aci.device = dev;
-    aci.physicalDevice = physdev;
+    aci.instance = rb->inst;
+    aci.device = rb->dev;
+    aci.physicalDevice = rb->physdev;
     aci.vulkanApiVersion = VK_API_VERSION_1_0;
 
     VmaVulkanFunctions vkfn;
@@ -16,6 +17,8 @@ void make_allocator(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev) {
 
     aci.pVulkanFunctions = &vkfn;
 
-    VmaAllocator alloc;
-    res = vmaCreateAllocator(&aci, &alloc);
+    res = vmaCreateAllocator(&aci, &rb->alloc);
+
+
+    return false;
 }

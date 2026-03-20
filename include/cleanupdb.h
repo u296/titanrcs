@@ -17,4 +17,12 @@ typedef struct PipelineCleanup {
 
 void destroy_pipeline(void* obj);
 
+typedef struct FramebuffersCleanup {
+    VkDevice dev;
+    VkFramebuffer* framebuffers;
+    u32 n_framebuffers;
+} FramebuffersCleanup;
+
+void destroy_framebuffers(void* obj);
+
 #endif
