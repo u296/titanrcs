@@ -1,13 +1,12 @@
 #include "pipeline.h"
+#include "buffers.h"
+#include "cleanupstack.h"
+#include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "cleanupstack.h"
-#include "common.h"
-#include "buffers.h"
 
 void read_file(const char* filename, usize* bufsize, u8** buf) {
-    
 
     FILE* fp = fopen(filename, "rb");
 
@@ -57,7 +56,7 @@ void destroy_pipelinelayout(void* obj) {
     vkDestroyPipelineLayout(p->dev, p->layout, NULL);
 }
 
-typedef struct PipelineCleanup{
+typedef struct PipelineCleanup {
     VkDevice dev;
     VkPipeline pipeline;
 } PipelineCleanup;
@@ -67,13 +66,15 @@ void destroy_pipeline(void* obj) {
     vkDestroyPipeline(p->dev, p->pipeline, NULL);
 }
 
-bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPass renderpass, VkDescriptorSetLayout desc_set_layout, VkPipelineLayout* pipeline_layout, VkPipeline* pipeline, struct Error* e_out, CleanupStack*cs) {
+bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPass renderpass,
+                           VkDescriptorSetLayout desc_set_layout, VkPipelineLayout* pipeline_layout,
+                           VkPipeline* pipeline, struct Error* e_out, CleanupStack* cs) {
 
     VkShaderModule vertexshader, fragshader;
 
     VkResult r = make_shadermodule(dev, "shaders/uniforms_vert.spv", &vertexshader);
     VERIFY("vert shader", r)
-    
+
     r = make_shadermodule(dev, "shaders/frag.spv", &fragshader);
     VERIFY("frag shader", r)
 
@@ -112,7 +113,7 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor = {};
-    scissor.offset = (struct VkOffset2D){0,0};
+    scissor.offset = (struct VkOffset2D){0, 0};
     scissor.extent = swapchainextent;
 
     VkPipelineViewportStateCreateInfo vpsci = {};
@@ -145,7 +146,8 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     msci.alphaToOneEnable = VK_FALSE;
 
     VkPipelineColorBlendAttachmentState bas = {};
-    bas.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    bas.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     bas.blendEnable = VK_FALSE;
 
     VkPipelineColorBlendStateCreateInfo bci = {};
@@ -155,10 +157,7 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     bci.attachmentCount = 1;
     bci.pAttachments = &bas;
 
-    VkDynamicState dynstate[2] = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
+    VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
     VkPipelineDynamicStateCreateInfo dsci = {};
     dsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -170,14 +169,11 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     plci.setLayoutCount = 1;
     plci.pSetLayouts = &desc_set_layout;
 
-    
     r = vkCreatePipelineLayout(dev, &plci, NULL, pipeline_layout);
 
-    CLEANUP_START(PipelineLayoutCleanup)
-    {dev,*pipeline_layout}
-    CLEANUP_END(pipelinelayout)
+    CLEANUP_START(PipelineLayoutCleanup){dev, *pipeline_layout} CLEANUP_END(pipelinelayout)
 
-    VERIFY("pipeline layout", r);
+        VERIFY("pipeline layout", r);
 
     VkGraphicsPipelineCreateInfo gpci = {};
     gpci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -199,17 +195,12 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
 
     r = vkCreateGraphicsPipelines(dev, VK_NULL_HANDLE, 1, &gpci, NULL, pipeline);
 
-    CLEANUP_START(PipelineCleanup)
-    {dev,*pipeline}
-    CLEANUP_END(pipeline)
+    CLEANUP_START(PipelineCleanup){dev, *pipeline} CLEANUP_END(pipeline)
 
-    VERIFY("pipeline", r)
+        VERIFY("pipeline", r)
 
-
-    vkDestroyShaderModule(dev, vertexshader, NULL);
+            vkDestroyShaderModule(dev, vertexshader, NULL);
     vkDestroyShaderModule(dev, fragshader, NULL);
 
     return false;
 }
-
-

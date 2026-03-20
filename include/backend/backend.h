@@ -1,18 +1,17 @@
 #ifndef BACKEND_H
 #define BACKEND_H
-#include "common.h"
 #include "cleanupstack.h"
-#include<GLFW/glfw3.h>
+#include "common.h"
 #include "vk_mem_alloc.h"
+#include <GLFW/glfw3.h>
 
 typedef struct Queues {
-	VkQueue graphics_queue;
-	u32 i_graphics_queue_fam;
+    VkQueue graphics_queue;
+    u32 i_graphics_queue_fam;
 
-	VkQueue present_queue;
-	u32 i_present_queue_fam;
+    VkQueue present_queue;
+    u32 i_present_queue_fam;
 } Queues;
-
 
 typedef struct RenderBackend {
     GLFWwindow* wnd;

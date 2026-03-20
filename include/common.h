@@ -1,8 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
+#include <stdbool.h>
 #include <stdint.h>
 #include <volk.h>
-#include <stdbool.h>
 
 typedef uint64_t u64;
 typedef int64_t i64;
@@ -18,13 +18,13 @@ typedef double f64;
 
 typedef uintptr_t usize;
 
-#define CLAMP(a,min,max) (a < min ? min : (a > max ? max : a))
+#define CLAMP(a, min, max) (a < min ? min : (a > max ? max : a))
 
-#define VERIFY(o,r) \
-if (r != VK_SUCCESS) { \
-    *e_out = (struct Error){.origin=o,.code=r}; \
-    return true;\
-}
+#define VERIFY(o, r)                                                                               \
+    if (r != VK_SUCCESS) {                                                                         \
+        *e_out = (struct Error){.origin = o, .code = r};                                           \
+        return true;                                                                               \
+    }
 
 typedef struct Error {
     const char* origin;
@@ -32,13 +32,13 @@ typedef struct Error {
 } Error;
 
 typedef struct Buffer {
-	VkBuffer buf;
-	VkDeviceMemory mem;
-	VkDeviceSize offset;
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDeviceSize offset;
 } Buffer;
 
 typedef struct Renderable {
-	Buffer vertexbuf;
+    Buffer vertexbuf;
     Buffer indexbuf;
 } Renderable;
 

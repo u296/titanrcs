@@ -1,13 +1,11 @@
 #include "render.h"
-#include "buffers.h"
 #include "common.h"
 #include "descriptors.h"
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void *ubufmap) {
+void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
     UniformBufferObject u = {};
 
     f32 I[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
@@ -18,6 +16,7 @@ void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void *ubufmap) {
     f32 t = (f32)frame * 1.0 / 150.0;
 
     f32 rotz[16] = {cosf(t), -sinf(t), 0, 0, sinf(t), cosf(t), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+    (void)rotz;
 
     f32 roty[16] = {cosf(t), 0, -sinf(t), 0, 0, 1, 0, 0, sinf(t), 0, cosf(t), 0, 0, 0, 0, 1};
 
@@ -66,7 +65,7 @@ void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void *ubufmap) {
 bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommandBuffer cmdbuf,
                          VkRenderPass renderpass, VkPipelineLayout pipeline_layout,
                          VkPipeline pipeline, VkDescriptorSet desc_set, Renderable ren,
-                         struct Error *e_out) {
+                         struct Error* e_out) {
 
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -127,8 +126,9 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommand
     return false;
 }
 
-LoopStatus do_renderloop(RenderContext *ctx) {
-    VkResult f = VK_ERROR_UNKNOWN;
+LoopStatus do_renderloop(RenderContext* ctx) {
+    volatile VkResult f = VK_ERROR_UNKNOWN;
+    f; // to silence unused variable warning in release builds
     struct Error e = {};
 
     while (!glfwWindowShouldClose(ctx->backend.wnd)) {
@@ -136,7 +136,7 @@ LoopStatus do_renderloop(RenderContext *ctx) {
 
         const u64 i_frame_modn = ctx->metadata.i_current_frame % ctx->resources.n_inflight_frames;
 
-        vkWaitForFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn], VK_TRUE,
+        f = vkWaitForFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn], VK_TRUE,
                         UINT32_MAX);
 
         u32 i_image = UINT32_MAX;
@@ -156,8 +156,8 @@ LoopStatus do_renderloop(RenderContext *ctx) {
             break;
         }
 
-        vkResetFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn]);
-        vkResetCommandBuffer(ctx->resources.cmd_bufs[i_frame_modn], 0);
+        f = vkResetFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn]);
+        f = vkResetCommandBuffer(ctx->resources.cmd_bufs[i_frame_modn], 0);
 
         update_uniformbuffer(ctx->metadata.i_current_frame, ctx->swapchain.swpch_ext,
                              ctx->resources.ubuf_mappings[i_frame_modn]);

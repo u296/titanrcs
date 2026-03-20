@@ -1,10 +1,9 @@
 #include <stdlib.h>
 
-#include "resources/sync.h"
 #include "cleanupstack.h"
 #include "common.h"
+#include "resources/sync.h"
 #include "vulkan/vulkan_core.h"
-
 
 typedef struct SyncObjectCleanup {
     VkDevice dev;
@@ -24,8 +23,8 @@ typedef struct FenceCleanup {
 } FenceCleanup;
 
 void destroy_semaphore(void* obj) {
-    SemaphoreCleanup* s = (SemaphoreCleanup*) obj;
-    vkDestroySemaphore(s->dev,s->sem, NULL);
+    SemaphoreCleanup* s = (SemaphoreCleanup*)obj;
+    vkDestroySemaphore(s->dev, s->sem, NULL);
 }
 
 void destroy_fence(void* obj) {
@@ -40,27 +39,21 @@ void destroy_sync_objects(void* obj) {
     vkDestroyFence(s->dev, s->fen, NULL);
 }
 
-bool make_sync_objects(VkDevice dev, const u32 n_max_inflight, VkSemaphore** sem1, VkSemaphore** sem2, VkFence** fen, struct Error* e_out, CleanupStack*cs) {
-    
-    *sem1 = malloc(sizeof(VkSemaphore)*n_max_inflight);
-    *sem2 = malloc(sizeof(VkSemaphore)*n_max_inflight);
-    *fen = malloc(sizeof(VkFence)*n_max_inflight);
+bool make_sync_objects(VkDevice dev, const u32 n_max_inflight, VkSemaphore** sem1,
+                       VkSemaphore** sem2, VkFence** fen, struct Error* e_out, CleanupStack* cs) {
+
+    *sem1 = malloc(sizeof(VkSemaphore) * n_max_inflight);
+    *sem2 = malloc(sizeof(VkSemaphore) * n_max_inflight);
+    *fen = malloc(sizeof(VkFence) * n_max_inflight);
 
     CLEANUP_START_NORES(void*)
-    *sem1
-    CLEANUP_END(memfree)
-    CLEANUP_START_NORES(void*)
-    *sem2
-    CLEANUP_END(memfree)
-    CLEANUP_START_NORES(void*)
-    *fen
-    CLEANUP_END(memfree)
+    *sem1 CLEANUP_END(memfree) CLEANUP_START_NORES(void*) *
+        sem2 CLEANUP_END(memfree) CLEANUP_START_NORES(void*) *
+        fen CLEANUP_END(memfree)
 
-
-    
-    VkSemaphoreCreateInfo sci = {};
+            VkSemaphoreCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    
+
     VkFenceCreateInfo fci = {};
     fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -69,25 +62,14 @@ bool make_sync_objects(VkDevice dev, const u32 n_max_inflight, VkSemaphore** sem
         VkResult r = VK_ERROR_UNKNOWN;
 
         r = vkCreateSemaphore(dev, &sci, NULL, &(*sem1)[i]);
-        CLEANUP_START(SemaphoreCleanup)
-        {dev,(*sem1)[i]}
-        CLEANUP_END(semaphore)
-        VERIFY("syncobj", r)
+        CLEANUP_START(SemaphoreCleanup){dev, (*sem1)[i]} CLEANUP_END(semaphore) VERIFY("syncobj", r)
 
-        r = vkCreateSemaphore(dev, &sci, NULL, &(*sem2)[i]);
-        CLEANUP_START(SemaphoreCleanup)
-        {dev,(*sem2)[i]}
-        CLEANUP_END(semaphore)
-        VERIFY("syncobj", r)
+            r = vkCreateSemaphore(dev, &sci, NULL, &(*sem2)[i]);
+        CLEANUP_START(SemaphoreCleanup){dev, (*sem2)[i]} CLEANUP_END(semaphore) VERIFY("syncobj", r)
 
-        r = vkCreateFence(dev, &fci, NULL, &(*fen)[i]);
-        CLEANUP_START(FenceCleanup)
-        {dev,(*fen)[i]}
-        CLEANUP_END(fence)
-        VERIFY("syncobj", r)
+            r = vkCreateFence(dev, &fci, NULL, &(*fen)[i]);
+        CLEANUP_START(FenceCleanup){dev, (*fen)[i]} CLEANUP_END(fence) VERIFY("syncobj", r)
     }
 
     return false;
-
 }
-

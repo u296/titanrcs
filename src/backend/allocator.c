@@ -1,4 +1,6 @@
-#include<volk.h>
+#include <assert.h>
+#include <volk.h>
+
 #include <vk_mem_alloc.h>
 
 void make_allocator(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev) {
@@ -10,6 +12,7 @@ void make_allocator(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev) {
 
     VmaVulkanFunctions vkfn;
     VkResult res = vmaImportVulkanFunctionsFromVolk(&aci, &vkfn);
+    assert(res == VK_SUCCESS);
 
     aci.pVulkanFunctions = &vkfn;
 

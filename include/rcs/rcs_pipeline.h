@@ -3,7 +3,6 @@
 
 #include "common.h"
 
-
 typedef struct Vec2 {
     float x;
     float y;
@@ -20,11 +19,10 @@ constexpr u32 N_RCSVERT_ATTRIB = 2;
 typedef struct RcsVertex {
     Vec3 pos;
     Vec3 normal;
-}  Vertex;
+} Vertex;
 
 constexpr VkVertexInputAttributeDescription RCSVERT_ATTRIB_DESC[N_RCSVERT_ATTRIB] = {
     {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
-    {1,0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}
-};
+    {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}};
 
 #endif

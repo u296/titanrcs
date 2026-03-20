@@ -1,25 +1,18 @@
 #include "buffers.h"
+#include "backend/backend.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include "backend/backend.h"
 #include "vulkan/vulkan_core.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+const Vertex verts[4] = {{{-0.5, -0.5}, {1.0, 1.0, 0.0}},
+                         {{-0.5, 0.5}, {0.0, 1.0, 0.0}},
+                         {{0.5, -0.5}, {0.0, 0.0, 1.0}},
+                         {{0.5, 0.5}, {1.0, 1.0, 1.0}}};
 
-
-const Vertex verts[4] = {
-    {{-0.5,-0.5},{1.0,1.0,0.0}},
-    {{-0.5,0.5},{0.0,1.0,0.0}},
-    {{0.5,-0.5},{0.0,0.0,1.0}},
-    {{0.5,0.5}, {1.0,1.0,1.0}}
-};
-
-const u16 indices[6] = {
-    0,1,2,
-    1,2,3
-};
+const u16 indices[6] = {0, 1, 2, 1, 2, 3};
 
 typedef struct BufferCleanInfo {
     VkDevice dev;
@@ -41,7 +34,6 @@ void destroy_devmem(void* obj) {
     vkFreeMemory(d->dev, d->mem, NULL);
 }
 
-
 u32 find_memory_type(VkPhysicalDevice physdev, u32 typefilter, VkMemoryPropertyFlags props) {
     VkPhysicalDeviceMemoryProperties memprops = {};
     vkGetPhysicalDeviceMemoryProperties(physdev, &memprops);
@@ -57,7 +49,9 @@ u32 find_memory_type(VkPhysicalDevice physdev, u32 typefilter, VkMemoryPropertyF
     abort();
 }
 
-bool make_buffer(VkPhysicalDevice physdev, VkDevice dev, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memprops, Buffer* buf, Error* e_out, CleanupStack* cs) {
+bool make_buffer(VkPhysicalDevice physdev, VkDevice dev, VkDeviceSize size,
+                 VkBufferUsageFlags usage, VkMemoryPropertyFlags memprops, Buffer* buf,
+                 Error* e_out, CleanupStack* cs) {
     VkBufferCreateInfo bci = {};
     bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bci.size = size;
@@ -65,14 +59,12 @@ bool make_buffer(VkPhysicalDevice physdev, VkDevice dev, VkDeviceSize size, VkBu
     bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VkResult r = vkCreateBuffer(dev, &bci, NULL, &buf->buf);
-    CLEANUP_START(BufferCleanInfo)
-    {dev,buf->buf}
-    CLEANUP_END(buffer)
+    CLEANUP_START(BufferCleanInfo){dev, buf->buf} CLEANUP_END(buffer)
 
-    VERIFY("buffer",r)
+        VERIFY("buffer", r)
 
-    VkMemoryRequirements mem_req = {};
-    vkGetBufferMemoryRequirements(dev, buf->buf,&mem_req);
+            VkMemoryRequirements mem_req = {};
+    vkGetBufferMemoryRequirements(dev, buf->buf, &mem_req);
 
     u32 memtype_i = find_memory_type(physdev, mem_req.memoryTypeBits, memprops);
 
@@ -83,18 +75,17 @@ bool make_buffer(VkPhysicalDevice physdev, VkDevice dev, VkDeviceSize size, VkBu
     mai.pNext = NULL;
 
     r = vkAllocateMemory(dev, &mai, NULL, &buf->mem);
-    CLEANUP_START(DevmemCleanInfo)
-    {dev, buf->mem}
-    CLEANUP_END(devmem)
+    CLEANUP_START(DevmemCleanInfo){dev, buf->mem} CLEANUP_END(devmem)
 
-    VERIFY("device memory allocation", r)
+        VERIFY("device memory allocation", r)
 
-    vkBindBufferMemory(dev, buf->buf, buf->mem, 0);
+            vkBindBufferMemory(dev, buf->buf, buf->mem, 0);
 
     return false;
 }
 
-void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, VkBuffer dst, VkDeviceSize size) {
+void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, VkBuffer dst,
+                VkDeviceSize size) {
     VkCommandBufferAllocateInfo cbi = {};
     cbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cbi.commandBufferCount = 1;
@@ -114,8 +105,8 @@ void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, V
     copyreg.size = size;
     copyreg.srcOffset = 0;
     copyreg.dstOffset = 0;
-    
-    vkCmdCopyBuffer(cbuf,src, dst, 1, &copyreg);
+
+    vkCmdCopyBuffer(cbuf, src, dst, 1, &copyreg);
 
     vkEndCommandBuffer(cbuf);
 
@@ -129,9 +120,16 @@ void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, V
     vkFreeCommandBuffers(dev, pool, 1, &cbuf);
 }
 
-bool make_local_buffer_staged(VkDeviceSize size, const void* filldata, VkBufferUsageFlags usage, VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool, Buffer* buf, Error* e_out, CleanupStack* cs) {
+bool make_local_buffer_staged(VkDeviceSize size, const void* filldata, VkBufferUsageFlags usage,
+                              VkPhysicalDevice physdev, VkDevice dev, Queues queues,
+                              VkCommandPool pool, Buffer* buf, Error* e_out, CleanupStack* cs) {
     Buffer stagingbuf = {};
-    VkResult r = make_buffer(physdev, dev, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &stagingbuf, e_out, NULL)? VK_ERROR_UNKNOWN : VK_SUCCESS;
+    VkResult r =
+        make_buffer(physdev, dev, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                    &stagingbuf, e_out, NULL)
+            ? VK_ERROR_UNKNOWN
+            : VK_SUCCESS;
     VERIFY("staging buffer", r)
 
     void* data;
@@ -139,26 +137,30 @@ bool make_local_buffer_staged(VkDeviceSize size, const void* filldata, VkBufferU
     memcpy(data, filldata, size);
     vkUnmapMemory(dev, stagingbuf.mem);
 
-    r = make_buffer(physdev, dev, size, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buf, e_out, cs)? VK_ERROR_UNKNOWN : VK_SUCCESS;
+    r = make_buffer(physdev, dev, size, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buf, e_out, cs)
+            ? VK_ERROR_UNKNOWN
+            : VK_SUCCESS;
     VERIFY("vertex buffer make", r);
 
-    copybuffer(dev,queues,pool,stagingbuf.buf,buf->buf,size);
+    copybuffer(dev, queues, pool, stagingbuf.buf, buf->buf, size);
 
     vkDestroyBuffer(dev, stagingbuf.buf, NULL);
-    vkFreeMemory(dev,stagingbuf.mem,NULL);
+    vkFreeMemory(dev, stagingbuf.mem, NULL);
 
     return false;
 }
 
+bool make_vertexbuffer(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool,
+                       Buffer* vbuf, Error* e_out, CleanupStack* cs) {
 
-bool make_vertexbuffer(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool, Buffer* vbuf, Error* e_out, CleanupStack* cs) {
-
-
-    return make_local_buffer_staged(sizeof(verts),verts, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, physdev, dev, queues, pool, vbuf, e_out, cs);
+    return make_local_buffer_staged(sizeof(verts), verts, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                    physdev, dev, queues, pool, vbuf, e_out, cs);
 }
 
-bool make_indexbuffer(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool, Buffer* ibuf, Error* e_out, CleanupStack* cs) {
+bool make_indexbuffer(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool,
+                      Buffer* ibuf, Error* e_out, CleanupStack* cs) {
 
-
-    return make_local_buffer_staged(sizeof(indices),indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, physdev, dev, queues, pool, ibuf, e_out, cs);
+    return make_local_buffer_staged(sizeof(indices), indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                    physdev, dev, queues, pool, ibuf, e_out, cs);
 }

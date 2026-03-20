@@ -4,9 +4,8 @@
 
 // column major
 typedef struct Mat4 {
-    f32 v[4*4];
+    f32 v[4 * 4];
 } Mat4;
-
 
 Mat4 transpose_m4(Mat4 A);
 f32 index_m4(Mat4 A, u32 row, u32 col);

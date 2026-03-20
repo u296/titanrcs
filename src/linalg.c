@@ -1,5 +1,4 @@
 #include "linalg.h"
-
 #include <stdio.h>
 
 Mat4 transpose_m4(Mat4 A) {

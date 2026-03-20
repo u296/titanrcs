@@ -1,13 +1,9 @@
 #include "descriptors.h"
-#include "buffers.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include "linalg.h"
 #include "vulkan/vulkan_core.h"
-#include <math.h>
-#include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <string.h>
 
 typedef struct DescriptorSetLayoutCleanup {
     VkDevice dev;
@@ -33,11 +29,9 @@ bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout, 
     dsli.pBindings = &dslb;
 
     VkResult r = vkCreateDescriptorSetLayout(dev, &dsli, NULL, desc_layout);
-    CLEANUP_START(DescriptorSetLayoutCleanup)
-    {dev,*desc_layout}
-    CLEANUP_END(descriptor_set_layout)
+    CLEANUP_START(DescriptorSetLayoutCleanup){dev, *desc_layout} CLEANUP_END(descriptor_set_layout)
 
-    return false;
+        return false;
 }
 
 typedef struct DescriptorPoolCleanup {
@@ -50,7 +44,8 @@ void destroy_dpool(void* obj) {
     vkDestroyDescriptorPool(d->dev, d->dpool, NULL);
 }
 
-bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool* dpool, Error* e_out, CleanupStack* cs) {
+bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool* dpool,
+                          Error* e_out, CleanupStack* cs) {
     VkDescriptorPoolSize ps = {};
     ps.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     ps.descriptorCount = n_max_inflight;
@@ -62,25 +57,24 @@ bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPo
     pci.maxSets = n_max_inflight;
 
     VkResult r = vkCreateDescriptorPool(dev, &pci, NULL, dpool);
-    CLEANUP_START(DescriptorPoolCleanup)
-    {dev, *dpool}
-    CLEANUP_END(dpool)
+    CLEANUP_START(DescriptorPoolCleanup){dev, *dpool} CLEANUP_END(dpool)
 
-    VERIFY("dpool", r)
+        VERIFY("dpool", r)
 
-    return false;
-
+            return false;
 }
 
-bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool dpool, Buffer* ubufs, VkDescriptorSetLayout desc_layout, VkDescriptorSet** desc_sets, Error*e_out, CleanupStack*cs) {
+bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool dpool,
+                          Buffer* ubufs, VkDescriptorSetLayout desc_layout,
+                          VkDescriptorSet** desc_sets, Error* e_out, CleanupStack* cs) {
 
-    *desc_sets = malloc(sizeof(VkDescriptorSet)*n_max_inflight);
+    *desc_sets = malloc(sizeof(VkDescriptorSet) * n_max_inflight);
 
     CLEANUP_START_NORES(void*)
-    *desc_sets
-    CLEANUP_END(memfree)
+    *desc_sets CLEANUP_END(memfree)
 
-    VkDescriptorSetLayout* desc_layout_copies = malloc(sizeof(VkDescriptorSetLayout)*n_max_inflight);
+        VkDescriptorSetLayout* desc_layout_copies =
+        malloc(sizeof(VkDescriptorSetLayout) * n_max_inflight);
     for (u32 i = 0; i < n_max_inflight; i++) {
         memcpy(desc_layout_copies + i, &desc_layout, sizeof(VkDescriptorSetLayout));
     }
