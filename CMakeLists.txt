@@ -53,6 +53,9 @@ add_executable(titanrcs
     src/resources/commandpool.c
     src/resources/sync.c
     src/resources/renderresources.c
+    src/rcs/rcs.c
+    src/rcs/rcs_renderpass.c
+#    src/rcs/rcs_pipeline.c
     src/pipeline.c
     src/buffers.c
     src/linalg.c

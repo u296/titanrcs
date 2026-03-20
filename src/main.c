@@ -13,6 +13,7 @@
 #include "pipeline.h"
 #include "render.h"
 #include "resources/renderresources.h"
+#include "rcs/rcs.h"
 
 #include "vulkan/vulkan_core.h" // having this here doesn't hurt and  prevents intellisense from adding it at the top which would break compilation
 
@@ -48,6 +49,8 @@ int main() {
     make_swapchain_context(ctx.backend, &ctx.swapchain, &swp_cs);
 
     make_renderresources(&ctx, &cs);
+
+    make_rcs_setup(&ctx.backend, &cs);
 
     f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
     MAINCHECK

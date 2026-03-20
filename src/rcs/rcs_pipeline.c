@@ -1,15 +1,18 @@
 #include "rcs/rcs_pipeline.h"
 #include "common.h"
+#include "context.h"
 
-void make_rcs_pipeline(Error* e_out) {
+VkResult make_shadermodule(VkDevice dev, const char* path, VkShaderModule* sm);
+
+void make_rcs_pipeline(RenderContext* ctx, Error* e_out) {
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(dev, "/Users/todd/Code/diddytron/shaders/uniforms_vert.spv",
+    VkResult r = make_shadermodule(ctx->backend.dev, "shaders/rcs/uniforms_vert.spv",
                                    &vertexshader);
     // VERIFY("vert shader", r)
 
-    r = make_shadermodule(dev, "/Users/todd/Code/diddytron/shaders/frag.spv", &fragshader);
+    r = make_shadermodule(ctx->backend.dev, "shaders/rcs/frag.spv", &fragshader);
     // VERIFY("frag shader", r)
 
     VkPipelineShaderStageCreateInfo vsi = {};
