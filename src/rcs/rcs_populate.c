@@ -50,8 +50,8 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     vkCmdBindVertexBuffers(cmdbuf, 0, 1, vbufs, vbuf_offsets);
     vkCmdBindIndexBuffer(cmdbuf, ren.indexbuf.buf, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &desc_set, 0, NULL);
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->rcs_resources.pipeline_layout, 0, 1,
+                            &ctx->rcs_resources.descset, 0, NULL);
 
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);

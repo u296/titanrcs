@@ -11,10 +11,13 @@ typedef struct RcsResources {
     VkRenderPass renderpass;
     VkDescriptorPool dpool;
     VkDescriptorSetLayout descset_layout;
+    VkDescriptorSet descset;
     VkPipelineLayout pipeline_layout;
     VkPipeline pipeline;
     Image depthimg;
     Image rendtargets[3];
+    Buffer ubo;
+    void* ubufmap;
     VkFramebuffer framebuffer;
 
 } RcsResources;

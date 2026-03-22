@@ -59,6 +59,7 @@ add_executable(titanrcs
     src/rcs/rcs_pipeline.c
     src/rcs/rcs_imgs.c
     src/rcs/rcs_fb.c
+    src/rcs/rcs_ubo.c
     src/pipeline.c
     src/buffers.c
     src/linalg.c

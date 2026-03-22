@@ -6,6 +6,7 @@
 #include "rcs/rcs_imgs.h"
 #include "rcs/rcs_pipeline.h"
 #include "rcs/rcs_renderpass.h"
+#include "rcs/rcs_ubo.h"
 #include <vulkan/vulkan_core.h>
 
 bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) {
@@ -15,12 +16,16 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
     VkExtent2D ext = {200, 200};
 
     VkRenderPass renderpass;
+    VkDescriptorPool rcs_dpool;
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
     VkPipeline rcs_pipeline;
-    Image rcs_depthimg;
-    Image rendtargets[N_RENDTARGETS];
+    Image rcs_depthimg = {};
+    Image rendtargets[N_RENDTARGETS] = {};
+    Buffer rcs_ubo = {};
+    VkDescriptorSet rcs_descset;
     VkFramebuffer framebuffer;
+    void* rcs_ubufmap;
 
     make_rcs_renderpass(rb, &renderpass, &e, cs);
 
@@ -28,11 +33,15 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
 
     make_rcs_rendertargets(rb, ext, N_RENDTARGETS, rendtargets, cs);
 
-    make_rcs_dpool(rb->dev, &out_res->dpool, cs);
+    make_rcs_dpool(rb->dev, &rcs_dpool, cs);
 
     make_rcs_descset_layout(rb->dev, &rcs_descset_layout, cs);
 
-    //make_rcs_descset();
+    make_rcs_ubo(rb, &rcs_ubo, cs);
+
+    vmaMapMemory(rb->alloc, rcs_ubo.alloc, &rcs_ubufmap);
+
+    make_rcs_descset(rb, rcs_dpool, rcs_descset_layout, rcs_ubo, &rcs_descset);
 
     make_rcs_pipeline(rb, ext, rcs_descset_layout, renderpass, &rcs_pipeline_layout, &rcs_pipeline,
                       &e, cs);
@@ -42,13 +51,18 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
 
     RcsResources res = {ext,
                         renderpass,
-                        out_res->dpool,
+                        rcs_dpool,
                         rcs_descset_layout,
+                        rcs_descset    ,
                         rcs_pipeline_layout,
                         rcs_pipeline,
                         rcs_depthimg,
                         {rendtargets[0], rendtargets[1], rendtargets[2]},
-                        framebuffer};
+                        rcs_ubo,
+                        rcs_ubufmap,
+                        framebuffer,
+
+                    };
 
     *out_res = res;
     return false;

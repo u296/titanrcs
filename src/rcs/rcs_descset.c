@@ -3,6 +3,8 @@
 #include "backend/backend.h"
 #include "cleanupdb.h"
 #include "context.h"
+#include "rcs/rcs_ubo.h"
+#include <assert.h>
 
 bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
 
@@ -55,8 +57,7 @@ bool make_rcs_descset_layout(VkDevice dev, VkDescriptorSetLayout* desc_layout, C
 }
 
 bool make_rcs_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                      VkDescriptorSetLayout descset_layout, VkDescriptorSet* desc_set,
-                      CleanupStack* cs) {
+                      VkDescriptorSetLayout descset_layout, Buffer ubo, VkDescriptorSet* desc_set) {
 
     VkDescriptorSetAllocateInfo dsai = {};
     dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -65,6 +66,25 @@ bool make_rcs_descset(RenderBackend* rb, VkDescriptorPool dpool,
     dsai.pSetLayouts = &descset_layout;
 
     VkResult r = vkAllocateDescriptorSets(rb->dev, &dsai, desc_set);
+    assert(r == VK_SUCCESS);
+
+    VkDescriptorBufferInfo dbi = {};
+    dbi.buffer = ubo.buf;
+    dbi.offset = 0;
+    dbi.range = sizeof(RcsUbo);
+
+    VkWriteDescriptorSet wds = {};
+    wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    wds.dstSet = *desc_set;
+    wds.dstBinding = 0;
+    wds.dstArrayElement = 0;
+    wds.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    wds.descriptorCount = 1;
+    wds.pBufferInfo = &dbi;
+    wds.pImageInfo = NULL;
+    wds.pTexelBufferView = NULL;
+
+    vkUpdateDescriptorSets(rb->dev, 1, &wds, 0, NULL);
 
     return false;
 }
