@@ -12,6 +12,7 @@
 #include "buffers.h"
 #include "pipeline.h"
 #include "rcs/rcs.h"
+#include "rcs/rcs_render.h"
 #include "render.h"
 #include "resources/renderresources.h"
 
@@ -77,6 +78,8 @@ int main() {
 
     f = make_rcs_setup(&ctx.backend, ctx.resources.cmd_pool, &ctx.rcs_resources, &cs);
     MAINCHECK
+
+    render_rcs_imgs(&ctx);
 
     // u64 i_frame = 0;
     constexpr u64 n_frameratecheck = 100;

@@ -1,6 +1,5 @@
 #include "backend/backend.h"
 #include "common.h"
-#include <vulkan/vulkan_core.h>
 
 VkFormat find_depth_format(VkPhysicalDevice physdev) {
     // don't know if this is allowed

@@ -25,7 +25,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     Image rendtargets[N_RENDTARGETS] = {};
     Buffer rcs_ubo = {};
     VkDescriptorSet rcs_descset;
-    VkFramebuffer framebuffer;
+    VkFramebuffer rcs_fb;
     void* rcs_ubufmap;
     Renderable rcs_mesh;
 
@@ -48,7 +48,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     make_rcs_pipeline(rb, ext, rcs_descset_layout, renderpass, &rcs_pipeline_layout, &rcs_pipeline,
                       &e, cs);
 
-    make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, rcs_depthimg, renderpass, &framebuffer, &e,
+    make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, rcs_depthimg, renderpass, &rcs_fb, &e,
                 cs);
 
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf, cs);
@@ -64,7 +64,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
                         {rendtargets[0], rendtargets[1], rendtargets[2]},
                         rcs_ubo,
                         rcs_ubufmap,
-                        framebuffer,
+                        rcs_fb,
                         rcs_mesh
                     };
 

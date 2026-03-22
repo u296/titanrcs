@@ -61,6 +61,7 @@ add_executable(titanrcs
     src/rcs/rcs_fb.c
     src/rcs/rcs_ubo.c
     src/rcs/rcs_mesh.c
+    src/rcs/rcs_render.c
     src/pipeline.c
     src/buffers.c
     src/linalg.c

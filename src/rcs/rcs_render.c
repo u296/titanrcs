@@ -1,6 +1,7 @@
-#include "rcs/rcs_populate.h"
+#include "rcs/rcs_render.h"
 
 #include "context.h"
+#include <assert.h>
 
 
 void render_rcs_imgs(RenderContext* ctx) {
@@ -38,7 +39,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     scissor.extent = ctx->rcs_resources.ext;
     scissor.offset = (struct VkOffset2D){0, 0};
 
-    VkBuffer vbufs[] = {ren.vertexbuf.buf};
+    VkBuffer vbufs[] = {ctx->rcs_resources.mesh.vertexbuf.buf};
     VkDeviceSize vbuf_offsets[] = {0};
 
     VkCommandBuffer cmdbuf = ctx->resources.cmd_bufs[0]; // should be alright
@@ -49,7 +50,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->rcs_resources.pipeline);
 
     vkCmdBindVertexBuffers(cmdbuf, 0, 1, vbufs, vbuf_offsets);
-    vkCmdBindIndexBuffer(cmdbuf, ren.indexbuf.buf, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.indexbuf.buf, 0, VK_INDEX_TYPE_UINT16);
     vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->rcs_resources.pipeline_layout, 0, 1,
                             &ctx->rcs_resources.descset, 0, NULL);
 
@@ -61,6 +62,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     vkCmdEndRenderPass(cmdbuf);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
+    assert(r == VK_SUCCESS);
 
-
+    
 }
