@@ -13,7 +13,7 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(rb->dev, "shaders/rcs/uniforms_vert.spv", &vertexshader);
+    VkResult r = make_shadermodule(rb->dev, "shaders/rcs/vert.spv", &vertexshader);
     // VERIFY("vert shader", r)
 
     r = make_shadermodule(rb->dev, "shaders/rcs/frag.spv", &fragshader);

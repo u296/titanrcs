@@ -9,6 +9,7 @@
 typedef struct RcsResources {
     VkExtent2D ext;
     VkRenderPass renderpass;
+    VkDescriptorPool dpool;
     VkDescriptorSetLayout descset_layout;
     VkPipelineLayout pipeline_layout;
     VkPipeline pipeline;

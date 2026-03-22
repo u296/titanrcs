@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <volk.h>
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan_core.h>
 
 typedef uint64_t u64;
 typedef int64_t i64;
@@ -31,10 +33,24 @@ typedef struct Error {
     VkResult code;
 } Error;
 
+/*
 typedef struct Buffer {
     VkBuffer buf;
     VkDeviceMemory mem;
     VkDeviceSize offset;
+} Buffer;
+*/
+
+typedef struct Image {
+    VkImage img;
+    VkImageView view;
+    VmaAllocation alloc;
+} Image;
+
+typedef struct Buffer {
+    VkBuffer buf;
+    VkBufferView view;
+    VmaAllocation alloc;
 } Buffer;
 
 typedef struct Renderable {

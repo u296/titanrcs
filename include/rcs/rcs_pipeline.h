@@ -1,7 +1,9 @@
 #ifndef RCS_PIPELINE_H
 #define RCS_PIPELINE_H
 
+#include "backend/backend.h"
 #include "common.h"
+
 
 typedef struct Vec2 {
     float x;
@@ -24,5 +26,12 @@ typedef struct RcsVertex {
 constexpr VkVertexInputAttributeDescription RCSVERT_ATTRIB_DESC[N_RCSVERT_ATTRIB] = {
     {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
     {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}};
+
+typedef struct RenderBackend RenderBackend;
+typedef struct CleanupStack CleanupStack;
+
+bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout descset_layout,
+                       VkRenderPass renderpass, VkPipelineLayout* pipeline_layout,
+                       VkPipeline* pipeline, Error* e_out, CleanupStack* cs);
 
 #endif

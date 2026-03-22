@@ -4,11 +4,13 @@
 #include "backend/backend.h"
 #include <vulkan/vulkan_core.h>
 
+/*
 typedef struct {
     VkImage img;
     VkImageView view;
     VmaAllocation alloc;
 } Image;
+ */
 
 bool make_rcs_depthresources(RenderBackend* rb, VkExtent2D ext, Image* depthimg, CleanupStack* cs);
 

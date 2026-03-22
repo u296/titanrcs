@@ -3,6 +3,7 @@
 #include "cleanupstack.h"
 #include "common.h"
 #include "vulkan/vulkan_core.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,14 +17,16 @@ const u16 indices[6] = {0, 1, 2, 1, 2, 3};
 
 typedef struct BufferCleanInfo {
     VkDevice dev;
+    VmaAllocation alloc;
+    VmaAllocator allocctx;
     VkBuffer buf;
 } BufferCleanInfo;
 
 void destroy_buffer(void* obj) {
     BufferCleanInfo* b = (BufferCleanInfo*)obj;
-    vkDestroyBuffer(b->dev, b->buf, NULL);
+    vmaDestroyBuffer(b->allocctx, b->buf, b->alloc);
 }
-
+/*
 typedef struct DevmemCleanInfo {
     VkDevice dev;
     VkDeviceMemory mem;
@@ -48,38 +51,27 @@ u32 find_memory_type(VkPhysicalDevice physdev, u32 typefilter, VkMemoryPropertyF
     printf("NO SUITABLE MEMORY TYPE");
     abort();
 }
+*/
 
-bool make_buffer(VkPhysicalDevice physdev, VkDevice dev, VkDeviceSize size,
-                 VkBufferUsageFlags usage, VkMemoryPropertyFlags memprops, Buffer* buf,
-                 Error* e_out, CleanupStack* cs) {
+bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
+                 bool mappable, Buffer* buf, CleanupStack* cs) {
     VkBufferCreateInfo bci = {};
     bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bci.size = size;
     bci.usage = usage;
     bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult r = vkCreateBuffer(dev, &bci, NULL, &buf->buf);
-    CLEANUP_START(BufferCleanInfo){dev, buf->buf} CLEANUP_END(buffer)
+    VmaAllocationCreateInfo aci = {};
+    aci.usage = VMA_MEMORY_USAGE_AUTO;
+    if (mappable) {
+        aci.flags =
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    }
 
-        VERIFY("buffer", r)
+    VmaAllocation alloc;
 
-            VkMemoryRequirements mem_req = {};
-    vkGetBufferMemoryRequirements(dev, buf->buf, &mem_req);
-
-    u32 memtype_i = find_memory_type(physdev, mem_req.memoryTypeBits, memprops);
-
-    VkMemoryAllocateInfo mai = {};
-    mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mai.memoryTypeIndex = memtype_i;
-    mai.allocationSize = mem_req.size;
-    mai.pNext = NULL;
-
-    r = vkAllocateMemory(dev, &mai, NULL, &buf->mem);
-    CLEANUP_START(DevmemCleanInfo){dev, buf->mem} CLEANUP_END(devmem)
-
-        VERIFY("device memory allocation", r)
-
-            vkBindBufferMemory(dev, buf->buf, buf->mem, 0);
+    VkResult r = vmaCreateBuffer(rb->alloc, &bci, &aci, &buf->buf, &buf->alloc, NULL);
+    assert(r == VK_SUCCESS);
 
     return false;
 }
@@ -120,10 +112,10 @@ void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, V
     vkFreeCommandBuffers(dev, pool, 1, &cbuf);
 }
 
-bool make_local_buffer_staged(VkDeviceSize size, const void* filldata, VkBufferUsageFlags usage,
-                              VkPhysicalDevice physdev, VkDevice dev, Queues queues,
-                              VkCommandPool pool, Buffer* buf, Error* e_out, CleanupStack* cs) {
-    Buffer stagingbuf = {};
+bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size, const void* filldata,
+                              VkBufferUsageFlags usage, VkCommandPool cpool, Buffer* buf,
+                              CleanupStack* cs) {
+    /*Buffer stagingbuf = {};
     VkResult r =
         make_buffer(physdev, dev, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
@@ -148,19 +140,60 @@ bool make_local_buffer_staged(VkDeviceSize size, const void* filldata, VkBufferU
     vkDestroyBuffer(dev, stagingbuf.buf, NULL);
     vkFreeMemory(dev, stagingbuf.mem, NULL);
 
+    return false;*/
+
+    VkBuffer stagingbuf;
+    VmaAllocation stagingalloc;
+
+    VkBufferCreateInfo bci = {};
+    bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bci.size = size;
+    bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo aci = {};
+    aci.usage = VMA_MEMORY_USAGE_AUTO;
+    aci.flags =
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    VkResult r = vmaCreateBuffer(rb->alloc, &bci, &aci, &stagingbuf, &stagingalloc, NULL);
+    assert(r == VK_SUCCESS);
+
+    void* mapping;
+    vmaMapMemory(rb->alloc, stagingalloc, &mapping);
+    memcpy(mapping, filldata, size);
+    vmaUnmapMemory(rb->alloc, stagingalloc);
+
+    bci.usage = usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    aci.flags = 0;
+
+    r = vmaCreateBuffer(rb->alloc, &bci, &aci, &buf->buf, &buf->alloc, NULL);
+    assert(r == VK_SUCCESS);
+
+    copybuffer(rb->dev, rb->queues, cpool, stagingbuf, buf->buf, size);
+
+    vmaDestroyBuffer(rb->alloc, stagingbuf, stagingalloc);
+
+    CLEANUP_START_NORES(BufferCleanInfo){
+        .dev = rb->dev,
+        .alloc = buf->alloc,
+        .allocctx = rb->alloc,
+        .buf = buf->buf,
+    };
+    CLEANUP_END(buffer);
+
     return false;
 }
 
-bool make_vertexbuffer(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool,
-                       Buffer* vbuf, Error* e_out, CleanupStack* cs) {
+bool make_vertexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* vbuf, CleanupStack* cs) {
 
-    return make_local_buffer_staged(sizeof(verts), verts, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                    physdev, dev, queues, pool, vbuf, e_out, cs);
+    return make_local_buffer_staged(rb, sizeof(verts), verts, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                    pool, vbuf, cs);
 }
 
-bool make_indexbuffer(VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkCommandPool pool,
-                      Buffer* ibuf, Error* e_out, CleanupStack* cs) {
+bool make_indexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* ibuf,
+                      CleanupStack* cs) {
 
-    return make_local_buffer_staged(sizeof(indices), indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                    physdev, dev, queues, pool, ibuf, e_out, cs);
+    return make_local_buffer_staged(rb, sizeof(indices), indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                    pool, ibuf, cs);
 }

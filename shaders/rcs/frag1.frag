@@ -7,9 +7,13 @@ layout(location = 0) out vec2 out_prefouriertransform;
 layout(location = 1) out vec4 out_phasecolor;
 layout(location = 2) out vec4 out_intenscolor;
 
-uniform sampler2D radar_infield;
-uniform vec2 resolution;
-uniform float L;
+layout(binding = 0) uniform UniformBufferObject {
+    vec2 resolution;
+    float L;
+} ubo;
+
+layout(binding = 1) uniform sampler2D radar_infield;
+
 
 const float pi = 3.1415926535897932384626433832795;
 
@@ -36,7 +40,7 @@ void main() {
 
     vec2 sq = pos.xy * pos.xy;
 
-    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
+    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(ubo.L+pos.z)));
     
     const float modphase = moddist * k;
 

@@ -7,6 +7,7 @@ typedef struct RenderContext RenderContext;
 
 typedef struct RenderResources {
     u32 n_inflight_frames;
+    VkDescriptorPool dpool;
     VkCommandPool cmd_pool;
     VkCommandBuffer* cmd_bufs;
     VkSemaphore* img_ready_sems;

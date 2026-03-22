@@ -46,15 +46,23 @@ void destroy_dpool(void* obj) {
 
 bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool* dpool,
                           Error* e_out, CleanupStack* cs) {
-    VkDescriptorPoolSize ps = {};
-    ps.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ps.descriptorCount = n_max_inflight;
+
+    const u32 external_sets = 1;
+    const u32 framesets = n_max_inflight;
+
+    VkDescriptorPoolSize ubo_ps = {};
+    ubo_ps.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ubo_ps.descriptorCount = n_max_inflight + 1;
+
+    VkDescriptorPoolSize sampler_ps = {};
+    sampler_ps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler_ps.descriptorCount = n_max_inflight;
 
     VkDescriptorPoolCreateInfo pci = {};
     pci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pci.poolSizeCount = 1;
-    pci.pPoolSizes = &ps;
-    pci.maxSets = n_max_inflight;
+    pci.poolSizeCount = 2;
+    pci.pPoolSizes = (VkDescriptorPoolSize[]){ubo_ps, sampler_ps};
+    pci.maxSets = framesets + external_sets;
 
     VkResult r = vkCreateDescriptorPool(dev, &pci, NULL, dpool);
     CLEANUP_START(DescriptorPoolCleanup){dev, *dpool} CLEANUP_END(dpool)

@@ -32,4 +32,19 @@ typedef struct FramebufferCleanup {
 
 void destroy_framebuffer(void* obj);
 
+
+typedef struct DescriptorSetLayoutCleanup {
+    VkDevice dev;
+    VkDescriptorSetLayout desc_layout;
+} DescriptorSetLayoutCleanup;
+
+void destroy_descriptor_set_layout(void* obj);
+
+typedef struct DescriptorPoolCleanup {
+    VkDevice dev;
+    VkDescriptorPool dpool;
+} DescriptorPoolCleanup;
+
+void destroy_dpool(void* obj);
+
 #endif

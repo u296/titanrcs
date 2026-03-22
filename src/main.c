@@ -11,9 +11,9 @@
 
 #include "buffers.h"
 #include "pipeline.h"
+#include "rcs/rcs.h"
 #include "render.h"
 #include "resources/renderresources.h"
-#include "rcs/rcs.h"
 
 #include "vulkan/vulkan_core.h" // having this here doesn't hurt and  prevents intellisense from adding it at the top which would break compilation
 
@@ -39,7 +39,6 @@ int main() {
 
     VkDescriptorSetLayout my_desc_set_layout;
     Renderable tri;
-    VkDescriptorPool my_dpool;
 
     init_backend(&ctx.backend, &cs);
 
@@ -50,8 +49,6 @@ int main() {
 
     make_renderresources(&ctx, &cs);
 
-    make_rcs_setup(&ctx.backend, &ctx.rcs_resources, &cs);
-
     f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
     MAINCHECK
 
@@ -60,23 +57,25 @@ int main() {
                               &ctx.framegraph.pipeline, &e, &cs);
     MAINCHECK
 
-    f = make_vertexbuffer(ctx.backend.physdev, ctx.backend.dev, ctx.backend.queues,
-                          ctx.resources.cmd_pool, &tri.vertexbuf, &e, &cs);
+    f = make_vertexbuffer(&ctx.backend, ctx.resources.cmd_pool, &tri.vertexbuf, &cs);
     MAINCHECK
 
-    f = make_indexbuffer(ctx.backend.physdev, ctx.backend.dev, ctx.backend.queues,
-                         ctx.resources.cmd_pool, &tri.indexbuf, &e, &cs);
+    f = make_indexbuffer(&ctx.backend, ctx.resources.cmd_pool, &tri.indexbuf, &cs);
     MAINCHECK
 
-    f = make_descriptor_pool(ctx.resources.n_inflight_frames, ctx.backend.dev, &my_dpool, &e, &cs);
+    f = make_descriptor_pool(ctx.resources.n_inflight_frames, ctx.backend.dev, &ctx.resources.dpool,
+                             &e, &cs);
     MAINCHECK
 
     f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
     MAINCHECK
 
-    f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev, my_dpool,
+    f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev, ctx.resources.dpool,
                              ctx.resources.ubufs, my_desc_set_layout, &ctx.framegraph.desc_sets, &e,
                              &cs);
+    MAINCHECK
+
+    f = make_rcs_setup(&ctx.backend, &ctx.rcs_resources, &cs);
     MAINCHECK
 
     // u64 i_frame = 0;
