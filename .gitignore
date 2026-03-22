@@ -2,7 +2,7 @@
 !.gitignore
 !.clang-format
 build
-shaders/*.spv
+shaders/**/*.spv
 compile_commands.json
 
 
