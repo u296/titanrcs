@@ -29,8 +29,12 @@ constexpr VkVertexInputAttributeDescription vertex_attrib_desc[N_VERT_ATTRIB] = 
     {0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, pos)},
     {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, col)}};
 
-bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
-                 bool mappable, Buffer* buf, CleanupStack* cs);
+bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage, bool mappable,
+                 Buffer* buf, CleanupStack* cs);
+
+bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size, const void* filldata,
+                              VkBufferUsageFlags usage, VkCommandPool cpool, Buffer* buf,
+                              CleanupStack* cs);
 
 bool make_vertexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* ibuf, CleanupStack* cs);
 bool make_indexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* ibuf, CleanupStack* cs);

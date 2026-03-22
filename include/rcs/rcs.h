@@ -19,10 +19,10 @@ typedef struct RcsResources {
     Buffer ubo;
     void* ubufmap;
     VkFramebuffer framebuffer;
-
+    Renderable mesh;
 } RcsResources;
 
-bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs);
+bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_res, CleanupStack* cs);
 
 
 

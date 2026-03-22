@@ -7,9 +7,10 @@
 #include "rcs/rcs_pipeline.h"
 #include "rcs/rcs_renderpass.h"
 #include "rcs/rcs_ubo.h"
+#include "rcs/rcs_mesh.h"
 #include <vulkan/vulkan_core.h>
 
-bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) {
+bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_res, CleanupStack* cs) {
     Error e;
 
     constexpr u32 N_RENDTARGETS = 3;
@@ -26,6 +27,7 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
     VkDescriptorSet rcs_descset;
     VkFramebuffer framebuffer;
     void* rcs_ubufmap;
+    Renderable rcs_mesh;
 
     make_rcs_renderpass(rb, &renderpass, &e, cs);
 
@@ -49,6 +51,8 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
     make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, rcs_depthimg, renderpass, &framebuffer, &e,
                 cs);
 
+    make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf, cs);
+
     RcsResources res = {ext,
                         renderpass,
                         rcs_dpool,
@@ -61,7 +65,7 @@ bool make_rcs_setup(RenderBackend* rb, RcsResources* out_res, CleanupStack* cs) 
                         rcs_ubo,
                         rcs_ubufmap,
                         framebuffer,
-
+                        rcs_mesh
                     };
 
     *out_res = res;

@@ -21,11 +21,11 @@ constexpr u32 N_RCSVERT_ATTRIB = 2;
 typedef struct RcsVertex {
     Vec3 pos;
     Vec3 normal;
-} Vertex;
+} RcsVertex;
 
 constexpr VkVertexInputAttributeDescription RCSVERT_ATTRIB_DESC[N_RCSVERT_ATTRIB] = {
-    {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
-    {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)}};
+    {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(RcsVertex, pos)},
+    {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(RcsVertex, normal)}};
 
 typedef struct RenderBackend RenderBackend;
 typedef struct CleanupStack CleanupStack;

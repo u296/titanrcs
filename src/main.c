@@ -75,7 +75,7 @@ int main() {
                              &cs);
     MAINCHECK
 
-    f = make_rcs_setup(&ctx.backend, &ctx.rcs_resources, &cs);
+    f = make_rcs_setup(&ctx.backend, ctx.resources.cmd_pool, &ctx.rcs_resources, &cs);
     MAINCHECK
 
     // u64 i_frame = 0;

@@ -34,7 +34,7 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
     VkPipelineShaderStageCreateInfo stages[] = {vsi, fsi};
 
     constexpr VkVertexInputBindingDescription rcsvertex_binding_desc = {
-        0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
+        0, sizeof(RcsVertex), VK_VERTEX_INPUT_RATE_VERTEX};
 
     VkPipelineVertexInputStateCreateInfo vici = {};
     vici.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
