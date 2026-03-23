@@ -1,4 +1,5 @@
 #include "buffers.h"
+#include "rcs/rcs_mesh.h"
 #include "rcs/rcs_pipeline.h"
 
 

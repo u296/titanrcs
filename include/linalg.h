@@ -2,6 +2,17 @@
 #define LINALG_H
 #include "common.h"
 
+typedef struct Vec2 {
+    float x;
+    float y;
+} Vec2;
+
+typedef struct Vec3 {
+    float x;
+    float y;
+    float z;
+} Vec3;
+
 // column major
 typedef struct Mat4 {
     f32 v[4 * 4];
