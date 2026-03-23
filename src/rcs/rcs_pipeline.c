@@ -98,8 +98,8 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
     bci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     bci.logicOpEnable = VK_FALSE;
     bci.logicOp = VK_LOGIC_OP_COPY;
-    bci.attachmentCount = 1;
-    bci.pAttachments = &bas;
+    bci.attachmentCount = 3;
+    bci.pAttachments = (VkPipelineColorBlendAttachmentState[]){bas,bas,bas};
 
     VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 

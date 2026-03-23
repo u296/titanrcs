@@ -35,7 +35,7 @@ bool make_rcs_descset_layout(VkDevice dev, VkDescriptorSetLayout* desc_layout, C
     vert_dslb.binding = 0;
     vert_dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     vert_dslb.descriptorCount = 1;
-    vert_dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    vert_dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     vert_dslb.pImmutableSamplers = NULL;
 
     VkDescriptorSetLayoutBinding frag_dslb = {};

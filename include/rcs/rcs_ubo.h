@@ -8,6 +8,7 @@ typedef struct RcsUbo {
     Mat4 model;
     Mat4 view;
     Mat4 proj;
+    Vec4 resolution_xy_L_;
 } RcsUbo;
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);

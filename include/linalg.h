@@ -13,6 +13,13 @@ typedef struct Vec3 {
     float z;
 } Vec3;
 
+typedef struct Vec4 {
+    float x;
+    float y;
+    float z;
+    float w;
+} Vec4;
+
 // column major
 typedef struct Mat4 {
     f32 v[4 * 4];

@@ -8,8 +8,10 @@ layout(location = 1) out vec4 out_phasecolor;
 layout(location = 2) out vec4 out_intenscolor;
 
 layout(binding = 0) uniform UniformBufferObject {
-    vec2 resolution;
-    float L;
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    vec4 resolution_xy_L_;
 } ubo;
 
 layout(binding = 1) uniform sampler2D radar_infield;
@@ -28,6 +30,8 @@ vec4 make_color(float phase) {
 }
 
 void main() {
+    const vec2 resolution = ubo.resolution_xy_L_.xy;
+    const float L = ubo.resolution_xy_L_.z;
 
     vec2 infield = texelFetch(radar_infield, ivec2(pos.xy), 0).xy;
 
@@ -40,7 +44,7 @@ void main() {
 
     vec2 sq = pos.xy * pos.xy;
 
-    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(ubo.L+pos.z)));
+    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
     
     const float modphase = moddist * k;
 
