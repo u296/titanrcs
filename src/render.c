@@ -1,5 +1,6 @@
 #include "render.h"
 #include "common.h"
+#include "context.h"
 #include "descriptors.h"
 #include <math.h>
 #include <stdio.h>
@@ -65,7 +66,7 @@ void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
 bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommandBuffer cmdbuf,
                          VkRenderPass renderpass, VkPipelineLayout pipeline_layout,
                          VkPipeline pipeline, VkDescriptorSet desc_set, Renderable ren,
-                         struct Error* e_out) {
+                         struct Error* e_out, RenderContext* ctx, const u32 swpch_img_i) {
 
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -120,6 +121,52 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommand
     // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
     vkCmdEndRenderPass(cmdbuf);
 
+    // TEMPORARY HACK TO BLIT TO SCREENBUFFER
+
+    VkImageMemoryBarrier swapBarrier = {};
+    swapBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    swapBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    swapBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    swapBarrier.srcAccessMask = 0;
+    swapBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    swapBarrier.image = ctx->swapchain.swpch_imgs[swpch_img_i];
+    swapBarrier.subresourceRange = (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         0, 0, NULL, 0, NULL, 1, &swapBarrier);
+
+    VkImageBlit bi = {};
+    bi.srcOffsets[0] = (VkOffset3D){0, 0, 0};
+    bi.srcOffsets[1] = (VkOffset3D){200, 200, 1};
+    bi.srcSubresource = (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+
+    i32 x = ctx->swapchain.swpch_ext.width;
+    i32 y = ctx->swapchain.swpch_ext.height;
+
+    bi.dstOffsets[0] = (VkOffset3D){0, 0, 0};
+    bi.dstOffsets[1] = (VkOffset3D){x, y, 1};
+    bi.dstSubresource = (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+
+    vkCmdBlitImage(cmdbuf, ctx->rcs_resources.rendtargets[1].img,
+                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ctx->swapchain.swpch_imgs[swpch_img_i],
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bi, VK_FILTER_LINEAR);
+
+    VkImageMemoryBarrier presentBarrier = {};
+    presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    presentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // Wait for blit to finish
+    presentBarrier.dstAccessMask = 0; // Presentation doesn't need specific access
+    presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    presentBarrier.image = ctx->swapchain.swpch_imgs[swpch_img_i];
+    presentBarrier.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    vkCmdPipelineBarrier(cmdbuf,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,       // From the blit stage
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // To the very end
+                         0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+    // END HACK
+
     VkResult r = vkEndCommandBuffer(cmdbuf);
     VERIFY("recording", r)
 
@@ -136,8 +183,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
         const u64 i_frame_modn = ctx->metadata.i_current_frame % ctx->resources.n_inflight_frames;
 
-        f = vkWaitForFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn], VK_TRUE,
-                        UINT32_MAX);
+        f = vkWaitForFences(ctx->backend.dev, 1, &ctx->resources.inflight_fncs[i_frame_modn],
+                            VK_TRUE, UINT32_MAX);
 
         u32 i_image = UINT32_MAX;
         VkResult img_ac_res = vkAcquireNextImageKHR(
@@ -166,7 +213,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
                                 ctx->resources.cmd_bufs[i_frame_modn], ctx->swapchain.renderpass,
                                 ctx->framegraph.pipeline_layout, ctx->framegraph.pipeline,
                                 ctx->framegraph.desc_sets[i_frame_modn], ctx->framegraph.the_object,
-                                &e);
+                                &e, ctx, i_image);
 
         VkSemaphore waitsems[1] = {ctx->resources.img_ready_sems[i_frame_modn]};
         VkSemaphore signalsems[1] = {ctx->resources.render_finished_sems[i_frame_modn]};

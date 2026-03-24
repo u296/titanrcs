@@ -1,11 +1,11 @@
 #include "rcs/rcs_render.h"
 
+#include "common.h"
 #include "context.h"
 #include <assert.h>
 
-
 void render_rcs_imgs(RenderContext* ctx) {
-    
+
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbbi.flags = 0;
@@ -20,12 +20,16 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     VkClearValue clearcol = {};
     clearcol.color.float32[0] = 0.0f;
-    clearcol.color.float32[1] = 0.0f;
-    clearcol.color.float32[2] = 0.0f;
+    clearcol.color.float32[1] = 1.0f;
+    clearcol.color.float32[2] = 1.0f;
     clearcol.color.float32[3] = 1.0f;
 
+    VkClearValue clear_depth = {};
+    clear_depth.depthStencil.depth = 1.0;
+    clear_depth.depthStencil.stencil = 0;
+
     rpbi.clearValueCount = 4;
-    rpbi.pClearValues = (VkClearValue[]){clearcol, clearcol, clearcol, clearcol};
+    rpbi.pClearValues = (VkClearValue[]){clearcol, clearcol, clearcol, clear_depth};
 
     VkViewport viewport = {};
     viewport.x = 0.0f;
@@ -51,8 +55,9 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     vkCmdBindVertexBuffers(cmdbuf, 0, 1, vbufs, vbuf_offsets);
     vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.indexbuf.buf, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->rcs_resources.pipeline_layout, 0, 1,
-                            &ctx->rcs_resources.descset, 0, NULL);
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            ctx->rcs_resources.pipeline_layout, 0, 1, &ctx->rcs_resources.descset,
+                            0, NULL);
 
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
@@ -61,8 +66,35 @@ void render_rcs_imgs(RenderContext* ctx) {
     // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
     vkCmdEndRenderPass(cmdbuf);
 
+    // TEMPORARY HACK TO BLIT TO SWAPCHAIN
+
+    VkImageMemoryBarrier renderBarrier = {};
+    renderBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    renderBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    renderBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    renderBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    renderBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    renderBarrier.image = ctx->rcs_resources.rendtargets[1].img; // Your offscreen image
+    renderBarrier.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &renderBarrier);
+
+    // END HACK
+
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);
 
-    
+    VkSubmitInfo si = {};
+    si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    si.waitSemaphoreCount = 0;
+    si.commandBufferCount = 1;
+    si.pCommandBuffers = &cmdbuf;
+    si.signalSemaphoreCount = 0;
+
+    r = vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si, VK_NULL_HANDLE);
+    assert(r == VK_SUCCESS);
+
+    vkQueueWaitIdle(ctx->backend.queues.graphics_queue);
 }
