@@ -95,11 +95,14 @@ set_target_properties(titanrcs PROPERTIES
 
 set_source_files_properties(src/vma_impl.cpp PROPERTIES COMPILE_FLAGS "-w")
 
+target_include_directories(volk
+    SYSTEM INTERFACE
+    ${volk_SOURCE_DIR}
+)
 
 
 
-
-target_link_libraries(titanrcs PRIVATE volk::volk glfw VulkanMemoryAllocator glslang VkFFT)
+target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator glslang VkFFT)
 
 
 if(APPLE)
@@ -117,5 +120,6 @@ endif()
 target_include_directories(titanrcs PRIVATE 
     "${CMAKE_SOURCE_DIR}/include"
     "${vkfft_SOURCE_DIR}/glslang-main/glslang/Include"
+
     )
 
