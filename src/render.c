@@ -216,7 +216,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
                                 &e, ctx, i_image);
 
         VkSemaphore waitsems[1] = {ctx->resources.img_ready_sems[i_frame_modn]};
-        VkSemaphore signalsems[1] = {ctx->resources.render_finished_sems[i_frame_modn]};
+        VkSemaphore render_signal_sems[1] = {ctx->resources.render_finished_sems[i_image]};
         VkPipelineStageFlags waitstages[1] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         VkSubmitInfo si = {};
         si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -226,7 +226,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         si.commandBufferCount = 1;
         si.pCommandBuffers = &ctx->resources.cmd_bufs[i_frame_modn];
         si.signalSemaphoreCount = 1;
-        si.pSignalSemaphores = signalsems;
+        si.pSignalSemaphores = render_signal_sems;
 
         vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si,
                       ctx->resources.inflight_fncs[i_frame_modn]);
@@ -234,7 +234,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         VkPresentInfoKHR pi = {};
         pi.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         pi.waitSemaphoreCount = 1;
-        pi.pWaitSemaphores = signalsems;
+        pi.pWaitSemaphores = render_signal_sems;
         pi.swapchainCount = 1;
         pi.pSwapchains = &ctx->swapchain.swpch;
         pi.pImageIndices = &i_image;

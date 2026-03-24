@@ -49,7 +49,7 @@ bool make_renderresources(RenderContext* ctx, CleanupStack* cs) {
                             &ctx->resources.cmd_bufs, &e, cs);
     CHECK
 
-    f = make_sync_objects(ctx->backend.dev, n_max_inflight, &ctx->resources.img_ready_sems,
+    f = make_sync_objects(ctx->backend.dev, n_max_inflight, ctx->swapchain.n_swpch_img, &ctx->resources.img_ready_sems,
                           &ctx->resources.render_finished_sems, &ctx->resources.inflight_fncs, &e,
                           cs);
     CHECK
