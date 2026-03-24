@@ -98,7 +98,7 @@ bool make_swapchain(
 	sci.imageColorSpace = chosen_format.colorSpace;
 	sci.imageExtent = sw_ext;
 	sci.imageArrayLayers = 1;
-	sci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	sci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 	u32 qfi[2] = {queues.i_graphics_queue_fam, queues.i_present_queue_fam};
 
