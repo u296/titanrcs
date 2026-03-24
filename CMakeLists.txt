@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-
+set(VKFFT_BACKEND 0)
 
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -56,6 +56,7 @@ add_executable(titanrcs
     src/backend/instance.c
     src/backend/device.c
     src/backend/allocator.c
+    src/backend/fft.c
     src/backend/backend.c
     src/swapchaincontext/swapchain.c
     src/swapchaincontext/renderpass.c
@@ -84,6 +85,7 @@ add_executable(titanrcs
 
 set_source_files_properties(src/vma_impl.cpp PROPERTIES LANGUAGE CXX)
 set_source_files_properties(src/vma_impl.cpp PROPERTIES COMPILE_FLAGS "-Wno-all")
+set_source_files_properties(src/vkfft.c PROPERTIES COMPILE_FLAGS "-Wno-all")
 
 
 set_target_properties(titanrcs PROPERTIES
@@ -102,7 +104,7 @@ target_include_directories(volk
 
 
 
-target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator glslang VkFFT)
+target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator SPIRV glslang VkFFT)
 
 
 if(APPLE)

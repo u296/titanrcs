@@ -2,7 +2,8 @@
 #define BACKEND_H
 #include "cleanupstack.h"
 #include "common.h"
-#include "vk_mem_alloc.h"
+#include <vk_mem_alloc.h>
+#include <vkFFT.h>
 #include <GLFW/glfw3.h>
 
 typedef struct Queues {
@@ -23,7 +24,7 @@ typedef struct RenderBackend {
     VkDevice dev;
     Queues queues;
     VmaAllocator alloc;
-
+    VkFFTApplication* fft;
 } RenderBackend;
 
 void init_backend(RenderBackend* out_rb, CleanupStack* cs);

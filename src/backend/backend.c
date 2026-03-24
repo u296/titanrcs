@@ -5,6 +5,7 @@
 #include "backend/allocator.h"
 #include "backend/device.h"
 #include "backend/instance.h"
+#include "backend/fft.h"
 
 #define CHECK assert(f == false)
 
@@ -63,4 +64,7 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
     volkLoadDevice(rb->dev);
 
     make_allocator(rb);
+
+
+    make_fftapp(rb->inst, rb->physdev, rb->dev, rb->queues, &rb->fft, cs);
 }
