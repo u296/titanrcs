@@ -4,5 +4,6 @@
 build
 shaders/**/*.spv
 compile_commands.json
+include/glslang
 
 

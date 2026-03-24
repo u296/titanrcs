@@ -37,6 +37,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(vma)
 
+FetchContent_Declare(
+    vkfft
+    GIT_REPOSITORY https://github.com/DTolm/VkFFT.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(vkfft)
+
+
+
+
+
 
 
 add_executable(titanrcs 
@@ -67,6 +78,7 @@ add_executable(titanrcs
     src/linalg.c
     src/descriptors.c
     src/vma_impl.cpp
+    src/vkfft.c
     src/render.c
     )
 
@@ -84,7 +96,10 @@ set_target_properties(titanrcs PROPERTIES
 set_source_files_properties(src/vma_impl.cpp PROPERTIES COMPILE_FLAGS "-w")
 
 
-target_link_libraries(titanrcs PRIVATE volk::volk glfw VulkanMemoryAllocator)
+
+
+
+target_link_libraries(titanrcs PRIVATE volk::volk glfw VulkanMemoryAllocator glslang VkFFT)
 
 
 if(APPLE)
@@ -99,4 +114,8 @@ if(APPLE)
 endif()
 
 
-target_include_directories(titanrcs PRIVATE "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(titanrcs PRIVATE 
+    "${CMAKE_SOURCE_DIR}/include"
+    "${vkfft_SOURCE_DIR}/glslang-main/glslang/Include"
+    )
+
