@@ -20,8 +20,8 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     VkClearValue clearcol = {};
     clearcol.color.float32[0] = 0.0f;
-    clearcol.color.float32[1] = 1.0f;
-    clearcol.color.float32[2] = 1.0f;
+    clearcol.color.float32[1] = 0.0f;
+    clearcol.color.float32[2] = 0.0f;
     clearcol.color.float32[3] = 1.0f;
 
     VkClearValue clear_depth = {};
