@@ -1,6 +1,7 @@
 #include "rcs/rcs_fb.h"
 #include "backend/backend.h"
 #include "cleanupdb.h"
+#include "common.h"
 #include "rcs/rcs_imgs.h"
 #include <stdlib.h>
 
@@ -28,7 +29,7 @@ bool make_rcs_fb(RenderBackend* rb, VkExtent2D ext, const u32 n_targets, Image* 
     fci.layers = 1;
 
     
-
+    r = vkCreateFramebuffer(rb->dev, &fci, NULL, framebuffer);
 
     CLEANUP_START(FramebufferCleanup)
     {rb->dev, *framebuffer}
