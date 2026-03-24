@@ -54,6 +54,7 @@ void main() {
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(length(reflfield), 0.0, 0.0, 1.0);
 
+    out_prefouriertransform = vec2(1.0,1.0);
     out_phasecolor = vec4(1.0,1.0,1.0,1.0); // OUTPUTS INTO ATTACHMENT 1, not 0
     
 }

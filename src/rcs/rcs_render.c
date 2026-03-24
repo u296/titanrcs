@@ -66,6 +66,8 @@ void render_rcs_imgs(RenderContext* ctx) {
     // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
     vkCmdEndRenderPass(cmdbuf);
 
+    
+
     // TEMPORARY HACK TO BLIT TO SWAPCHAIN
 
     VkImageMemoryBarrier renderBarrier = {};
@@ -74,7 +76,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     renderBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     renderBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     renderBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    renderBarrier.image = ctx->rcs_resources.rendtargets[1].img; // Your offscreen image
+    renderBarrier.image = ctx->rcs_resources.rendtargets[0].img; // Your offscreen image
     renderBarrier.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 

@@ -147,7 +147,7 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb, VkCommand
     bi.dstOffsets[1] = (VkOffset3D){x, y, 1};
     bi.dstSubresource = (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 
-    vkCmdBlitImage(cmdbuf, ctx->rcs_resources.rendtargets[1].img,
+    vkCmdBlitImage(cmdbuf, ctx->rcs_resources.rendtargets[0].img,
                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ctx->swapchain.swpch_imgs[swpch_img_i],
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bi, VK_FILTER_LINEAR);
 
