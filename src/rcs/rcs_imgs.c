@@ -17,7 +17,8 @@ void destroy_image(void* obj) {
     vmaDestroyImage(ic->allocctx, ic->img.img, ic->img.alloc);
 }
 
-bool make_rcs_depthresources(RenderBackend* rb, VkExtent2D ext, Image* depthimg, CleanupStack* cs) {
+bool make_rcs_depthresources(RenderBackend* rb, VkExtent2D ext, Image* depthimg,
+                             CleanupStack* cs) {
     constexpr VkFormat format = VK_FORMAT_D32_SFLOAT;
 
     VkImageCreateInfo ici = {};
@@ -46,22 +47,25 @@ bool make_rcs_depthresources(RenderBackend* rb, VkExtent2D ext, Image* depthimg,
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
 
-    
-    vmaCreateImage(rb->alloc, &ici, &aci, &depthimg->img, &depthimg->alloc, NULL);
+    vmaCreateImage(rb->alloc, &ici, &aci, &depthimg->img, &depthimg->alloc,
+                   NULL);
     ivci.image = depthimg->img;
 
     vkCreateImageView(rb->dev, &ivci, NULL, &depthimg->view);
 
-    CLEANUP_START_NORES(ImageCleanup){*depthimg, rb->dev, rb->alloc} CLEANUP_END(image)
-    
+    CLEANUP_START_NORES(ImageCleanup){*depthimg, rb->dev,
+                                      rb->alloc} CLEANUP_END(image)
 
-    return false;
+        return false;
 }
 
-bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext, const u32 n_targets, Image* rendtargets,
+bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
+                            const u32 n_targets, Image* rendtargets,
                             CleanupStack* cs) {
 
-    constexpr VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+    
 
     VkImageCreateInfo ici = {};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -72,7 +76,9 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext, const u32 n_targe
     ici.format = format;
     ici.tiling = VK_IMAGE_TILING_OPTIMAL;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    ici.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    ici.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
     ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -90,15 +96,20 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext, const u32 n_targe
     aci.usage = VMA_MEMORY_USAGE_AUTO;
 
     for (u32 i = 0; i < n_targets; i++) {
-        vmaCreateImage(rb->alloc, &ici, &aci, &rendtargets[i].img, &rendtargets[i].alloc, NULL);
+        if (i == 0) {
+            ici.format = VK_FORMAT_R32G32_SFLOAT;
+            ivci.format = ici.format;
+        }
+
+        vmaCreateImage(rb->alloc, &ici, &aci, &rendtargets[i].img,
+                       &rendtargets[i].alloc, NULL);
 
         ivci.image = rendtargets[i].img;
 
         vkCreateImageView(rb->dev, &ivci, NULL, &rendtargets[i].view);
 
-        CLEANUP_START_NORES(ImageCleanup)
-        {rendtargets[i], rb->dev, rb->alloc} 
-        CLEANUP_END(image)
+        CLEANUP_START_NORES(ImageCleanup){rendtargets[i], rb->dev,
+                                          rb->alloc} CLEANUP_END(image)
     }
 
     return false;
