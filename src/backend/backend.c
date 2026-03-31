@@ -66,5 +66,5 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
     make_allocator(rb, cs);
 
 
-    //make_fftapp(rb->inst, rb->physdev, rb->dev, rb->queues, &rb->fft, cs);
+    make_fftapp(rb->inst, rb->physdev, rb->dev, rb->queues, &rb->fft, cs);
 }
