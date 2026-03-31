@@ -45,7 +45,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(vkfft)
 
 
-
+if(TARGET SPIRV)
+    if(MSVC)
+        target_compile_options(SPIRV PRIVATE /FI"cstdint")
+    else()
+        target_compile_options(SPIRV PRIVATE -include cstdint)
+    endif()
+endif()
 
 
 
