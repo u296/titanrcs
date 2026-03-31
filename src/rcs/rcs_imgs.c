@@ -99,6 +99,9 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
         if (i == 0) {
             ici.format = VK_FORMAT_R32G32_SFLOAT;
             ivci.format = ici.format;
+        } else {
+            ici.format = format;
+            ivci.format = format;
         }
 
         vmaCreateImage(rb->alloc, &ici, &aci, &rendtargets[i].img,

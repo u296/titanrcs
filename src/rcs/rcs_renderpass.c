@@ -42,6 +42,9 @@ bool make_rcs_renderpass(RenderBackend* rb, VkRenderPass* renderpass, struct Err
     VkAttachmentReference car0 = {};
     car0.attachment = 0;
     car0.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    
+    VkAttachmentDescription desc0 = color_attachment;
+    desc0.format = VK_FORMAT_R32G32_SFLOAT;
 
     VkAttachmentReference car1 = {};
     car1.attachment = 1;
@@ -77,7 +80,7 @@ bool make_rcs_renderpass(RenderBackend* rb, VkRenderPass* renderpass, struct Err
     VkRenderPassCreateInfo rpci = {};
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rpci.attachmentCount = 4;
-    rpci.pAttachments = (VkAttachmentDescription[]){color_attachment, color_attachment,
+    rpci.pAttachments = (VkAttachmentDescription[]){desc0, color_attachment,
                                                     color_attachment, depth_attachment};
     rpci.subpassCount = 1;
     rpci.pSubpasses = &subpass;
