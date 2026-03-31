@@ -13,4 +13,6 @@ typedef struct RcsUbo {
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
 
+bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs);
+
 #endif
