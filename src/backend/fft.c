@@ -57,10 +57,12 @@ bool make_fftapp(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev, Queues
     CLEANUP_START_NORES(void*)
     fftapp
     CLEANUP_END(memfree)
+    
+    memset(fftapp, 0, sizeof(VkFFTApplication));
 
-    VkFFTResult res = initializeVkFFT(fftapp, cfg);
+    //VkFFTResult res = initializeVkFFT(fftapp, cfg);
 
-    assert(res == VKFFT_SUCCESS);
+    //assert(res == VKFFT_SUCCESS);
 
     CLEANUP_START_NORES(FFTCleanup)
     {

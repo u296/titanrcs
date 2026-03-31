@@ -47,4 +47,11 @@ typedef struct DescriptorPoolCleanup {
 
 void destroy_dpool(void* obj);
 
+typedef struct MappingCleanup {
+    VmaAllocator allocctx;
+    VmaAllocation alloc;
+} MappingCleanup;
+
+void destroy_mapping(void* obj);
+
 #endif

@@ -1,6 +1,7 @@
 #include "backend/backend.h"
 
 #include "cleanupstack.h"
+#include "common.h"
 #include "context.h"
 #include "descriptors.h"
 #include "resources/commandpool.h"
@@ -11,6 +12,17 @@
 #include "buffers.h"
 #include <stdlib.h>
 
+typedef struct MappingCleanup {
+    VmaAllocator allocctx;
+    VmaAllocation alloc;
+} MappingCleanup;
+
+void destroy_mapping(void* obj) {
+    MappingCleanup* m = (MappingCleanup*)obj;
+
+    vmaUnmapMemory(m->allocctx, m->alloc);
+}
+
 bool make_uniform_buffers(const u32 n_max_inflight, RenderBackend* rb,
                           Buffer** ubufs, void*** ubuf_mappings, CleanupStack* cs) {
 
@@ -19,9 +31,18 @@ bool make_uniform_buffers(const u32 n_max_inflight, RenderBackend* rb,
 
     for (u32 i = 0; i < n_max_inflight; i++) {
 
+        char bufname[32];
+        sprintf(bufname, "Uniform Buffer %u", i);
 
         make_buffer(rb, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, &(*ubufs)[i], cs);
         vmaMapMemory(rb->alloc, (*ubufs)[i].alloc, &(*ubuf_mappings)[i]);
+        vmaSetAllocationName(rb->alloc, (*ubufs)[i].alloc, bufname);
+        CLEANUP_START_NORES(MappingCleanup){
+            .allocctx = rb->alloc,
+            .alloc = (*ubufs)[i].alloc,
+        };
+        CLEANUP_END(mapping)
+        
     }
 
     CLEANUP_START_NORES(void*)

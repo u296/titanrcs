@@ -157,6 +157,8 @@ int main() {
 
         LoopStatus l = do_renderloop(&ctx);
 
+        vkDeviceWaitIdle(ctx.backend.dev);
+
         cs_consume(&swp_cs);
 
         switch (l) {
@@ -171,6 +173,7 @@ int main() {
     } while (!shouldclose);
 
     vkDeviceWaitIdle(ctx.backend.dev);
+    // system("sleep 1");
 
     cs_consume(&cs);
     return 0;

@@ -58,6 +58,7 @@ bool make_swapchain(
 	for (u32 i = 0; i < n_formats; i++) {
 		if (formats[i].format == VK_FORMAT_B8G8R8A8_SRGB && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			chosen_format = formats[i];
+			set_format = 1;
 		}
 	}
 

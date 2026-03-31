@@ -1,5 +1,6 @@
 #include "rcs/rcs.h"
 #include "cleanupstack.h"
+#include "cleanupdb.h"
 #include "common.h"
 #include "rcs/rcs_descset.h"
 #include "rcs/rcs_fb.h"
@@ -42,6 +43,11 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     make_rcs_ubo(rb, &rcs_ubo, cs);
 
     vmaMapMemory(rb->alloc, rcs_ubo.alloc, &rcs_ubufmap);
+    CLEANUP_START_NORES(MappingCleanup){
+        .allocctx = rb->alloc,
+        .alloc = rcs_ubo.alloc,
+    }
+    CLEANUP_END(mapping)
 
     make_rcs_descset(rb, rcs_dpool, rcs_descset_layout, rcs_ubo, &rcs_descset);
 

@@ -1,5 +1,6 @@
 #include "buffers.h"
 #include "rcs/rcs_mesh.h"
+#include "common.h"
 #include "rcs/rcs_pipeline.h"
 
 
@@ -19,6 +20,8 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf, Buffer*
     make_local_buffer_staged(rb, sizeof(rcs_verts), rcs_verts, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, cpool, vbuf, cs);
     make_local_buffer_staged(rb, sizeof(rcs_indices), rcs_indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool, ibuf, cs);
 
+    vmaSetAllocationName(rb->alloc, vbuf->alloc, "RCS vertex buffer");
+    vmaSetAllocationName(rb->alloc, ibuf->alloc, "RCS index buffer");
 
     return false;
 }
