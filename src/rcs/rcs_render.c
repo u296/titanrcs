@@ -98,6 +98,9 @@ void render_rcs_imgs(RenderContext* ctx) {
     // the buffer copies can be modified to do the layout shifting to center the
     // fft
 
+    VkBufferImageCopy quads[4] = {{},{},{},{}};
+    quads[0].bufferOffset = ((RCS_RESOLUTION)) * 2 * sizeof(float);
+
     VkBufferImageCopy reg = {};
     reg.bufferOffset = 0;
     reg.bufferRowLength = 0;
