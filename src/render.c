@@ -2,6 +2,7 @@
 #include "common.h"
 #include "context.h"
 #include "descriptors.h"
+#include "vulkan/vulkan_core.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -135,6 +136,10 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb,
 
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
+
+    u32 tex_i = 3;//rand() % 4;
+    vkCmdPushConstants(cmdbuf, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                       sizeof(u32), &tex_i);
 
     vkCmdDrawIndexed(cmdbuf, 6, 1, 0, 0, 0);
     // vkCmdDraw(cmdbuf, 3, 1, 0, 0);

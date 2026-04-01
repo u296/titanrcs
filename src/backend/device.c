@@ -149,6 +149,8 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
 
     VkPhysicalDeviceFeatures df = {};
 
+    df.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+
     VkDeviceCreateInfo dci = {};
     dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dci.queueCreateInfoCount = n_queue_infos;

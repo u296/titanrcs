@@ -2,6 +2,7 @@
 #include "buffers.h"
 #include "cleanupstack.h"
 #include "common.h"
+#include "vulkan/vulkan_core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -164,10 +165,17 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     dsci.dynamicStateCount = 2;
     dsci.pDynamicStates = dynstate;
 
+    VkPushConstantRange pcr = {};
+    pcr.size = 16;
+    pcr.offset = 0;
+    pcr.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.setLayoutCount = 1;
     plci.pSetLayouts = &desc_set_layout;
+    plci.pushConstantRangeCount = 1;
+    plci.pPushConstantRanges = &pcr;
 
     r = vkCreatePipelineLayout(dev, &plci, NULL, pipeline_layout);
 
