@@ -13,6 +13,35 @@ const Vertex verts[4] = {{{-0.5, -0.5}, {0.0, 0.0}},
                          {{0.5, -0.5}, {1.0, 0.0}},
                          {{0.5, 0.5}, {1.0, 1.0}}};
 
+const Vertex overview_verts[16] = {
+    {{-1.0, -1.0}, {0.0, 0.0}}, {{+0.0, -1.0}, {1.0, 0.0}},
+    {{-1.0, 0.0}, {0.0, 1.0}},  {{0.0, +0.0}, {1.0, 1.0}},
+
+    {{0.0, -1.0}, {0.0, 0.0}},  {{+1.0, -1.0}, {1.0, 0.0}},
+    {{+0.0, 0.0}, {0.0, 1.0}},  {{1.0, +0.0}, {1.0, 1.0}},
+
+    {{-1.0, 0.0}, {0.0, 0.0}},  {{+0.0, 0.0}, {1.0, 0.0}},
+    {{-1.0, 1.0}, {0.0, 1.0}},  {{0.0, 1.0}, {1.0, 1.0}},
+
+    {{0.0, -0.0}, {0.0, 0.0}},  {{+1.0, 0.0}, {1.0, 0.0}},
+    {{+0.0, 1.0}, {0.0, 1.0}},  {{1.0, +1.0}, {1.0, 1.0}},
+
+};
+
+const u16 overview_inds[] = {0,  1,  2,  1,
+                             2,  3,
+
+                             4,  5,  6,  5,
+                             6,  7,
+
+                             8,  9,  10, 9,
+                             10, 11,
+
+                             12, 13, 14, 13,
+                             14, 15
+
+};
+
 const u16 indices[6] = {0, 1, 2, 1, 2, 3};
 
 typedef struct BufferCleanInfo {
@@ -37,14 +66,13 @@ void destroy_devmem(void* obj) {
     vkFreeMemory(d->dev, d->mem, NULL);
 }
 
-u32 find_memory_type(VkPhysicalDevice physdev, u32 typefilter, VkMemoryPropertyFlags props) {
-    VkPhysicalDeviceMemoryProperties memprops = {};
+u32 find_memory_type(VkPhysicalDevice physdev, u32 typefilter,
+VkMemoryPropertyFlags props) { VkPhysicalDeviceMemoryProperties memprops = {};
     vkGetPhysicalDeviceMemoryProperties(physdev, &memprops);
 
     for (u32 i = 0; i < memprops.memoryTypeCount; i++) {
-        if (typefilter & (1 << i) && (memprops.memoryTypes[i].propertyFlags & props) == props) {
-            printf("selecting memory type index %u\n", i);
-            return i;
+        if (typefilter & (1 << i) && (memprops.memoryTypes[i].propertyFlags &
+props) == props) { printf("selecting memory type index %u\n", i); return i;
         }
     }
 
@@ -53,8 +81,8 @@ u32 find_memory_type(VkPhysicalDevice physdev, u32 typefilter, VkMemoryPropertyF
 }
 */
 
-bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage, bool mappable,
-                 Buffer* buf, CleanupStack* cs) {
+bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
+                 bool mappable, Buffer* buf, CleanupStack* cs) {
     VkBufferCreateInfo bci = {};
     bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bci.size = size;
@@ -70,7 +98,8 @@ bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
 
     VmaAllocation alloc;
 
-    VkResult r = vmaCreateBuffer(rb->alloc, &bci, &aci, &buf->buf, &buf->alloc, NULL);
+    VkResult r =
+        vmaCreateBuffer(rb->alloc, &bci, &aci, &buf->buf, &buf->alloc, NULL);
     assert(r == VK_SUCCESS);
 
     CLEANUP_START_NORES(BufferCleanInfo){
@@ -84,8 +113,8 @@ bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
     return false;
 }
 
-void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, VkBuffer dst,
-                VkDeviceSize size) {
+void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src,
+                VkBuffer dst, VkDeviceSize size) {
     VkCommandBufferAllocateInfo cbi = {};
     cbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cbi.commandBufferCount = 1;
@@ -120,8 +149,9 @@ void copybuffer(VkDevice dev, Queues queues, VkCommandPool pool, VkBuffer src, V
     vkFreeCommandBuffers(dev, pool, 1, &cbuf);
 }
 
-bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size, const void* filldata,
-                              VkBufferUsageFlags usage, VkCommandPool cpool, Buffer* buf,
+bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size,
+                              const void* filldata, VkBufferUsageFlags usage,
+                              VkCommandPool cpool, Buffer* buf,
                               CleanupStack* cs) {
 
     VkBuffer stagingbuf;
@@ -135,10 +165,11 @@ bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size, const void* 
 
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
-    aci.flags =
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    aci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-    VkResult r = vmaCreateBuffer(rb->alloc, &bci, &aci, &stagingbuf, &stagingalloc, NULL);
+    VkResult r = vmaCreateBuffer(rb->alloc, &bci, &aci, &stagingbuf,
+                                 &stagingalloc, NULL);
     assert(r == VK_SUCCESS);
 
     vmaSetAllocationName(rb->alloc, stagingalloc, "STAGING BUFFER");
@@ -169,18 +200,22 @@ bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size, const void* 
     return false;
 }
 
-bool make_vertexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* vbuf, CleanupStack* cs) {
+bool make_vertexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* vbuf,
+                       CleanupStack* cs) {
 
-    bool res = make_local_buffer_staged(rb, sizeof(verts), verts, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                        pool, vbuf, cs);
+    bool res = make_local_buffer_staged(rb, sizeof(overview_verts), overview_verts,
+                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pool,
+                                        vbuf, cs);
     vmaSetAllocationName(rb->alloc, vbuf->alloc, "VERTEX BUFFER MAINSCREEN");
     return res;
 }
 
-bool make_indexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* ibuf, CleanupStack* cs) {
+bool make_indexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* ibuf,
+                      CleanupStack* cs) {
 
-    bool res = make_local_buffer_staged(rb, sizeof(indices), indices,
-                                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pool, ibuf, cs);
-    vmaSetAllocationName(rb->alloc, ibuf->alloc, "INDEX BUFFER MAINSCREEN")    ;
+    bool res = make_local_buffer_staged(rb, sizeof(overview_inds), overview_inds,
+                                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pool,
+                                        ibuf, cs);
+    vmaSetAllocationName(rb->alloc, ibuf->alloc, "INDEX BUFFER MAINSCREEN");
     return res;
 }

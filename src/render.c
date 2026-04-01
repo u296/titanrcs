@@ -137,12 +137,15 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb,
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
 
-    u32 tex_i = 3;//rand() % 4;
-    vkCmdPushConstants(cmdbuf, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-                       sizeof(u32), &tex_i);
+    for (u32 i = 0; i < 4; i++) {
+        //u32 tex_i = 3; // rand() % 4;
+        vkCmdPushConstants(cmdbuf, pipeline_layout,
+                           VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(u32),
+                           &i);
 
-    vkCmdDrawIndexed(cmdbuf, 6, 1, 0, 0, 0);
-    // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
+        vkCmdDrawIndexed(cmdbuf, 6, 1, i*6, 0, 0);
+        // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
+    }
     vkCmdEndRenderPass(cmdbuf);
 
     const bool blittoscreenbuffer = false;
