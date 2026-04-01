@@ -13,7 +13,9 @@ typedef struct ImageCleanup {
 
 void destroy_image(void* obj) {
     ImageCleanup* ic = (ImageCleanup*)obj;
-    vkDestroyImageView(ic->dev, ic->img.view, NULL);
+    if (ic->img.view != VK_NULL_HANDLE) {
+        vkDestroyImageView(ic->dev, ic->img.view, NULL);
+    }
     vmaDestroyImage(ic->allocctx, ic->img.img, ic->img.alloc);
 }
 

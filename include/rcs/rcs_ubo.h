@@ -15,4 +15,6 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
 
 bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs);
 
+bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, CleanupStack* cs);
+
 #endif

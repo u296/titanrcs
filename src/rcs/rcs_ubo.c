@@ -3,6 +3,7 @@
 #include "backend/backend.h"
 #include "buffers.h"
 #include "cleanupstack.h"
+#include "cleanupdb.h"
 #include "common.h"
 #include <vulkan/vulkan_core.h>
 
@@ -20,6 +21,35 @@ bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs) {
     make_buffer(rb, 256 * 256 * 2 * sizeof(float),
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                  false, rcs_fftbuf, cs);
+
+    return false;
+}
+
+bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, CleanupStack* cs) {
+
+    VkImageCreateInfo ici = {};
+    ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ici.imageType = VK_IMAGE_TYPE_2D;
+    ici.extent = (VkExtent3D){ext.width, ext.height, 1};
+    ici.format = VK_FORMAT_R32G32_SFLOAT;
+    ici.arrayLayers = 1;
+    ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    ici.samples = VK_SAMPLE_COUNT_1_BIT;
+    ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ici.mipLevels = 1;
+    ici.queueFamilyIndexCount = 1;
+    ici.pQueueFamilyIndices = &rb->queues.i_graphics_queue_fam;
+    ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    VmaAllocationCreateInfo aci = {};
+    aci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &rcs_fftimg->img, &rcs_fftimg->alloc, NULL);
+
+    CLEANUP_START(ImageCleanup)
+    {*rcs_fftimg, rb->dev, rb->alloc}
+    CLEANUP_END(image)
 
     return false;
 }

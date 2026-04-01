@@ -93,6 +93,9 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     VkBuffer fft_buf = ctx->rcs_resources.fft_buf.buf;
 
+    // the buffer copies can be modified to do the layout shifting to center the
+    // fft
+
     VkBufferImageCopy reg = {};
     reg.bufferOffset = 0;
     reg.bufferRowLength = 0;
@@ -147,7 +150,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkImageMemoryBarrier bar_imgpostfft = {};
     bar_imgpostfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bar_imgpostfft.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    bar_imgpostfft.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    bar_imgpostfft.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     bar_imgpostfft.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
     bar_imgpostfft.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     bar_imgpostfft.image =
@@ -155,12 +158,27 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_imgpostfft.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 1,
-                         &bar_bufpostfft, 1, &bar_imgpostfft);
+    VkImageMemoryBarrier bar_fftimg_postfft = {};
+    bar_fftimg_postfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bar_fftimg_postfft.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    bar_fftimg_postfft.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    bar_fftimg_postfft.srcAccessMask = VK_ACCESS_NONE;
+    bar_fftimg_postfft.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    bar_fftimg_postfft.image =
+        ctx->rcs_resources.fft_img.img; // Your offscreen image
+    bar_fftimg_postfft.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-    vkCmdCopyBufferToImage(cmdbuf, fft_buf,
-                           ctx->rcs_resources.rendtargets[0].img,
+    const VkImageMemoryBarrier postfft_imgbars[2] = {bar_imgpostfft, bar_fftimg_postfft};
+
+    vkCmdPipelineBarrier(
+        cmdbuf,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0, 0, NULL, 1, &bar_bufpostfft, 2, postfft_imgbars
+        );
+
+    vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.fft_img.img,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &reg);
 
     VkImageMemoryBarrier bar_imgpostfftcopy = {};
@@ -169,8 +187,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_imgpostfftcopy.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     bar_imgpostfftcopy.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     bar_imgpostfftcopy.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    bar_imgpostfftcopy.image =
-        ctx->rcs_resources.rendtargets[0].img; // Your offscreen image
+    bar_imgpostfftcopy.image = ctx->rcs_resources.fft_img.img;
     bar_imgpostfftcopy.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
