@@ -54,4 +54,13 @@ typedef struct MappingCleanup {
 
 void destroy_mapping(void* obj);
 
+
+typedef struct ImageCleanup {
+    Image img;
+    VkDevice dev;
+    VmaAllocator allocctx;
+} ImageCleanup;
+
+void destroy_image(void* obj);
+
 #endif
