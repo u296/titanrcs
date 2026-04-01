@@ -6,6 +6,8 @@
 #include <vkFFT/vkFFT_AppManagement/vkFFT_InitializeApp.h>
 #include <vkFFT/vkFFT_Structs/vkFFT_Structs.h>
 #include "cleanupstack.h"
+#include "res.h"
+
 
 typedef struct FFTCleanup {
     VkFFTApplication* app;
@@ -21,11 +23,13 @@ void destroy_fftapp(void* obj) {
 // I'm thinking about just pointing to the backend but that makes it impossible to ever move the backend
 // which sucks because the whole point of the backend was to be a movable package
 
+
+
 static VkDevice persist_dev;
 static VkPhysicalDevice persist_physdev;
 static VkQueue persist_queue;
 static u32 persist_queue_i;
-u64 fftbuf_size = 2 * sizeof(float) * 256 * 256; // x2 for complex
+u64 fftbuf_size = 2 * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex
 
 
 bool make_fftapp(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkFFTApplication** out_fftapp, CleanupStack* cs ) {
@@ -68,8 +72,8 @@ bool make_fftapp(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev, Queues
 
 
     cfg.FFTdim = 2;
-    cfg.size[0] = 256;
-    cfg.size[1] = 256;
+    cfg.size[0] = RCS_RESOLUTION;
+    cfg.size[1] = RCS_RESOLUTION;
     cfg.size[2] = 1;
     cfg.isInputFormatted = 0;
 

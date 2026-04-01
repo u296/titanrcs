@@ -5,6 +5,7 @@
 #include "cleanupstack.h"
 #include "cleanupdb.h"
 #include "common.h"
+#include "res.h"
 #include <vulkan/vulkan_core.h>
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
@@ -18,7 +19,7 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
 
 bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs) {
 
-    make_buffer(rb, 256 * 256 * 2 * sizeof(float),
+    make_buffer(rb, RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float),
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                  false, rcs_fftbuf, cs);
 
@@ -65,6 +66,6 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, Clean
     CLEANUP_START(ImageCleanup)
     {*rcs_fftimg, rb->dev, rb->alloc}
     CLEANUP_END(image)
-    
+
     return false;
 }

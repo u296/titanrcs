@@ -3,13 +3,20 @@
 #include "common.h"
 #include "rcs/rcs_pipeline.h"
 
+#define LEFT -0.5
+#define RIGHT 0.5
+#define TOP 0.5
+#define BOT -0.5
 
-
-
+const RcsVertex rcs_verts[4] = {{{LEFT, TOP, 0.0}, {0.0, 0.0, 1.0}},
+                         {{RIGHT, TOP, 0.0}, {0.0, 1.0, 0.0}},
+                         {{LEFT, BOT, 0.0}, {1.0, 0.0, 0.0}},
+                         {{RIGHT, BOT, 0.0}, {1.0, 1.0, 1.0}}};
+/*
 const RcsVertex rcs_verts[4] = {{{-1.0, -1.0, 0.0}, {0.0, 0.0, 1.0}},
                          {{-1.0, -0.5, 0.0}, {0.0, 1.0, 0.0}},
                          {{-0.5, -1.0, 0.0}, {1.0, 0.0, 0.0}},
-                         {{-0.5, -0.7, 0.0}, {1.0, 1.0, 1.0}}};
+                         {{-0.5, -0.7, 0.0}, {1.0, 1.0, 1.0}}};*/
 
 
 const u16 rcs_indices[6] = {0, 1, 2, 1, 2, 3};

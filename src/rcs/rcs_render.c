@@ -6,6 +6,7 @@
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 #include "vulkan/vulkan_core.h"
 #include <assert.h>
+#include "res.h"
 
 void render_rcs_imgs(RenderContext* ctx) {
 
@@ -107,11 +108,8 @@ void render_rcs_imgs(RenderContext* ctx) {
     reg.imageSubresource.baseArrayLayer = 0;
     reg.imageSubresource.layerCount = 1;
 
-    const u32 w = 256, h = 256; // should change this to a
-                                // more global solution
-
     reg.imageOffset = (VkOffset3D){0, 0, 0};
-    reg.imageExtent = (VkExtent3D){w, h, 1};
+    reg.imageExtent = (VkExtent3D){RCS_RESOLUTION, RCS_RESOLUTION, 1};
 
     vkCmdCopyImageToBuffer(cmdbuf, ctx->rcs_resources.rendtargets[0].img,
                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 1,

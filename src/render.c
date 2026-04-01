@@ -2,7 +2,8 @@
 #include "common.h"
 #include "context.h"
 #include "descriptors.h"
-#include "vulkan/vulkan_core.h"
+#include "rcs/rcs.h"
+#include "res.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -138,12 +139,11 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb,
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
 
     for (u32 i = 0; i < 4; i++) {
-        //u32 tex_i = 3; // rand() % 4;
+        // u32 tex_i = 3; // rand() % 4;
         vkCmdPushConstants(cmdbuf, pipeline_layout,
-                           VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(u32),
-                           &i);
+                           VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(u32), &i);
 
-        vkCmdDrawIndexed(cmdbuf, 6, 1, i*6, 0, 0);
+        vkCmdDrawIndexed(cmdbuf, 6, 1, i * 6, 0, 0);
         // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
     }
     vkCmdEndRenderPass(cmdbuf);
@@ -168,7 +168,7 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkFramebuffer fb,
 
         VkImageBlit bi = {};
         bi.srcOffsets[0] = (VkOffset3D){0, 0, 0};
-        bi.srcOffsets[1] = (VkOffset3D){256, 256, 1};
+        bi.srcOffsets[1] = (VkOffset3D){RCS_RESOLUTION, RCS_RESOLUTION, 1};
         bi.srcSubresource =
             (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 

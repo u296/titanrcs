@@ -9,13 +9,13 @@
 #include "rcs/rcs_renderpass.h"
 #include "rcs/rcs_ubo.h"
 #include "rcs/rcs_mesh.h"
-#include <vulkan/vulkan_core.h>
+#include "res.h"
 
 bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_res, CleanupStack* cs) {
     Error e;
 
     constexpr u32 N_RENDTARGETS = 3;
-    VkExtent2D ext = {256, 256};
+    VkExtent2D ext = {RCS_RESOLUTION, RCS_RESOLUTION};
 
     VkRenderPass renderpass;
     VkDescriptorPool rcs_dpool;
