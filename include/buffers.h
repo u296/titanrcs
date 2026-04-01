@@ -9,7 +9,7 @@ constexpr u32 N_VERT_ATTRIB = 2;
 
 typedef struct Vertex {
     Vec2 pos;
-    Vec3 col;
+    Vec2 uv;
 } Vertex;
 
 constexpr VkVertexInputBindingDescription vertex_binding_desc = {0, sizeof(Vertex),
@@ -17,7 +17,7 @@ constexpr VkVertexInputBindingDescription vertex_binding_desc = {0, sizeof(Verte
 
 constexpr VkVertexInputAttributeDescription vertex_attrib_desc[N_VERT_ATTRIB] = {
     {0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, pos)},
-    {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, col)}};
+    {1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv)}};
 
 bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage, bool mappable,
                  Buffer* buf, CleanupStack* cs);

@@ -8,9 +8,11 @@ layout(set = 0, binding = 1) uniform sampler2D mytex[4];
 
 #define prefft mytex[0]
 
+#define postfft mytex[3]
+
 void main() {
 
-    vec3 mycol = texture(prefft, uv).rgb;
+    vec3 mycol = texture(postfft, uv).rgb;
 
 
     outColor = vec4(mycol, 1.0);

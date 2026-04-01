@@ -236,8 +236,8 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkImageMemoryBarrier fin_img_bars[] = {bar_raw, bar_intens, bar_phase,
                                            bar_fft};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 4,
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 4,
                          fin_img_bars);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
