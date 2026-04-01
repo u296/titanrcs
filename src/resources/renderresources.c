@@ -51,6 +51,8 @@ bool make_uniform_buffers(const u32 n_max_inflight, RenderBackend* rb,
                                                                  return false;
 }
 
+
+
 #define CHECK assert(f == false);
 
 bool make_renderresources(RenderContext* ctx, CleanupStack* cs) {

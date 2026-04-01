@@ -47,9 +47,24 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, Clean
 
     VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &rcs_fftimg->img, &rcs_fftimg->alloc, NULL);
 
+    
+
+    VkImageViewCreateInfo ivci = {};
+    ivci.image = rcs_fftimg->img;
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R32G32_SFLOAT;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.layerCount = 1;
+
+    r = vkCreateImageView(rb->dev, &ivci, NULL, &rcs_fftimg->view);
+
     CLEANUP_START(ImageCleanup)
     {*rcs_fftimg, rb->dev, rb->alloc}
     CLEANUP_END(image)
-
+    
     return false;
 }

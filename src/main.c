@@ -68,18 +68,21 @@ int main() {
                              &e, &cs);
     MAINCHECK
 
-    f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
-    MAINCHECK
-
-    f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev, ctx.resources.dpool,
-                             ctx.resources.ubufs, my_desc_set_layout, &ctx.framegraph.desc_sets, &e,
-                             &cs);
-    MAINCHECK
+    //f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
+    //MAINCHECK
 
     f = make_rcs_setup(&ctx.backend, ctx.resources.cmd_pool, &ctx.rcs_resources, &cs);
     MAINCHECK
 
     render_rcs_imgs(&ctx);
+
+
+    f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev, ctx.resources.dpool,
+                             ctx.resources.ubufs, my_desc_set_layout, &ctx.rcs_resources, &ctx.framegraph.desc_sets, &e,
+                             &cs);
+    MAINCHECK
+
+    
 
     // u64 i_frame = 0;
     constexpr u64 n_frameratecheck = 100;

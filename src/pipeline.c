@@ -72,10 +72,10 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(dev, "shaders/uniforms_vert.spv", &vertexshader);
+    VkResult r = make_shadermodule(dev, "shaders/interface/vert.spv", &vertexshader);
     VERIFY("vert shader", r)
 
-    r = make_shadermodule(dev, "shaders/frag.spv", &fragshader);
+    r = make_shadermodule(dev, "shaders/interface/frag.spv", &fragshader);
     VERIFY("frag shader", r)
 
     VkPipelineShaderStageCreateInfo vsi = {};

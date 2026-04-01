@@ -27,6 +27,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     Buffer rcs_ubo = {};
     Buffer rcs_fftbuf = {};
     Image rcs_fftimg = {};
+    VkSampler rcs_sampler;
     VkDescriptorSet rcs_descset;
     VkFramebuffer rcs_fb;
     void* rcs_ubufmap;
@@ -47,6 +48,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     make_rcs_fftbuf(rb, &rcs_fftbuf, cs);
 
     make_rcs_fftimg(rb, ext, &rcs_fftimg, cs);
+
+    make_sampler(rb, &rcs_sampler, cs);
 
     vmaMapMemory(rb->alloc, rcs_ubo.alloc, &rcs_ubufmap);
     CLEANUP_START_NORES(MappingCleanup){
@@ -77,6 +80,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
                         rcs_ubo,
                         rcs_fftbuf,
                         rcs_fftimg,
+                        rcs_sampler,
                         rcs_ubufmap,
                         rcs_fb,
                         rcs_mesh

@@ -17,4 +17,6 @@ bool make_rcs_depthresources(RenderBackend* rb, VkExtent2D ext, Image* depthimg,
 bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext, const u32 n_targets,
                             Image* rendtargets, CleanupStack* cs);
 
+bool make_sampler(RenderBackend* rb, VkSampler* out_sampler, CleanupStack* cs);
+
 #endif

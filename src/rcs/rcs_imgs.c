@@ -119,3 +119,37 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
 
     return false;
 }
+
+typedef struct SamplerCleanup {
+    VkDevice dev;
+    VkSampler samp;
+} SamplerCleanup;
+
+void destroy_sampler(void* obj) {
+    SamplerCleanup* sc = (SamplerCleanup*)obj;
+    vkDestroySampler(sc->dev, sc->samp, NULL);
+}
+
+bool make_sampler(RenderBackend* rb, VkSampler* out_sampler, CleanupStack* cs) {
+
+    VkSamplerCreateInfo sci = {};
+    sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sci.magFilter = VK_FILTER_NEAREST;
+    sci.minFilter = VK_FILTER_NEAREST;
+    sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sci.anisotropyEnable = VK_FALSE;
+    sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+
+    sci.unnormalizedCoordinates = VK_FALSE;
+    sci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+    VkResult r = vkCreateSampler(rb->dev, &sci, NULL, out_sampler);
+    CLEANUP_START(SamplerCleanup)
+    {rb->dev, *out_sampler}
+    CLEANUP_END(sampler);
+
+
+    return false;
+}

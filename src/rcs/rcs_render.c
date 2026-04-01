@@ -4,6 +4,7 @@
 #include "context.h"
 #include "vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h"
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
+#include "vulkan/vulkan_core.h"
 #include <assert.h>
 
 void render_rcs_imgs(RenderContext* ctx) {
@@ -147,7 +148,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_bufpostfft.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     bar_bufpostfft.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-    VkImageMemoryBarrier bar_imgpostfft = {};
+    /*VkImageMemoryBarrier bar_imgpostfft = {};
     bar_imgpostfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bar_imgpostfft.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     bar_imgpostfft.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -156,7 +157,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_imgpostfft.image =
         ctx->rcs_resources.rendtargets[0].img; // Your offscreen image
     bar_imgpostfft.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};*/
 
     VkImageMemoryBarrier bar_fftimg_postfft = {};
     bar_fftimg_postfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -169,14 +170,14 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_fftimg_postfft.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-    const VkImageMemoryBarrier postfft_imgbars[2] = {bar_imgpostfft, bar_fftimg_postfft};
+    const VkImageMemoryBarrier postfft_imgbars[1] = {
+        bar_fftimg_postfft}; //, bar_fftimg_postfft};
 
     vkCmdPipelineBarrier(
         cmdbuf,
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0, 0, NULL, 1, &bar_bufpostfft, 2, postfft_imgbars
-        );
+        0, 0, NULL, 1, &bar_bufpostfft, 1, postfft_imgbars);
 
     vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.fft_img.img,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &reg);
@@ -184,16 +185,60 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkImageMemoryBarrier bar_imgpostfftcopy = {};
     bar_imgpostfftcopy.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bar_imgpostfftcopy.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    bar_imgpostfftcopy.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    bar_imgpostfftcopy.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     bar_imgpostfftcopy.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_imgpostfftcopy.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    bar_imgpostfftcopy.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     bar_imgpostfftcopy.image = ctx->rcs_resources.fft_img.img;
     bar_imgpostfftcopy.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
+    VkImageMemoryBarrier bar_raw = {}, bar_intens = {}, bar_phase = {},
+                         bar_fft = {};
+    bar_raw.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bar_intens.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bar_phase.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bar_fft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+    bar_raw.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    bar_intens.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    bar_phase.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    bar_fft.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    bar_raw.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    bar_intens.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    bar_phase.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    bar_fft.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    bar_raw.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    bar_intens.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    bar_phase.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    bar_fft.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+    bar_raw.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    bar_intens.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    bar_phase.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    bar_fft.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    bar_raw.image = ctx->rcs_resources.rendtargets[0].img;
+    bar_intens.image = ctx->rcs_resources.rendtargets[1].img;
+    bar_phase.image = ctx->rcs_resources.rendtargets[2].img;
+    bar_fft.image = ctx->rcs_resources.fft_img.img;
+
+    bar_raw.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    bar_intens.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    bar_phase.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    bar_fft.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+
+    VkImageMemoryBarrier fin_img_bars[] = {bar_raw, bar_intens, bar_phase,
+                                           bar_fft};
+
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
-                         &bar_imgpostfftcopy);
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 4,
+                         fin_img_bars);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);

@@ -19,6 +19,7 @@ typedef struct RcsResources {
     Buffer ubo;
     Buffer fft_buf;
     Image fft_img;
+    VkSampler sampler;
     void* ubufmap;
     VkFramebuffer framebuffer;
     Renderable mesh;

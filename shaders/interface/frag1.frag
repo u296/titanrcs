@@ -4,16 +4,14 @@ layout(location = 0) in vec2 uv;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 1) uniform sampler2D prefft;
-layout(binding = 2) uniform sampler2D phase;
-layout(binding = 3) uniform sampler2D intens;
-layout(binding = 4) uniform sampler2D postfft;
+layout(set = 0, binding = 1) uniform sampler2D mytex[4];
 
+#define prefft mytex[0]
 
 void main() {
 
-    vec2 mycol = texture(prefft, uv).rg;
+    vec3 mycol = texture(prefft, uv).rgb;
 
 
-    outColor = vec4(mycol, 0.0, 1.0);
+    outColor = vec4(mycol, 1.0);
 }

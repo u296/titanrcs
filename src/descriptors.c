@@ -1,6 +1,8 @@
 #include "descriptors.h"
+#include "backend/backend.h"
 #include "cleanupstack.h"
 #include "common.h"
+#include "rcs/rcs.h"
 #include "vulkan/vulkan_core.h"
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +17,8 @@ void destroy_descriptor_set_layout(void* obj) {
     vkDestroyDescriptorSetLayout(c->dev, c->desc_layout, NULL);
 }
 
-bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout, CleanupStack* cs) {
+bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout,
+                              CleanupStack* cs) {
     VkDescriptorSetLayoutBinding dslb = {};
     dslb.binding = 0;
     dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -23,13 +26,23 @@ bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout, 
     dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     dslb.pImmutableSamplers = NULL;
 
+    VkDescriptorSetLayoutBinding sampler = {};
+    sampler.binding = 1;
+    sampler.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler.descriptorCount = 4;
+    sampler.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    sampler.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutBinding bindings[] = {dslb, sampler};
+
     VkDescriptorSetLayoutCreateInfo dsli = {};
     dsli.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dsli.bindingCount = 1;
-    dsli.pBindings = &dslb;
+    dsli.bindingCount = 2;
+    dsli.pBindings = bindings;
 
     VkResult r = vkCreateDescriptorSetLayout(dev, &dsli, NULL, desc_layout);
-    CLEANUP_START(DescriptorSetLayoutCleanup){dev, *desc_layout} CLEANUP_END(descriptor_set_layout)
+    CLEANUP_START(DescriptorSetLayoutCleanup){dev, *desc_layout} CLEANUP_END(
+        descriptor_set_layout)
 
         return false;
 }
@@ -44,8 +57,9 @@ void destroy_dpool(void* obj) {
     vkDestroyDescriptorPool(d->dev, d->dpool, NULL);
 }
 
-bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool* dpool,
-                          Error* e_out, CleanupStack* cs) {
+bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev,
+                          VkDescriptorPool* dpool, Error* e_out,
+                          CleanupStack* cs) {
 
     const u32 external_sets = 1;
     const u32 framesets = n_max_inflight;
@@ -56,7 +70,7 @@ bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPo
 
     VkDescriptorPoolSize sampler_ps = {};
     sampler_ps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    sampler_ps.descriptorCount = n_max_inflight;
+    sampler_ps.descriptorCount = n_max_inflight * 4; // just to be safe
 
     VkDescriptorPoolCreateInfo pci = {};
     pci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -72,9 +86,13 @@ bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPo
             return false;
 }
 
-bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool dpool,
-                          Buffer* ubufs, VkDescriptorSetLayout desc_layout,
-                          VkDescriptorSet** desc_sets, Error* e_out, CleanupStack* cs) {
+
+
+bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev,
+                          VkDescriptorPool dpool, Buffer* ubufs,
+                          VkDescriptorSetLayout desc_layout,
+                          RcsResources* rcs_res, VkDescriptorSet** desc_sets,
+                          Error* e_out, CleanupStack* cs) {
 
     *desc_sets = malloc(sizeof(VkDescriptorSet) * n_max_inflight);
 
@@ -84,7 +102,8 @@ bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev, VkDescriptorPo
         VkDescriptorSetLayout* desc_layout_copies =
         malloc(sizeof(VkDescriptorSetLayout) * n_max_inflight);
     for (u32 i = 0; i < n_max_inflight; i++) {
-        memcpy(desc_layout_copies + i, &desc_layout, sizeof(VkDescriptorSetLayout));
+        memcpy(desc_layout_copies + i, &desc_layout,
+               sizeof(VkDescriptorSetLayout));
     }
 
     VkDescriptorSetAllocateInfo dai = {};
@@ -114,7 +133,41 @@ bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev, VkDescriptorPo
         wds.pImageInfo = NULL;
         wds.pTexelBufferView = NULL;
 
-        vkUpdateDescriptorSets(dev, 1, &wds, 0, NULL);
+        // do the sampler here
+
+        VkDescriptorImageInfo prefft = {}, intens = {}, phase = {},
+                              postfft = {};
+        prefft.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        intens = prefft;
+        phase = prefft;
+        postfft = prefft;
+
+        prefft.imageView = rcs_res->rendtargets[0].view;
+        intens.imageView = rcs_res->rendtargets[1].view;
+        phase.imageView = rcs_res->rendtargets[2].view;
+        postfft.imageView = rcs_res->fft_img.view;
+
+        prefft.sampler = rcs_res->sampler;
+        intens.sampler = rcs_res->sampler;
+        phase.sampler = rcs_res->sampler;
+        postfft.sampler = rcs_res->sampler;
+
+        VkDescriptorImageInfo imginfos[] = {prefft, intens, phase, postfft};
+
+        VkWriteDescriptorSet sampwds = {};
+        sampwds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        sampwds.dstSet = (*desc_sets)[i];
+        sampwds.dstBinding = 1;
+        sampwds.dstArrayElement = 0;
+        sampwds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        sampwds.descriptorCount = 4;
+        sampwds.pImageInfo = imginfos;
+
+        VkWriteDescriptorSet writes[2] = {
+            wds, sampwds
+        };
+
+        vkUpdateDescriptorSets(dev, 2, writes, 0, NULL);
     }
 
     free(desc_layout_copies);
