@@ -18,11 +18,13 @@ void write_rcs_ubo(RenderContext* ctx) {
 
     Mat3 ident3 = subm4_m3(ident4);
 
+    const f32 L = 1000.0f;
+
     myubo.model = ident4;
     myubo.view = ident4;
     myubo.proj = ident4;
-    myubo.norm_trans = ident3;
-    myubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, 1.0, 0.0};
+    myubo.norm_trans = ident4;
+    myubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 0.0};
 
     Mat4 scale = ident4;
 
@@ -38,9 +40,33 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&transl, 1, 3) = 0.0f;
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
-    myubo.model = mul_m4(transl, scale);
+    Mat4 rotx = ident4;
+    const f32 ang = 40.0f * (3.141592f / 180.0f);
+    *pindex_m4(&rotx, 1, 1) = cosf(ang);
+    *pindex_m4(&rotx, 1, 2) = -sinf(ang);
+    *pindex_m4(&rotx, 2, 1) = sinf(ang);
+    *pindex_m4(&rotx, 2, 2) = cosf(ang);
 
-    myubo.norm_trans = transpose_m3(invert_m3(subm4_m3(myubo.model)));
+    myubo.model = mul_m4(transl, mul_m4(rotx,scale));
+
+    Mat3 subm = subm4_m3(myubo.model);
+    printf("submatrix: \n");
+    print_m3(subm);
+    
+    Mat3 inv = invert_m3(subm);
+    printf("inverted: \n");
+    print_m3(inv);
+
+    Mat3 transposed = transpose_m3(inv);
+    printf("transposed: \n");
+    print_m3(transposed);
+
+    Mat3 norm = transpose_m3(invert_m3(subm4_m3(myubo.model)));
+
+    Mat4 norm4 = zeroed_from_m3(norm);
+    *pindex_m4(&norm4, 3, 3) = 1.0f; // set corner
+
+    myubo.norm_trans = norm4;
 
     const f32 near = -100.0f, far = 100.0f, left = -10.0f, right = 10.0f,
               top = -10.0f, bot = 10.0f;

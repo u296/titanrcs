@@ -8,7 +8,7 @@ typedef struct RcsUbo {
     Mat4 model;
     Mat4 view;
     Mat4 proj;
-    Mat3 norm_trans;
+    Mat4 norm_trans;
     Vec4 resolution_xy_L_;
 } RcsUbo;
 

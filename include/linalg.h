@@ -38,7 +38,9 @@ f32 len_v3(Vec3 a);
 Mat3 transpose_m3(Mat3 A);
 Mat3 invert_m3(Mat3 A);
 Mat3 subm4_m3(Mat4 A);
+void print_m3(Mat3 A);
 
+Mat4 zeroed_from_m3(Mat3 A);
 Mat4 transpose_m4(Mat4 A);
 f32 index_m4(Mat4 A, u32 row, u32 col);
 f32* pindex_m4(Mat4* A, u32 row, u32 col);

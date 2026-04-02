@@ -90,6 +90,24 @@ Mat3 subm4_m3(Mat4 A) {
     return T;
 }
 
+void print_m3(Mat3 A) {
+    printf("[%2.2f %2.2f %2.2f]\n", index_m3(A, 0, 0), index_m3(A, 0, 1), index_m3(A, 0, 2));
+    printf("[%2.2f %2.2f %2.2f]\n", index_m3(A, 1, 0), index_m3(A, 1, 1), index_m3(A, 1, 2));
+    printf("[%2.2f %2.2f %2.2f]\n", index_m3(A, 2, 0), index_m3(A, 2, 1), index_m3(A, 2, 2));
+}
+
+
+Mat4 zeroed_from_m3(Mat3 A) {
+    Mat4 T = {
+        {
+            A.v[0], A.v[1], A.v[2], 0.0f,
+            A.v[3], A.v[4], A.v[5], 0.0f,
+            A.v[6], A.v[7], A.v[8], 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f
+        }
+    };
+    return T;
+}
 
 Mat4 transpose_m4(Mat4 A) {
     Mat4 T = {

@@ -10,15 +10,19 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
-    mat3 norm_trans;
+    mat4 norm_trans;
     vec4 resolution_xy_L_;
 } ubo;
 
 void main() {
 
-    vec4 proj_pos = ubo.proj * ubo.model * vec4(in_pos, 1.0);
+    vec4 proj_pos = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
 
     gl_Position = proj_pos;
     out_pos = proj_pos.xyz;
-    out_norm = ubo.norm_trans * in_norm;
+    vec3 v1 =  normalize((ubo.model * vec4(in_norm,1.0)).xyz);
+    vec3 v2 = normalize(mat3(ubo.norm_trans) * in_norm);
+
+    out_norm = v1;
+
 }
