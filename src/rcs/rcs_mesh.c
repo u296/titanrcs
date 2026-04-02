@@ -3,6 +3,7 @@
 #include "buffers.h"
 #include "common.h"
 #include "rcs/rcs_pipeline.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <stlfile.h>
 #include <vulkan/vulkan_core.h>
@@ -50,7 +51,9 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
     // VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool, ibuf, cs);
 
     // NEEDS TO BE BINARY STL FILE, CAN'T USE RAW EXPORT FROM OPENVSP
-    FILE* fp = fopen("rcs2mesh.stl", "r");
+    FILE* fp = fopen("rcsmesh3.stl", "r");
+
+    assert(fp != NULL);
 
     char comment[80];
     float* vertdata;

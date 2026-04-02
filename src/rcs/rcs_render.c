@@ -31,7 +31,7 @@ void write_rcs_ubo(RenderContext* ctx) {
 
     Mat4 transl = ident;
 
-    *pindex_m4(&transl, 0, 3) = -7.0f;
+    *pindex_m4(&transl, 0, 3) = -0.0f;
     *pindex_m4(&transl, 1, 3) = 0.0f;
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
