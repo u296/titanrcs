@@ -14,10 +14,31 @@ layout(set = 0, binding = 1) uniform sampler2D mytex[4];
 
 #define postfft mytex[3]
 
+#define pi 3.14159265
+
+vec3 make_color(float phase) {
+    phase = mod(phase, 2.0 * pi);
+
+    return vec3(cos(phase), cos(phase + 2.0*pi/3.0), cos(phase + 4.0*pi/3.0));
+}
+
 void main() {
 
     vec3 mycol = texture(mytex[pc.texture_i], uv).rgb;
 
+    if (pc.texture_i == 3) {
+        // let's do the modulus in case of complex value
+        float phase = atan(mycol.g, mycol.r);
 
-    outColor = vec4(mycol, 1.0);
+        vec3 base_col = vec3(1,1,1);//make_color(phase);
+        vec3 norm_col = base_col / length(base_col);
+
+        float i = length(mycol.rg) / (1024);
+
+        //outColor = vec4(i,i,i,1.0);
+        outColor = vec4(norm_col * i, 1.0);
+    } else {
+        outColor = vec4(mycol, 1.0);
+    }
+    
 }

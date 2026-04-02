@@ -3,10 +3,12 @@
 #include "common.h"
 #include "rcs/rcs_pipeline.h"
 
-#define LEFT -0.5
-#define RIGHT 0.5
-#define TOP 0.5
-#define BOT -0.5
+#define S 0.03125
+
+#define LEFT -S
+#define RIGHT S
+#define TOP S
+#define BOT -S
 
 const RcsVertex rcs_verts[4] = {{{LEFT, TOP, 0.0}, {0.0, 0.0, 1.0}},
                          {{RIGHT, TOP, 0.0}, {0.0, 1.0, 0.0}},

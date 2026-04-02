@@ -99,8 +99,31 @@ void render_rcs_imgs(RenderContext* ctx) {
     // fft
 
     VkBufferImageCopy quads[4] = {{},{},{},{}};
-    quads[0].bufferOffset = ((RCS_RESOLUTION)) * 2 * sizeof(float);
 
+    for (u32 i = 0; i < 4; i++) {
+        quads[i].bufferImageHeight = (RCS_RESOLUTION);
+        quads[i].bufferRowLength = (RCS_RESOLUTION);
+        quads[i].imageExtent = (VkExtent3D){(RCS_RESOLUTION/2),(RCS_RESOLUTION/2),1};
+        quads[i].imageSubresource = (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    }
+    const u32 texelsize = sizeof(float)*2;
+    // 0: top left to bottom right
+    quads[0].imageOffset = (VkOffset3D){0,0,0};
+    quads[0].bufferOffset = ((RCS_RESOLUTION) * (RCS_RESOLUTION/2) + (RCS_RESOLUTION/2)) * texelsize;
+
+    // 1: top right to bottom left
+    quads[1].imageOffset = (VkOffset3D){(RCS_RESOLUTION/2), 0, 0};
+    quads[1].bufferOffset = ((RCS_RESOLUTION) * (RCS_RESOLUTION/2)) * texelsize;
+
+    // 2: bottom left to top right
+    quads[2].imageOffset = (VkOffset3D){0, (RCS_RESOLUTION/2),0};
+    quads[2].bufferOffset = ((RCS_RESOLUTION/2))* texelsize;
+
+    // 3: bottom right to top left
+    quads[3].imageOffset = (VkOffset3D){RCS_RESOLUTION/2,RCS_RESOLUTION/2};
+    quads[3].bufferOffset = 0;
+    
+    /*
     VkBufferImageCopy reg = {};
     reg.bufferOffset = 0;
     reg.bufferRowLength = 0;
@@ -112,11 +135,11 @@ void render_rcs_imgs(RenderContext* ctx) {
     reg.imageSubresource.layerCount = 1;
 
     reg.imageOffset = (VkOffset3D){0, 0, 0};
-    reg.imageExtent = (VkExtent3D){RCS_RESOLUTION, RCS_RESOLUTION, 1};
+    reg.imageExtent = (VkExtent3D){RCS_RESOLUTION, RCS_RESOLUTION, 1};*/
 
     vkCmdCopyImageToBuffer(cmdbuf, ctx->rcs_resources.rendtargets[0].img,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 1,
-                           &reg);
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4,
+                           quads);
 
     VkBufferMemoryBarrier bar_bufpostcp = {};
     bar_bufpostcp.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -181,7 +204,7 @@ void render_rcs_imgs(RenderContext* ctx) {
         0, 0, NULL, 1, &bar_bufpostfft, 1, postfft_imgbars);
 
     vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.fft_img.img,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &reg);
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quads);
 
     VkImageMemoryBarrier bar_imgpostfftcopy = {};
     bar_imgpostfftcopy.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
