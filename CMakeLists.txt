@@ -44,6 +44,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(vkfft)
 
+FetchContent_Declare(
+    libstl
+    GIT_REPOSITORY https://github.com/u296/libstl.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(libstl)
+
 
 if(TARGET SPIRV)
     if(MSVC)
@@ -110,7 +117,7 @@ target_include_directories(volk
 
 
 
-target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator SPIRV glslang VkFFT)
+target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator SPIRV glslang VkFFT stl)
 
 
 if(APPLE)
