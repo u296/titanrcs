@@ -56,6 +56,7 @@ typedef struct Buffer {
 typedef struct Renderable {
     Buffer vertexbuf;
     Buffer indexbuf;
+    u32 n_indices;
 } Renderable;
 
 #endif

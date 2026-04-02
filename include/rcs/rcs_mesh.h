@@ -3,6 +3,6 @@
 
 #include "backend/backend.h"
 
-bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf, Buffer* ibuf, CleanupStack* cs);
+bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf, Buffer* ibuf, u32* n_indices, CleanupStack* cs);
 
 #endif

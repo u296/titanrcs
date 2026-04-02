@@ -13,6 +13,9 @@ layout(binding = 0) uniform UniformBufferObject {
 } ubo;
 
 void main() {
-    gl_Position = vec4(in_pos.xy, 0.5, 1.0);
-    out_pos = in_pos;
+
+    vec4 proj_pos = ubo.proj * ubo.model * vec4(in_pos, 1.0);
+
+    gl_Position = proj_pos;
+    out_pos = proj_pos.xyz;
 }

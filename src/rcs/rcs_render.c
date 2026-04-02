@@ -2,13 +2,60 @@
 
 #include "common.h"
 #include "context.h"
+#include "linalg.h"
+#include "rcs/rcs_ubo.h"
+#include "res.h"
 #include "vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h"
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 #include "vulkan/vulkan_core.h"
 #include <assert.h>
-#include "res.h"
+
+void write_rcs_ubo(RenderContext* ctx) {
+    RcsUbo myubo = {};
+
+    Mat4 ident = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                   0.0, 0.0, 0.0, 1.0}};
+
+    myubo.model = ident;
+    myubo.view = ident;
+    myubo.proj = ident;
+    myubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, 1.0, 0.0};
+
+    Mat4 scale = ident;
+
+    const f32 s = 1.0f;
+
+    *pindex_m4(&scale, 0, 0) = s;
+    *pindex_m4(&scale, 1, 1) = s;
+    *pindex_m4(&scale, 2, 2) = s;
+
+    Mat4 transl = ident;
+
+    *pindex_m4(&transl, 0, 3) = -7.0f;
+    *pindex_m4(&transl, 1, 3) = 0.0f;
+    *pindex_m4(&transl, 2, 3) = 0.0f;
+
+    myubo.model = mul_m4(transl, scale);
+
+    const f32 near = -100.0f, far = 100.0f, left = -10.0f, right = 10.0f,
+              top = -10.0f, bot = 10.0f;
+
+    *pindex_m4(&myubo.proj, 0, 0) = 2.0f / (right - left);
+    *pindex_m4(&myubo.proj, 1, 1) = 2.0f / (bot - top);
+    *pindex_m4(&myubo.proj, 2, 2) = 1.0f / (far - near);
+
+    *pindex_m4(&myubo.proj, 0, 3) = -(right + left) / (right - left);
+    *pindex_m4(&myubo.proj, 1, 3) = -(bot + top) / (bot - top);
+    *pindex_m4(&myubo.proj,2, 3) = -(near) / (far - near);
+
+    void* mapping = ctx->rcs_resources.ubufmap;
+
+    memcpy(mapping, &myubo, sizeof(myubo));
+}
 
 void render_rcs_imgs(RenderContext* ctx) {
+
+    write_rcs_ubo(ctx);
 
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -61,7 +108,7 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     vkCmdBindVertexBuffers(cmdbuf, 0, 1, vbufs, vbuf_offsets);
     vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.indexbuf.buf, 0,
-                         VK_INDEX_TYPE_UINT16);
+                         VK_INDEX_TYPE_UINT32);
     vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             ctx->rcs_resources.pipeline_layout, 0, 1,
                             &ctx->rcs_resources.descset, 0, NULL);
@@ -69,7 +116,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
 
-    vkCmdDrawIndexed(cmdbuf, 6, 1, 0, 0, 0);
+    vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
     // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
     vkCmdEndRenderPass(cmdbuf);
 
@@ -98,31 +145,36 @@ void render_rcs_imgs(RenderContext* ctx) {
     // the buffer copies can be modified to do the layout shifting to center the
     // fft
 
-    VkBufferImageCopy quads[4] = {{},{},{},{}};
+    VkBufferImageCopy quads[4] = {{}, {}, {}, {}};
 
     for (u32 i = 0; i < 4; i++) {
         quads[i].bufferImageHeight = (RCS_RESOLUTION);
         quads[i].bufferRowLength = (RCS_RESOLUTION);
-        quads[i].imageExtent = (VkExtent3D){(RCS_RESOLUTION/2),(RCS_RESOLUTION/2),1};
-        quads[i].imageSubresource = (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        quads[i].imageExtent =
+            (VkExtent3D){(RCS_RESOLUTION / 2), (RCS_RESOLUTION / 2), 1};
+        quads[i].imageSubresource =
+            (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
     }
-    const u32 texelsize = sizeof(float)*2;
+    const u32 texelsize = sizeof(float) * 2;
     // 0: top left to bottom right
-    quads[0].imageOffset = (VkOffset3D){0,0,0};
-    quads[0].bufferOffset = ((RCS_RESOLUTION) * (RCS_RESOLUTION/2) + (RCS_RESOLUTION/2)) * texelsize;
+    quads[0].imageOffset = (VkOffset3D){0, 0, 0};
+    quads[0].bufferOffset =
+        ((RCS_RESOLUTION) * (RCS_RESOLUTION / 2) + (RCS_RESOLUTION / 2)) *
+        texelsize;
 
     // 1: top right to bottom left
-    quads[1].imageOffset = (VkOffset3D){(RCS_RESOLUTION/2), 0, 0};
-    quads[1].bufferOffset = ((RCS_RESOLUTION) * (RCS_RESOLUTION/2)) * texelsize;
+    quads[1].imageOffset = (VkOffset3D){(RCS_RESOLUTION / 2), 0, 0};
+    quads[1].bufferOffset =
+        ((RCS_RESOLUTION) * (RCS_RESOLUTION / 2)) * texelsize;
 
     // 2: bottom left to top right
-    quads[2].imageOffset = (VkOffset3D){0, (RCS_RESOLUTION/2),0};
-    quads[2].bufferOffset = ((RCS_RESOLUTION/2))* texelsize;
+    quads[2].imageOffset = (VkOffset3D){0, (RCS_RESOLUTION / 2), 0};
+    quads[2].bufferOffset = ((RCS_RESOLUTION / 2)) * texelsize;
 
     // 3: bottom right to top left
-    quads[3].imageOffset = (VkOffset3D){RCS_RESOLUTION/2,RCS_RESOLUTION/2};
+    quads[3].imageOffset = (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
     quads[3].bufferOffset = 0;
-    
+
     /*
     VkBufferImageCopy reg = {};
     reg.bufferOffset = 0;
@@ -260,9 +312,11 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkImageMemoryBarrier fin_img_bars[] = {bar_raw, bar_intens, bar_phase,
                                            bar_fft};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 4,
-                         fin_img_bars);
+    vkCmdPipelineBarrier(cmdbuf,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT |
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0,
+                         NULL, 4, fin_img_bars);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);
