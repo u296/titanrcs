@@ -3,6 +3,7 @@
 #include "context.h"
 #include "descriptors.h"
 #include "rcs/rcs.h"
+#include "rcs/rcs_render.h"
 #include "res.h"
 #include <math.h>
 #include <stdio.h>
@@ -309,6 +310,11 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         }
 
         (ctx->metadata.i_current_frame)++;
+
+        if (ctx->metadata.i_current_frame % 2 == 0) {
+            //vkDeviceWaitIdle(ctx->backend.dev);
+            render_rcs_imgs(ctx);
+        }
 
         if (ctx->metadata.i_current_frame %
                 ctx->config.n_frameratecheck_interval ==

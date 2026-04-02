@@ -41,25 +41,16 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
     Mat4 rotx = ident4;
-    const f32 ang = 40.0f * (3.141592f / 180.0f);
+    static  f32 ang = 40.0f * (3.141592f / 180.0f);
+
+    ang += 1.0f * (3.1415 / 180);
+
     *pindex_m4(&rotx, 1, 1) = cosf(ang);
     *pindex_m4(&rotx, 1, 2) = -sinf(ang);
     *pindex_m4(&rotx, 2, 1) = sinf(ang);
     *pindex_m4(&rotx, 2, 2) = cosf(ang);
 
     myubo.model = mul_m4(transl, mul_m4(rotx,scale));
-
-    Mat3 subm = subm4_m3(myubo.model);
-    printf("submatrix: \n");
-    print_m3(subm);
-    
-    Mat3 inv = invert_m3(subm);
-    printf("inverted: \n");
-    print_m3(inv);
-
-    Mat3 transposed = transpose_m3(inv);
-    printf("transposed: \n");
-    print_m3(transposed);
 
     Mat3 norm = transpose_m3(invert_m3(subm4_m3(myubo.model)));
 
@@ -131,7 +122,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkBuffer vbufs[] = {ctx->rcs_resources.mesh.vertexbuf.buf};
     VkDeviceSize vbuf_offsets[] = {0};
 
-    VkCommandBuffer cmdbuf = ctx->resources.cmd_bufs[0]; // should be alright
+    VkCommandBuffer cmdbuf = ctx->resources.cmd_bufs[0]; // should be alright if offline
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 
