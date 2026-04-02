@@ -24,6 +24,7 @@ typedef struct RcsResources {
     VkSampler sampler;
     void* ubufmap;
     VkFramebuffer framebuffer;
+    VkCommandBuffer cmdbuf;
     Renderable mesh;
 } RcsResources;
 

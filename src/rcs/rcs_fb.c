@@ -1,9 +1,11 @@
 #include "rcs/rcs_fb.h"
 #include "backend/backend.h"
 #include "cleanupdb.h"
+#include "cleanupstack.h"
 #include "common.h"
 #include "rcs/rcs_imgs.h"
 #include <stdlib.h>
+#include <vulkan/vulkan_core.h>
 
 
 
@@ -34,6 +36,19 @@ bool make_rcs_fb(RenderBackend* rb, VkExtent2D ext, const u32 n_targets, Image* 
     CLEANUP_START(FramebufferCleanup)
     {rb->dev, *framebuffer}
     CLEANUP_END(framebuffer)
+
+    return false;
+}
+
+bool make_rcs_cmdbuf(RenderBackend* rb, VkCommandPool cpool, VkCommandBuffer* out_cmdbuf, CleanupStack* cs) {
+
+    VkCommandBufferAllocateInfo ai = {};
+    ai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    ai.commandPool = cpool;
+    ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    ai.commandBufferCount = 1;
+
+    vkAllocateCommandBuffers(rb->dev, &ai, out_cmdbuf);
 
     return false;
 }

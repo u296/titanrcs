@@ -6,4 +6,6 @@ bool make_rcs_fb(RenderBackend* rb, VkExtent2D ext, const u32 n_targets, Image* 
                  Image depth, VkRenderPass renderpass, VkFramebuffer* framebuffer,
                  struct Error* e_out, CleanupStack* cs);
 
+bool make_rcs_cmdbuf(RenderBackend* rb, VkCommandPool cpool, VkCommandBuffer* out_cmdbuf, CleanupStack* cs);
+
 #endif

@@ -30,6 +30,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     VkSampler rcs_sampler;
     VkDescriptorSet rcs_descset;
     VkFramebuffer rcs_fb;
+    VkCommandBuffer rcs_cmdbuf;
     void* rcs_ubufmap;
     Renderable rcs_mesh;
 
@@ -66,6 +67,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, rcs_depthimg, renderpass, &rcs_fb, &e,
                 cs);
 
+    make_rcs_cmdbuf(rb, cpool, &rcs_cmdbuf, cs);
+
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf, &rcs_mesh.n_indices, cs);
 
     RcsResources res = {ext,
@@ -83,6 +86,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
                         rcs_sampler,
                         rcs_ubufmap,
                         rcs_fb,
+                        rcs_cmdbuf,
                         rcs_mesh
                     };
 

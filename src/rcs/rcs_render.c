@@ -122,7 +122,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkBuffer vbufs[] = {ctx->rcs_resources.mesh.vertexbuf.buf};
     VkDeviceSize vbuf_offsets[] = {0};
 
-    VkCommandBuffer cmdbuf = ctx->resources.cmd_bufs[0]; // should be alright if offline
+    VkCommandBuffer cmdbuf = ctx->rcs_resources.cmdbuf;
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 

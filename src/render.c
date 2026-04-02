@@ -311,7 +311,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
         (ctx->metadata.i_current_frame)++;
 
-        if (ctx->metadata.i_current_frame % 2 == 0) {
+        if (ctx->metadata.i_current_frame % 1 == 0) {
             //vkDeviceWaitIdle(ctx->backend.dev);
             render_rcs_imgs(ctx);
         }
