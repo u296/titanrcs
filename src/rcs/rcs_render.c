@@ -13,15 +13,18 @@
 void write_rcs_ubo(RenderContext* ctx) {
     RcsUbo myubo = {};
 
-    Mat4 ident = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+    Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                    0.0, 0.0, 0.0, 1.0}};
 
-    myubo.model = ident;
-    myubo.view = ident;
-    myubo.proj = ident;
+    Mat3 ident3 = subm4_m3(ident4);
+
+    myubo.model = ident4;
+    myubo.view = ident4;
+    myubo.proj = ident4;
+    myubo.norm_trans = ident3;
     myubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, 1.0, 0.0};
 
-    Mat4 scale = ident;
+    Mat4 scale = ident4;
 
     const f32 s = 1.0f;
 
@@ -29,13 +32,15 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&scale, 1, 1) = s;
     *pindex_m4(&scale, 2, 2) = s;
 
-    Mat4 transl = ident;
+    Mat4 transl = ident4;
 
     *pindex_m4(&transl, 0, 3) = -0.0f;
     *pindex_m4(&transl, 1, 3) = 0.0f;
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
     myubo.model = mul_m4(transl, scale);
+
+    myubo.norm_trans = transpose_m3(invert_m3(subm4_m3(myubo.model)));
 
     const f32 near = -100.0f, far = 100.0f, left = -10.0f, right = 10.0f,
               top = -10.0f, bot = 10.0f;
@@ -47,6 +52,8 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&myubo.proj, 0, 3) = -(right + left) / (right - left);
     *pindex_m4(&myubo.proj, 1, 3) = -(bot + top) / (bot - top);
     *pindex_m4(&myubo.proj,2, 3) = -(near) / (far - near);
+
+
 
     void* mapping = ctx->rcs_resources.ubufmap;
 

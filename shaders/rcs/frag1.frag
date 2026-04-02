@@ -1,7 +1,7 @@
 #version 450
 
 layout(location = 0) in vec3 pos;
-//layout(location = 1) in ve
+layout(location = 1) in vec3 norm;
 
 layout(location = 0) out vec2 out_prefouriertransform;
 layout(location = 1) out vec4 out_phasecolor;
@@ -52,7 +52,11 @@ void main() {
 
     out_prefouriertransform = mul(reflfield, phasefactor);
     out_phasecolor = make_color(modphase);
-    out_intenscolor = vec4(0.5,0.5,0.5,1.0);// vec4(length(reflfield), 0.0, 0.0, 1.0);
+
+
+    
+
+    out_intenscolor = vec4(0.5*normalize(norm) + vec3(0.5,0.5,0.5),1.0);// vec4(length(reflfield), 0.0, 0.0, 1.0);
 
     out_prefouriertransform = vec2(1.0,0.0);
     out_phasecolor = vec4(1.0,1.0,1.0,1.0); // OUTPUTS INTO ATTACHMENT 1, not 0

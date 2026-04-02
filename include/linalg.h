@@ -7,7 +7,7 @@ typedef struct Vec2 {
     float y;
 } Vec2;
 
-typedef struct Vec3 {
+typedef struct __attribute__((packed)) Vec3 {
     float x;
     float y;
     float z;
@@ -20,10 +20,24 @@ typedef struct Vec4 {
     float w;
 } Vec4;
 
+typedef struct Mat3 {
+    f32 v[3*3];
+} Mat3;
+
 // column major
 typedef struct Mat4 {
     f32 v[4 * 4];
 } Mat4;
+
+Vec3 sub_v3(Vec3 a, Vec3 b);
+Vec3 add_v3(Vec3 a, Vec3 b);
+Vec3 cross_v3(Vec3 a, Vec3 b);
+Vec3 muls_v3(f32 a, Vec3 b);
+f32 len_v3(Vec3 a);
+
+Mat3 transpose_m3(Mat3 A);
+Mat3 invert_m3(Mat3 A);
+Mat3 subm4_m3(Mat4 A);
 
 Mat4 transpose_m4(Mat4 A);
 f32 index_m4(Mat4 A, u32 row, u32 col);
