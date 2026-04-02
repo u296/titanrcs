@@ -1,6 +1,7 @@
 #include "backend/instance.h"
 #include "cleanupstack.h"
 #include "common.h"
+#include "res.h"
 #include "vulkan/vulkan_core.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,12 +104,14 @@ bool make_instance(VkInstance* instance, struct Error* e_out, CleanupStack* cs) 
 
     const char* desired_layers[1] = {"VK_LAYER_KHRONOS_validation"};
 
+    if (WANT_VALIDATION) {
     for (u32 i = 0; i < n_layer; i++) {
         if (strcmp(desired_layers[0], layer_prop[i].layerName) == 0) {
             ici.ppEnabledLayerNames = desired_layers;
             ici.enabledLayerCount = 1;
             printf("requesting validation layer\n");
         }
+    }
     }
 
     VkResult r = vkCreateInstance(&ici, NULL, instance);
