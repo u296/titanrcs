@@ -8,6 +8,7 @@
 #include "resources/renderresources.h"
 #include "resources/sync.h"
 #include <assert.h>
+#include "res.h"
 
 #include "buffers.h"
 #include <stdlib.h>
@@ -59,20 +60,20 @@ bool make_renderresources(RenderContext* ctx, CleanupStack* cs) {
     bool f;
     Error e;
 
-    constexpr u32 n_max_inflight = 2;
-    ctx->resources.n_inflight_frames = n_max_inflight;
+    
+    ctx->resources.n_inflight_frames = N_MAX_INFLIGHT;
 
     f = make_commandpool(ctx->backend.dev, ctx->backend.queues, &ctx->resources.cmd_pool, &e, cs);
     CHECK
 
-    f = make_uniform_buffers(n_max_inflight, &ctx->backend, &ctx->resources.ubufs, &ctx->resources.ubuf_mappings, cs);
+    f = make_uniform_buffers(N_MAX_INFLIGHT, &ctx->backend, &ctx->resources.ubufs, &ctx->resources.ubuf_mappings, cs);
     CHECK
 
-    f = make_commandbuffers(ctx->backend.dev, ctx->resources.cmd_pool, n_max_inflight,
+    f = make_commandbuffers(ctx->backend.dev, ctx->resources.cmd_pool, N_MAX_INFLIGHT,
                             &ctx->resources.cmd_bufs, &e, cs);
     CHECK
 
-    f = make_sync_objects(ctx->backend.dev, n_max_inflight, ctx->swapchain.n_swpch_img, &ctx->resources.img_ready_sems,
+    f = make_sync_objects(ctx->backend.dev, N_MAX_INFLIGHT, ctx->swapchain.n_swpch_img, &ctx->resources.img_ready_sems,
                           &ctx->resources.render_finished_sems, &ctx->resources.inflight_fncs, &e,
                           cs);
     CHECK
