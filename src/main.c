@@ -93,7 +93,8 @@ int main() {
     // u64 i_frame = 0;
     constexpr u64 n_frameratecheck = 100;
 
-    clock_t last_time = clock();
+    struct timespec startprogtime = {};
+    timespec_get(&startprogtime, TIME_UTC);
 
     bool firstiter = true;
 
@@ -135,7 +136,7 @@ int main() {
             };*/
 
     ctx.metadata.i_current_frame = 0;
-    ctx.metadata.last_frame_time = last_time;
+    ctx.metadata.last_frame_time = startprogtime;
     // ctx.config.max_inflight_frames = n_max_inflight;
     ctx.config.n_frameratecheck_interval = n_frameratecheck;
 

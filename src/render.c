@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <vulkan/vulkan_core.h>
 
@@ -262,20 +263,20 @@ LoopStatus do_renderloop(RenderContext* ctx) {
     while (!glfwWindowShouldClose(ctx->backend.wnd)) {
         glfwPollEvents();
 
-        //vkDeviceWaitIdle(ctx->backend.dev);
-        //usleep(1000*300);
+        // vkDeviceWaitIdle(ctx->backend.dev);
+        // usleep(1000*300);
 
-        const u64 i_frame_modn =
+        const u64 i_inflight =
             ctx->metadata.i_current_frame % ctx->resources.n_inflight_frames;
 
         f = vkWaitForFences(ctx->backend.dev, 1,
-                            &ctx->resources.inflight_fncs[i_frame_modn],
-                            VK_TRUE, UINT32_MAX);
+                            &ctx->resources.inflight_fncs[i_inflight], VK_TRUE,
+                            UINT32_MAX);
 
         u32 i_image = UINT32_MAX;
         VkResult img_ac_res = vkAcquireNextImageKHR(
             ctx->backend.dev, ctx->swapchain.swpch, UINT64_MAX,
-            ctx->resources.img_ready_sems[i_frame_modn], VK_NULL_HANDLE,
+            ctx->resources.img_ready_sems[i_inflight], VK_NULL_HANDLE,
             &i_image);
 
         switch (img_ac_res) {
@@ -291,30 +292,29 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         }
 
         f = vkResetFences(ctx->backend.dev, 1,
-                          &ctx->resources.inflight_fncs[i_frame_modn]);
-        f = vkResetCommandBuffer(ctx->resources.cmd_bufs[i_frame_modn], 0);
+                          &ctx->resources.inflight_fncs[i_inflight]);
+        f = vkResetCommandBuffer(ctx->resources.cmd_bufs[i_inflight], 0);
 
         update_uniformbuffer(ctx->metadata.i_current_frame,
                              ctx->swapchain.swpch_ext,
-                             ctx->resources.ubuf_mappings[i_frame_modn]);
+                             ctx->resources.ubuf_mappings[i_inflight]);
 
-        write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_frame_modn].ubufmap);
+        write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_inflight].ubufmap);
 
         f = recordcommandbuffer(ctx->swapchain.swpch_ext,
 
-                                ctx->resources.cmd_bufs[i_frame_modn],
+                                ctx->resources.cmd_bufs[i_inflight],
 
                                 ctx->framegraph.pipeline_layout,
                                 ctx->framegraph.pipeline,
-                                ctx->framegraph.desc_sets[i_frame_modn],
+                                ctx->framegraph.desc_sets[i_inflight],
                                 ctx->framegraph.the_object, &e, ctx, i_image);
 
         VkCommandBuffer cmdbufs[2] = {
-            ctx->rcs_resources.sets[i_frame_modn].cmdbuf,
-            ctx->resources.cmd_bufs[i_frame_modn]
-        };
+            ctx->rcs_resources.sets[i_inflight].cmdbuf,
+            ctx->resources.cmd_bufs[i_inflight]};
 
-        VkSemaphore waitsems[1] = {ctx->resources.img_ready_sems[i_frame_modn]};
+        VkSemaphore waitsems[1] = {ctx->resources.img_ready_sems[i_inflight]};
         VkSemaphore render_signal_sems[1] = {
             ctx->resources.render_finished_sems[i_image]};
         VkPipelineStageFlags waitstages[1] = {
@@ -330,7 +330,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         si.pSignalSemaphores = render_signal_sems;
 
         vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si,
-                      ctx->resources.inflight_fncs[i_frame_modn]);
+                      ctx->resources.inflight_fncs[i_inflight]);
 
         VkPresentInfoKHR pi = {};
         pi.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -344,7 +344,24 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         VkResult pres_res =
             vkQueuePresentKHR(ctx->backend.queues.present_queue, &pi);
 
-        
+        (ctx->metadata.i_current_frame)++;
+
+        if (ctx->metadata.i_current_frame %
+                ctx->config.n_frameratecheck_interval ==
+            (ctx->config.n_frameratecheck_interval - 1)) {
+            struct timespec now = {};
+            timespec_get(&now, TIME_UTC);
+            struct timespec then = ctx->metadata.last_frame_time;
+
+            f32 elapsed_time = (f32)(now.tv_sec - then.tv_sec) + (f32)(now.tv_nsec - then.tv_nsec) / 1000000000.0f;
+
+
+            const float fps = (float)ctx->config.n_frameratecheck_interval / elapsed_time;
+
+            ctx->metadata.last_frame_time = now;
+
+            printf("FPS: %.1f\n", fps);
+        }
 
         switch (pres_res) {
         case VK_SUCCESS:
@@ -362,22 +379,6 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         if (ctx->backend.fb_resized) {
             ctx->backend.fb_resized = false;
             return REMAKE_SWAPCHAIN;
-        }
-
-        (ctx->metadata.i_current_frame)++;
-
-        if (ctx->metadata.i_current_frame %
-                ctx->config.n_frameratecheck_interval ==
-            ctx->config.n_frameratecheck_interval - 1) {
-            const clock_t time_now = clock();
-
-            const float fps = (float)ctx->config.n_frameratecheck_interval *
-                              (float)CLOCKS_PER_SEC /
-                              (float)(time_now - ctx->metadata.last_frame_time);
-
-            ctx->metadata.last_frame_time = time_now;
-
-            printf("FPS: %.0f\n", fps);
         }
     }
 fail:

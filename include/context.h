@@ -16,7 +16,7 @@ typedef struct FrameGraph {
 typedef struct RenderContext {
     struct {
         u32 i_current_frame;
-        clock_t last_frame_time;
+        struct timespec last_frame_time;
     } metadata;
     struct {
         u32 n_frameratecheck_interval;
