@@ -21,16 +21,9 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
     VkPipeline rcs_pipeline;
-    Image rcs_depthimg = {};
-    Image rendtargets[N_RENDTARGETS] = {};
-    Buffer rcs_ubo = {};
-    Buffer rcs_fftbuf = {};
-    Image rcs_fftimg = {};
     VkSampler rcs_sampler;
-    VkDescriptorSet rcs_descset;
-    VkCommandBuffer rcs_cmdbuf;
-    void* rcs_ubufmap;
     Renderable rcs_mesh;
+    RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
 
     VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT,
                                VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -38,35 +31,38 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 
     VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
-    make_rcs_depthresources(rb, ext, &rcs_depthimg, cs);
-
-    make_rcs_rendertargets(rb, ext, N_RENDTARGETS, rendtargets, cs);
-
     make_rcs_dpool(rb->dev, &rcs_dpool, cs);
 
     make_rcs_descset_layout(rb->dev, &rcs_descset_layout, cs);
 
-    make_rcs_ubo(rb, &rcs_ubo, cs);
+    for (u32 i = 0; i < N_MAX_INFLIGHT; i++) {
+        rcs_inflights[i] = (RcsPerInflight){};
 
-    make_rcs_fftbuf(rb, &rcs_fftbuf, cs);
+        make_rcs_depthresources(rb, ext, &rcs_inflights[i].depthimg, cs);
+        make_rcs_rendertargets(rb, ext, N_RENDTARGETS,
+                               rcs_inflights[i].rendtargets, cs);
+        make_rcs_ubo(rb, &rcs_inflights[i].ubo, cs);
+        vmaMapMemory(rb->alloc, rcs_inflights[i].ubo.alloc,
+                     &rcs_inflights[i].ubufmap);
+        CLEANUP_START_NORES(MappingCleanup){
+            .allocctx = rb->alloc,
+            .alloc = rcs_inflights[i].ubo.alloc,
+        } CLEANUP_END(mapping);
 
-    make_rcs_fftimg(rb, ext, &rcs_fftimg, cs);
+        make_rcs_fftbuf(rb, &rcs_inflights[i].fft_buf, cs);
+
+        make_rcs_fftimg(rb, ext, &rcs_inflights[i].fft_img, cs);
+
+        make_rcs_descset(rb, rcs_dpool, rcs_descset_layout,
+                         rcs_inflights[i].ubo, &rcs_inflights[i].descset);
+
+        make_rcs_cmdbuf(rb, cpool, &rcs_inflights[i].cmdbuf, cs);
+    }
 
     make_sampler(rb, &rcs_sampler, cs);
 
-    vmaMapMemory(rb->alloc, rcs_ubo.alloc, &rcs_ubufmap);
-    CLEANUP_START_NORES(MappingCleanup){
-        .allocctx = rb->alloc,
-        .alloc = rcs_ubo.alloc,
-    } CLEANUP_END(mapping)
-
-        make_rcs_descset(rb, rcs_dpool, rcs_descset_layout, rcs_ubo,
-                         &rcs_descset);
-
     make_rcs_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,
                       &rcs_pipeline_layout, &rcs_pipeline, &e, cs);
-
-    make_rcs_cmdbuf(rb, cpool, &rcs_cmdbuf, cs);
 
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
                   &rcs_mesh.n_indices, cs);
@@ -74,18 +70,11 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     RcsResources res = {ext,
                         rcs_dpool,
                         rcs_descset_layout,
-                        rcs_descset,
                         rcs_pipeline_layout,
                         rcs_pipeline,
-                        rcs_depthimg,
-                        {rendtargets[0], rendtargets[1], rendtargets[2]},
-                        rcs_ubo,
-                        rcs_fftbuf,
-                        rcs_fftimg,
                         rcs_sampler,
-                        rcs_ubufmap,
-                        rcs_cmdbuf,
-                        rcs_mesh};
+                        rcs_mesh,
+                        {rcs_inflights[0], rcs_inflights[1]}};
 
     *out_res = res;
     return false;

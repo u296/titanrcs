@@ -10,7 +10,7 @@
 #include "vulkan/vulkan_core.h"
 #include <assert.h>
 
-void write_rcs_ubo(RenderContext* ctx) {
+void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     RcsUbo myubo = {};
 
     Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
@@ -68,14 +68,13 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&myubo.proj, 1, 3) = -(bot + top) / (bot - top);
     *pindex_m4(&myubo.proj, 2, 3) = -(near) / (far - near);
 
-    void* mapping = ctx->rcs_resources.ubufmap;
-
     memcpy(mapping, &myubo, sizeof(myubo));
 }
 
-void render_rcs_imgs(RenderContext* ctx) {
+// f is the inflight index
+void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
-    write_rcs_ubo(ctx);
+    write_rcs_ubo(ctx, ctx->rcs_resources.sets[f].ubufmap);
 
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -98,7 +97,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     d.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     d.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     d.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    d.imageView = ctx->rcs_resources.depthimg.view;
+    d.imageView = ctx->rcs_resources.sets[f].depthimg.view;
 
     VkRenderingAttachmentInfo c[3] = {{}, {}, {}};
 
@@ -108,7 +107,7 @@ void render_rcs_imgs(RenderContext* ctx) {
         c[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         c[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         c[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        c[i].imageView = ctx->rcs_resources.rendtargets[i].view;
+        c[i].imageView = ctx->rcs_resources.sets[f].rendtargets[i].view;
     }
 
     VkRenderingInfo ri = {};
@@ -134,7 +133,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     VkBuffer vbufs[] = {ctx->rcs_resources.mesh.vertexbuf.buf};
     VkDeviceSize vbuf_offsets[] = {0};
 
-    VkCommandBuffer cmdbuf = ctx->rcs_resources.cmdbuf;
+    VkCommandBuffer cmdbuf = ctx->rcs_resources.sets[f].cmdbuf;
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 
@@ -153,22 +152,22 @@ void render_rcs_imgs(RenderContext* ctx) {
         rsb[i].srcAccessMask = VK_ACCESS_NONE;
     }
     rsb[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    rsb[0].image = ctx->rcs_resources.rendtargets[0].img;
+    rsb[0].image = ctx->rcs_resources.sets[f].rendtargets[0].img;
     rsb[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     rsb[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     rsb[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    rsb[1].image = ctx->rcs_resources.rendtargets[1].img;
+    rsb[1].image = ctx->rcs_resources.sets[f].rendtargets[1].img;
     rsb[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     rsb[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     rsb[2].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    rsb[2].image = ctx->rcs_resources.rendtargets[2].img;
+    rsb[2].image = ctx->rcs_resources.sets[f].rendtargets[2].img;
     rsb[2].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     rsb[2].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     rsb[3].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    rsb[3].image = ctx->rcs_resources.depthimg.img;
+    rsb[3].image = ctx->rcs_resources.sets[f].depthimg.img;
     rsb[3].newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     rsb[3].subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
@@ -187,7 +186,7 @@ void render_rcs_imgs(RenderContext* ctx) {
                          VK_INDEX_TYPE_UINT32);
     vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             ctx->rcs_resources.pipeline_layout, 0, 1,
-                            &ctx->rcs_resources.descset, 0, NULL);
+                            &ctx->rcs_resources.sets[f].descset, 0, NULL);
 
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
@@ -204,7 +203,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     renderBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     renderBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     renderBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    renderBarrier.image = ctx->rcs_resources.rendtargets[0].img;
+    renderBarrier.image = ctx->rcs_resources.sets[f].rendtargets[0].img;
     renderBarrier.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -212,7 +211,7 @@ void render_rcs_imgs(RenderContext* ctx) {
                          VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
                          &renderBarrier);
 
-    VkBuffer fft_buf = ctx->rcs_resources.fft_buf.buf;
+    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf.buf;
 
     // the buffer copies can be configured to do the layout shifting to center
     // the fft
@@ -248,7 +247,7 @@ void render_rcs_imgs(RenderContext* ctx) {
         (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
     quadrants[3].bufferOffset = 0;
 
-    vkCmdCopyImageToBuffer(cmdbuf, ctx->rcs_resources.rendtargets[0].img,
+    vkCmdCopyImageToBuffer(cmdbuf, ctx->rcs_resources.sets[f].rendtargets[0].img,
                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4,
                            quadrants);
 
@@ -289,7 +288,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_fftimg_postfft.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     bar_fftimg_postfft.srcAccessMask = VK_ACCESS_NONE;
     bar_fftimg_postfft.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_fftimg_postfft.image = ctx->rcs_resources.fft_img.img;
+    bar_fftimg_postfft.image = ctx->rcs_resources.sets[f].fft_img.img;
     bar_fftimg_postfft.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -302,7 +301,7 @@ void render_rcs_imgs(RenderContext* ctx) {
         VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         0, 0, NULL, 1, &bar_bufpostfft, 1, postfft_imgbars);
 
-    vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.fft_img.img,
+    vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.sets[f].fft_img.img,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quadrants);
 
     VkImageMemoryBarrier bar_raw = {}, bar_intens = {}, bar_phase = {},
@@ -332,10 +331,10 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_phase.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     bar_fft.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    bar_raw.image = ctx->rcs_resources.rendtargets[0].img;
-    bar_intens.image = ctx->rcs_resources.rendtargets[1].img;
-    bar_phase.image = ctx->rcs_resources.rendtargets[2].img;
-    bar_fft.image = ctx->rcs_resources.fft_img.img;
+    bar_raw.image = ctx->rcs_resources.sets[f].rendtargets[0].img;
+    bar_intens.image = ctx->rcs_resources.sets[f].rendtargets[1].img;
+    bar_phase.image = ctx->rcs_resources.sets[f].rendtargets[2].img;
+    bar_fft.image = ctx->rcs_resources.sets[f].fft_img.img;
 
     bar_raw.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
@@ -357,17 +356,19 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);
+}
+
+void render_rcs_imgs(RenderContext *ctx, u32 f) {
+    record_rcs_cmdbuf(ctx, f);
 
     VkSubmitInfo si = {};
     si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     si.waitSemaphoreCount = 0;
     si.commandBufferCount = 1;
-    si.pCommandBuffers = &cmdbuf;
+    si.pCommandBuffers = &ctx->rcs_resources.sets[f].cmdbuf;
     si.signalSemaphoreCount = 0;
 
-    r = vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si,
+    VkResult r = vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si,
                       VK_NULL_HANDLE);
     assert(r == VK_SUCCESS);
-
-    // vkQueueWaitIdle(ctx->backend.queues.graphics_queue);
 }

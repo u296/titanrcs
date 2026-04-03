@@ -142,10 +142,10 @@ bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev,
         phase = prefft;
         postfft = prefft;
 
-        prefft.imageView = rcs_res->rendtargets[0].view;
-        intens.imageView = rcs_res->rendtargets[1].view;
-        phase.imageView = rcs_res->rendtargets[2].view;
-        postfft.imageView = rcs_res->fft_img.view;
+        prefft.imageView = rcs_res->sets[i].rendtargets[0].view;
+        intens.imageView = rcs_res->sets[i].rendtargets[1].view;
+        phase.imageView = rcs_res->sets[i].rendtargets[2].view;
+        postfft.imageView = rcs_res->sets[i].fft_img.view;
 
         prefft.sampler = rcs_res->sampler;
         intens.sampler = rcs_res->sampler;

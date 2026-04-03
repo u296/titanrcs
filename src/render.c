@@ -221,7 +221,7 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
         bi.dstSubresource =
             (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 
-        vkCmdBlitImage(cmdbuf, ctx->rcs_resources.fft_img.img,
+        vkCmdBlitImage(cmdbuf, ctx->rcs_resources.sets[0].fft_img.img,
                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                        ctx->swapchain.swpch_imgs[swpch_img_i],
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bi,
@@ -294,6 +294,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
                              ctx->swapchain.swpch_ext,
                              ctx->resources.ubuf_mappings[i_frame_modn]);
 
+        write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_frame_modn].ubufmap);
+
         f = recordcommandbuffer(ctx->swapchain.swpch_ext,
 
                                 ctx->resources.cmd_bufs[i_frame_modn],
@@ -302,6 +304,11 @@ LoopStatus do_renderloop(RenderContext* ctx) {
                                 ctx->framegraph.pipeline,
                                 ctx->framegraph.desc_sets[i_frame_modn],
                                 ctx->framegraph.the_object, &e, ctx, i_image);
+
+        VkCommandBuffer cmdbufs[2] = {
+            ctx->rcs_resources.sets[i_frame_modn].cmdbuf,
+            ctx->resources.cmd_bufs[i_frame_modn]
+        };
 
         VkSemaphore waitsems[1] = {ctx->resources.img_ready_sems[i_frame_modn]};
         VkSemaphore render_signal_sems[1] = {
@@ -313,8 +320,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         si.waitSemaphoreCount = 1;
         si.pWaitSemaphores = waitsems;
         si.pWaitDstStageMask = waitstages;
-        si.commandBufferCount = 1;
-        si.pCommandBuffers = &ctx->resources.cmd_bufs[i_frame_modn];
+        si.commandBufferCount = 2;
+        si.pCommandBuffers = cmdbufs;
         si.signalSemaphoreCount = 1;
         si.pSignalSemaphores = render_signal_sems;
 
@@ -353,9 +360,9 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
         (ctx->metadata.i_current_frame)++;
 
-        if (ctx->metadata.i_current_frame % 1 == 0) {
+        if (ctx->metadata.i_current_frame % 999999 == 0) {
             // vkDeviceWaitIdle(ctx->backend.dev);
-            render_rcs_imgs(ctx);
+            render_rcs_imgs(ctx, 0);
         }
 
         if (ctx->metadata.i_current_frame %

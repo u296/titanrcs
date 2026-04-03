@@ -14,6 +14,7 @@
 #include "rcs/rcs.h"
 #include "rcs/rcs_render.h"
 #include "render.h"
+#include "res.h"
 #include "resources/renderresources.h"
 
 #include "vulkan/vulkan_core.h" // having this here doesn't hurt and  prevents intellisense from adding it at the top which would break compilation
@@ -78,7 +79,10 @@ int main() {
                        &cs);
     MAINCHECK
 
-    render_rcs_imgs(&ctx);
+    for (u32 i = 0; i < N_MAX_INFLIGHT; i++) {
+        record_rcs_cmdbuf(&ctx, i);
+    }
+    //vkQueueWaitIdle(ctx.backend.queues.graphics_queue); // 
 
     f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev,
                              ctx.resources.dpool, ctx.resources.ubufs,

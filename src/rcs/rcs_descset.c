@@ -4,17 +4,18 @@
 #include "cleanupdb.h"
 #include "context.h"
 #include "rcs/rcs_ubo.h"
+#include "res.h"
 #include <assert.h>
 
 bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
 
     VkDescriptorPoolSize ubo_ps = {};
     ubo_ps.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ubo_ps.descriptorCount = 1;
+    ubo_ps.descriptorCount = N_MAX_INFLIGHT;
 
     VkDescriptorPoolSize sampler_ps = {};
     sampler_ps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    sampler_ps.descriptorCount = 1;
+    sampler_ps.descriptorCount = N_MAX_INFLIGHT;
 
     VkDescriptorPoolSize pool_sizes[] = {ubo_ps, sampler_ps};
 
@@ -22,7 +23,7 @@ bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
     dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     dpci.poolSizeCount = 2;
     dpci.pPoolSizes = pool_sizes;
-    dpci.maxSets = 1;
+    dpci.maxSets = N_MAX_INFLIGHT;
 
     VkResult r = vkCreateDescriptorPool(dev, &dpci, NULL, dpool);
     CLEANUP_START(DescriptorPoolCleanup){dev, *dpool} CLEANUP_END(dpool)
