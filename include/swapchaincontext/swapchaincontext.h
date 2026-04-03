@@ -11,8 +11,6 @@ typedef struct SwapchainContext {
     VkFormat format;
     VkImage* swpch_imgs;
     VkImageView* swpch_imgvs;
-    VkRenderPass renderpass;
-    VkFramebuffer* fbufs;
 } SwapchainContext;
 
 // Abstracts creation of swapchain and related items into a single function

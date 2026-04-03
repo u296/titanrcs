@@ -17,22 +17,6 @@ typedef struct PipelineCleanup {
 
 void destroy_pipeline(void* obj);
 
-typedef struct FramebuffersCleanup {
-    VkDevice dev;
-    VkFramebuffer* framebuffers;
-    u32 n_framebuffers;
-} FramebuffersCleanup;
-
-void destroy_framebuffers(void* obj);
-
-typedef struct FramebufferCleanup {
-    VkDevice dev;
-    VkFramebuffer framebuffers;
-} FramebufferCleanup;
-
-void destroy_framebuffer(void* obj);
-
-
 typedef struct DescriptorSetLayoutCleanup {
     VkDevice dev;
     VkDescriptorSetLayout desc_layout;
@@ -53,7 +37,6 @@ typedef struct MappingCleanup {
 } MappingCleanup;
 
 void destroy_mapping(void* obj);
-
 
 typedef struct ImageCleanup {
     Image img;

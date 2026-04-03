@@ -67,13 +67,17 @@ void destroy_pipeline(void* obj) {
     vkDestroyPipeline(p->dev, p->pipeline, NULL);
 }
 
-bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPass renderpass,
-                           VkDescriptorSetLayout desc_set_layout, VkPipelineLayout* pipeline_layout,
-                           VkPipeline* pipeline, struct Error* e_out, CleanupStack* cs) {
+bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent,
+                           VkDescriptorSetLayout desc_set_layout,
+                           VkFormat swp_format,
+                           VkPipelineLayout* pipeline_layout,
+                           VkPipeline* pipeline, struct Error* e_out,
+                           CleanupStack* cs) {
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(dev, "shaders/interface/vert.spv", &vertexshader);
+    VkResult r =
+        make_shadermodule(dev, "shaders/interface/vert.spv", &vertexshader);
     VERIFY("vert shader", r)
 
     r = make_shadermodule(dev, "shaders/interface/frag.spv", &fragshader);
@@ -158,7 +162,8 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     bci.attachmentCount = 1;
     bci.pAttachments = &bas;
 
-    VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+    VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT,
+                                  VK_DYNAMIC_STATE_SCISSOR};
 
     VkPipelineDynamicStateCreateInfo dsci = {};
     dsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -179,9 +184,15 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
 
     r = vkCreatePipelineLayout(dev, &plci, NULL, pipeline_layout);
 
-    CLEANUP_START(PipelineLayoutCleanup){dev, *pipeline_layout} CLEANUP_END(pipelinelayout)
+    CLEANUP_START(PipelineLayoutCleanup){dev, *pipeline_layout} CLEANUP_END(
+        pipelinelayout)
 
         VERIFY("pipeline layout", r);
+
+    VkPipelineRenderingCreateInfo prci = {};
+    prci.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    prci.colorAttachmentCount = 1;
+    prci.pColorAttachmentFormats = &swp_format;
 
     VkGraphicsPipelineCreateInfo gpci = {};
     gpci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -196,12 +207,14 @@ bool make_graphicspipeline(VkDevice dev, VkExtent2D swapchainextent, VkRenderPas
     gpci.pColorBlendState = &bci;
     gpci.pDynamicState = &dsci;
     gpci.layout = *pipeline_layout;
-    gpci.renderPass = renderpass;
+    gpci.renderPass = VK_NULL_HANDLE; // dynamic rendering
     gpci.subpass = 0;
     gpci.basePipelineHandle = VK_NULL_HANDLE;
     gpci.basePipelineIndex = -1;
+    gpci.pNext = &prci;
 
-    r = vkCreateGraphicsPipelines(dev, VK_NULL_HANDLE, 1, &gpci, NULL, pipeline);
+    r = vkCreateGraphicsPipelines(dev, VK_NULL_HANDLE, 1, &gpci, NULL,
+                                  pipeline);
 
     CLEANUP_START(PipelineCleanup){dev, *pipeline} CLEANUP_END(pipeline)
 

@@ -72,8 +72,6 @@ add_executable(titanrcs
     src/backend/fft.c
     src/backend/backend.c
     src/swapchaincontext/swapchain.c
-    src/swapchaincontext/renderpass.c
-    src/swapchaincontext/framebuffers.c
     src/swapchaincontext/swapchaincontext.c
     src/resources/commandpool.c
     src/resources/sync.c

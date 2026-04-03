@@ -18,10 +18,10 @@
 
 #include "vulkan/vulkan_core.h" // having this here doesn't hurt and  prevents intellisense from adding it at the top which would break compilation
 
-#define MAINCHECK                                                                                  \
-    if (f) {                                                                                       \
-        printf("Error, code=%d: %s\n", e.code, e.origin);                                          \
-        goto fail;                                                                                 \
+#define MAINCHECK                                                              \
+    if (f) {                                                                   \
+        printf("Error, code=%d: %s\n", e.code, e.origin);                      \
+        goto fail;                                                             \
     }
 
 #include "context.h"
@@ -53,36 +53,38 @@ int main() {
     f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
     MAINCHECK
 
-    f = make_graphicspipeline(ctx.backend.dev, ctx.swapchain.swpch_ext, ctx.swapchain.renderpass,
-                              my_desc_set_layout, &ctx.framegraph.pipeline_layout,
+    f = make_graphicspipeline(ctx.backend.dev, ctx.swapchain.swpch_ext,
+                              my_desc_set_layout, ctx.swapchain.format,
+                              &ctx.framegraph.pipeline_layout,
                               &ctx.framegraph.pipeline, &e, &cs);
     MAINCHECK
 
-    f = make_vertexbuffer(&ctx.backend, ctx.resources.cmd_pool, &tri.vertexbuf, &cs);
+    f = make_vertexbuffer(&ctx.backend, ctx.resources.cmd_pool, &tri.vertexbuf,
+                          &cs);
     MAINCHECK
 
-    f = make_indexbuffer(&ctx.backend, ctx.resources.cmd_pool, &tri.indexbuf, &cs);
+    f = make_indexbuffer(&ctx.backend, ctx.resources.cmd_pool, &tri.indexbuf,
+                         &cs);
     MAINCHECK
 
-    f = make_descriptor_pool(ctx.resources.n_inflight_frames, ctx.backend.dev, &ctx.resources.dpool,
-                             &e, &cs);
+    f = make_descriptor_pool(ctx.resources.n_inflight_frames, ctx.backend.dev,
+                             &ctx.resources.dpool, &e, &cs);
     MAINCHECK
 
-    //f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
-    //MAINCHECK
+    // f = make_descriptorsetlayout(ctx.backend.dev, &my_desc_set_layout, &cs);
+    // MAINCHECK
 
-    f = make_rcs_setup(&ctx.backend, ctx.resources.cmd_pool, &ctx.rcs_resources, &cs);
+    f = make_rcs_setup(&ctx.backend, ctx.resources.cmd_pool, &ctx.rcs_resources,
+                       &cs);
     MAINCHECK
 
     render_rcs_imgs(&ctx);
 
-
-    f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev, ctx.resources.dpool,
-                             ctx.resources.ubufs, my_desc_set_layout, &ctx.rcs_resources, &ctx.framegraph.desc_sets, &e,
-                             &cs);
+    f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev,
+                             ctx.resources.dpool, ctx.resources.ubufs,
+                             my_desc_set_layout, &ctx.rcs_resources,
+                             &ctx.framegraph.desc_sets, &e, &cs);
     MAINCHECK
-
-    
 
     // u64 i_frame = 0;
     constexpr u64 n_frameratecheck = 100;
@@ -139,8 +141,8 @@ int main() {
     ctx.framegraph.the_object = tri;
 
     do {
-        // this is the loop that owns the swapchain and recreates it whenever the renderloop exits
-        // because the swapchain needs renewal
+        // this is the loop that owns the swapchain and recreates it whenever
+        // the renderloop exits because the swapchain needs renewal
 
         if (!firstiter) {
 
