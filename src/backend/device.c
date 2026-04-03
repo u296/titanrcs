@@ -147,9 +147,13 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
         n_queue_infos = 2;
     }
 
-    VkPhysicalDeviceFeatures df = {};
+    VkPhysicalDeviceVulkan13Features vk13features = {};
+    vk13features.synchronization2 = VK_TRUE;
 
-    df.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    VkPhysicalDeviceFeatures2 df2 = {};
+    df2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    df2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    df2.pNext = &vk13features;
 
     VkDeviceCreateInfo dci = {};
     dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -157,7 +161,10 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
     dci.pQueueCreateInfos = queue_infos;
     dci.enabledExtensionCount = n_dev_ext;
     dci.ppEnabledExtensionNames = device_extensions;
-    dci.pEnabledFeatures = &df;
+    dci.pEnabledFeatures = NULL;
+    dci.pNext = &df2;
+
+    
 
     VkResult r = vkCreateDevice(devs[i_sel], &dci, NULL, device);
     *physdev = devs[i_sel];
