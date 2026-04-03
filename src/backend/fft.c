@@ -31,13 +31,16 @@ static VkQueue persist_queue;
 static u32 persist_queue_i;
 u64 fftbuf_size = 2 * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex
 
-
-bool make_fftapp(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev, Queues queues, VkFFTApplication** out_fftapp, CleanupStack* cs ) {
-
+void fft_populate_persistents(VkDevice dev, VkPhysicalDevice physdev, Queues queues) {
     persist_dev = dev;
     persist_physdev = physdev;
     persist_queue = queues.graphics_queue;
     persist_queue_i = queues.i_graphics_queue_fam;
+}
+
+bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp, CleanupStack* cs ) {
+
+    
 
     VkFFTConfiguration cfg = {0};
 

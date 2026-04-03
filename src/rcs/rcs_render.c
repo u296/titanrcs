@@ -270,7 +270,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     lp.commandBuffer = &cmdbuf;
     lp.buffer = &fft_buf;
 
-    VkFFTAppend(ctx->backend.fft, -1, &lp);
+    VkFFTAppend(ctx->backend.fft[f], -1, &lp);
 
     VkBufferMemoryBarrier bar_bufpostfft = {};
     bar_bufpostfft.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;

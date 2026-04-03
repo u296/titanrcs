@@ -6,6 +6,7 @@
 #include "backend/device.h"
 #include "backend/instance.h"
 #include "backend/fft.h"
+#include "res.h"
 
 #define CHECK assert(f == false)
 
@@ -65,6 +66,9 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
 
     make_allocator(rb, cs);
 
+    fft_populate_persistents(rb->dev, rb->physdev, rb->queues);
 
-    make_fftapp(rb->inst, rb->physdev, rb->dev, rb->queues, &rb->fft, cs);
+    for (u32 i = 0; i < N_MAX_INFLIGHT; i++) {
+        make_fftapp(rb->inst, &rb->fft[i], cs);
+    }
 }

@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <vulkan/vulkan_core.h>
 
 void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
@@ -261,6 +262,9 @@ LoopStatus do_renderloop(RenderContext* ctx) {
     while (!glfwWindowShouldClose(ctx->backend.wnd)) {
         glfwPollEvents();
 
+        //vkDeviceWaitIdle(ctx->backend.dev);
+        //usleep(1000*300);
+
         const u64 i_frame_modn =
             ctx->metadata.i_current_frame % ctx->resources.n_inflight_frames;
 
@@ -340,6 +344,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         VkResult pres_res =
             vkQueuePresentKHR(ctx->backend.queues.present_queue, &pi);
 
+        
+
         switch (pres_res) {
         case VK_SUCCESS:
             break;
@@ -359,11 +365,6 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         }
 
         (ctx->metadata.i_current_frame)++;
-
-        if (ctx->metadata.i_current_frame % 999999 == 0) {
-            // vkDeviceWaitIdle(ctx->backend.dev);
-            render_rcs_imgs(ctx, 0);
-        }
 
         if (ctx->metadata.i_current_frame %
                 ctx->config.n_frameratecheck_interval ==

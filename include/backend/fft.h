@@ -5,7 +5,9 @@
 typedef struct Queues Queues;
 typedef struct CleanupStack CleanupStack;
 
-bool make_fftapp(VkInstance inst, VkPhysicalDevice physdev, VkDevice dev, Queues queues,
+void fft_populate_persistents(VkDevice dev, VkPhysicalDevice physdev, Queues queues);
+
+bool make_fftapp(VkInstance inst,
                  VkFFTApplication** out_fftapp, CleanupStack* cs);
 
 #endif
