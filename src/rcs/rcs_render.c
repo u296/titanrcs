@@ -16,8 +16,6 @@ void write_rcs_ubo(RenderContext* ctx) {
     Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                     0.0, 0.0, 0.0, 1.0}};
 
-    Mat3 ident3 = subm4_m3(ident4);
-
     const f32 L = 1000.0f;
 
     myubo.model = ident4;

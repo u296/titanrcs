@@ -1,9 +1,7 @@
 #include "rcs/rcs_cmdbuf.h"
 #include "backend/backend.h"
-#include "cleanupdb.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include <stdlib.h>
 
 bool make_rcs_cmdbuf(RenderBackend* rb, VkCommandPool cpool,
                      VkCommandBuffer* out_cmdbuf, CleanupStack* cs) {
