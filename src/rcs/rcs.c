@@ -1,23 +1,22 @@
 #include "rcs/rcs.h"
-#include "cleanupstack.h"
 #include "cleanupdb.h"
+#include "cleanupstack.h"
 #include "common.h"
+#include "rcs/rcs_cmdbuf.h"
 #include "rcs/rcs_descset.h"
-#include "rcs/rcs_fb.h"
 #include "rcs/rcs_imgs.h"
-#include "rcs/rcs_pipeline.h"
-#include "rcs/rcs_renderpass.h"
-#include "rcs/rcs_ubo.h"
 #include "rcs/rcs_mesh.h"
+#include "rcs/rcs_pipeline.h"
+#include "rcs/rcs_ubo.h"
 #include "res.h"
 
-bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_res, CleanupStack* cs) {
+bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
+                    RcsResources* out_res, CleanupStack* cs) {
     Error e;
 
     constexpr u32 N_RENDTARGETS = 3;
     VkExtent2D ext = {RCS_RESOLUTION, RCS_RESOLUTION};
 
-    VkRenderPass renderpass;
     VkDescriptorPool rcs_dpool;
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
@@ -29,12 +28,15 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     Image rcs_fftimg = {};
     VkSampler rcs_sampler;
     VkDescriptorSet rcs_descset;
-    VkFramebuffer rcs_fb;
     VkCommandBuffer rcs_cmdbuf;
     void* rcs_ubufmap;
     Renderable rcs_mesh;
 
-    make_rcs_renderpass(rb, &renderpass, &e, cs);
+    VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT,
+                               VK_FORMAT_R32G32B32A32_SFLOAT,
+                               VK_FORMAT_R32G32B32A32_SFLOAT};
+
+    VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
     make_rcs_depthresources(rb, ext, &rcs_depthimg, cs);
 
@@ -56,26 +58,23 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
     CLEANUP_START_NORES(MappingCleanup){
         .allocctx = rb->alloc,
         .alloc = rcs_ubo.alloc,
-    }
-    CLEANUP_END(mapping)
+    } CLEANUP_END(mapping)
 
-    make_rcs_descset(rb, rcs_dpool, rcs_descset_layout, rcs_ubo, &rcs_descset);
+        make_rcs_descset(rb, rcs_dpool, rcs_descset_layout, rcs_ubo,
+                         &rcs_descset);
 
-    make_rcs_pipeline(rb, ext, rcs_descset_layout, renderpass, &rcs_pipeline_layout, &rcs_pipeline,
-                      &e, cs);
-
-    make_rcs_fb(rb, ext, N_RENDTARGETS, rendtargets, rcs_depthimg, renderpass, &rcs_fb, &e,
-                cs);
+    make_rcs_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,
+                      &rcs_pipeline_layout, &rcs_pipeline, &e, cs);
 
     make_rcs_cmdbuf(rb, cpool, &rcs_cmdbuf, cs);
 
-    make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf, &rcs_mesh.n_indices, cs);
+    make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
+                  &rcs_mesh.n_indices, cs);
 
     RcsResources res = {ext,
-                        renderpass,
                         rcs_dpool,
                         rcs_descset_layout,
-                        rcs_descset    ,
+                        rcs_descset,
                         rcs_pipeline_layout,
                         rcs_pipeline,
                         rcs_depthimg,
@@ -85,10 +84,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool, RcsResources* out_re
                         rcs_fftimg,
                         rcs_sampler,
                         rcs_ubufmap,
-                        rcs_fb,
                         rcs_cmdbuf,
-                        rcs_mesh
-                    };
+                        rcs_mesh};
 
     *out_res = res;
     return false;

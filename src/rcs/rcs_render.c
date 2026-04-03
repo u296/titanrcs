@@ -14,7 +14,7 @@ void write_rcs_ubo(RenderContext* ctx) {
     RcsUbo myubo = {};
 
     Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                   0.0, 0.0, 0.0, 1.0}};
+                    0.0, 0.0, 0.0, 1.0}};
 
     Mat3 ident3 = subm4_m3(ident4);
 
@@ -41,7 +41,7 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
     Mat4 rotx = ident4;
-    static  f32 ang = 40.0f * (3.141592f / 180.0f);
+    static f32 ang = 40.0f * (3.141592f / 180.0f);
 
     ang += 1.0f * (3.1415 / 180);
 
@@ -50,7 +50,7 @@ void write_rcs_ubo(RenderContext* ctx) {
     *pindex_m4(&rotx, 2, 1) = sinf(ang);
     *pindex_m4(&rotx, 2, 2) = cosf(ang);
 
-    myubo.model = mul_m4(transl, mul_m4(rotx,scale));
+    myubo.model = mul_m4(transl, mul_m4(rotx, scale));
 
     Mat3 norm = transpose_m3(invert_m3(subm4_m3(myubo.model)));
 
@@ -68,9 +68,7 @@ void write_rcs_ubo(RenderContext* ctx) {
 
     *pindex_m4(&myubo.proj, 0, 3) = -(right + left) / (right - left);
     *pindex_m4(&myubo.proj, 1, 3) = -(bot + top) / (bot - top);
-    *pindex_m4(&myubo.proj,2, 3) = -(near) / (far - near);
-
-
+    *pindex_m4(&myubo.proj, 2, 3) = -(near) / (far - near);
 
     void* mapping = ctx->rcs_resources.ubufmap;
 
@@ -86,13 +84,6 @@ void render_rcs_imgs(RenderContext* ctx) {
     cbbi.flags = 0;
     cbbi.pInheritanceInfo = NULL;
 
-    VkRenderPassBeginInfo rpbi = {};
-    rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpbi.renderPass = ctx->rcs_resources.renderpass;
-    rpbi.framebuffer = ctx->rcs_resources.framebuffer;
-    rpbi.renderArea.offset = (struct VkOffset2D){0, 0};
-    rpbi.renderArea.extent = ctx->rcs_resources.ext;
-
     VkClearValue clearcol = {};
     clearcol.color.float32[0] = 0.0f;
     clearcol.color.float32[1] = 0.0f;
@@ -103,9 +94,32 @@ void render_rcs_imgs(RenderContext* ctx) {
     clear_depth.depthStencil.depth = 1.0;
     clear_depth.depthStencil.stencil = 0;
 
-    rpbi.clearValueCount = 4;
-    rpbi.pClearValues =
-        (VkClearValue[]){clearcol, clearcol, clearcol, clear_depth};
+    VkRenderingAttachmentInfo d = {};
+    d.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    d.clearValue = clear_depth;
+    d.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    d.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    d.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    d.imageView = ctx->rcs_resources.depthimg.view;
+
+    VkRenderingAttachmentInfo c[3] = {{}, {}, {}};
+
+    for (u32 i = 0; i < 3; i++) {
+        c[i].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        c[i].clearValue = clearcol;
+        c[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        c[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        c[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        c[i].imageView = ctx->rcs_resources.rendtargets[i].view;
+    }
+
+    VkRenderingInfo ri = {};
+    ri.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    ri.layerCount = 1;
+    ri.pDepthAttachment = &d;
+    ri.colorAttachmentCount = 3;
+    ri.pColorAttachments = c;
+    ri.renderArea = (VkRect2D){{0, 0}, {RCS_RESOLUTION, RCS_RESOLUTION}};
 
     VkViewport viewport = {};
     viewport.x = 0.0f;
@@ -126,7 +140,47 @@ void render_rcs_imgs(RenderContext* ctx) {
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 
-    vkCmdBeginRenderPass(cmdbuf, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    VkImageMemoryBarrier rsb[4];
+
+    for (u32 i = 0; i < 4; i++) {
+        rsb[i] = (VkImageMemoryBarrier){};
+        rsb[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        rsb[i].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        rsb[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        rsb[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        rsb[i].subresourceRange.baseArrayLayer = 0;
+        rsb[i].subresourceRange.layerCount = 1;
+        rsb[i].subresourceRange.levelCount = 1;
+        rsb[i].subresourceRange.baseMipLevel = 0;
+        rsb[i].srcAccessMask = VK_ACCESS_NONE;
+    }
+    rsb[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    rsb[0].image = ctx->rcs_resources.rendtargets[0].img;
+    rsb[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    rsb[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    rsb[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    rsb[1].image = ctx->rcs_resources.rendtargets[1].img;
+    rsb[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    rsb[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    rsb[2].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    rsb[2].image = ctx->rcs_resources.rendtargets[2].img;
+    rsb[2].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    rsb[2].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    rsb[3].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    rsb[3].image = ctx->rcs_resources.depthimg.img;
+    rsb[3].newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    rsb[3].subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                         0, 0, NULL, 0, NULL, 4, rsb);
+
+    vkCmdBeginRendering(cmdbuf, &ri);
+
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       ctx->rcs_resources.pipeline);
 
@@ -141,11 +195,10 @@ void render_rcs_imgs(RenderContext* ctx) {
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
 
     vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
-    // vkCmdDraw(cmdbuf, 3, 1, 0, 0);
-    vkCmdEndRenderPass(cmdbuf);
 
-    // TEMPORARY HACK TO BLIT TO SWAPCHAIN
-    // also allows for transfer to the fft buffer
+    vkCmdEndRendering(cmdbuf);
+
+    // barrier to transfer to fft buffer
 
     VkImageMemoryBarrier renderBarrier = {};
     renderBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -153,8 +206,7 @@ void render_rcs_imgs(RenderContext* ctx) {
     renderBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     renderBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     renderBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    renderBarrier.image =
-        ctx->rcs_resources.rendtargets[0].img; // Your offscreen image
+    renderBarrier.image = ctx->rcs_resources.rendtargets[0].img;
     renderBarrier.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -162,60 +214,45 @@ void render_rcs_imgs(RenderContext* ctx) {
                          VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
                          &renderBarrier);
 
-    // END HACK
-
     VkBuffer fft_buf = ctx->rcs_resources.fft_buf.buf;
 
-    // the buffer copies can be modified to do the layout shifting to center the
-    // fft
+    // the buffer copies can be configured to do the layout shifting to center
+    // the fft
 
-    VkBufferImageCopy quads[4] = {{}, {}, {}, {}};
+    VkBufferImageCopy quadrants[4] = {{}, {}, {}, {}};
 
     for (u32 i = 0; i < 4; i++) {
-        quads[i].bufferImageHeight = (RCS_RESOLUTION);
-        quads[i].bufferRowLength = (RCS_RESOLUTION);
-        quads[i].imageExtent =
+        quadrants[i].bufferImageHeight = (RCS_RESOLUTION);
+        quadrants[i].bufferRowLength = (RCS_RESOLUTION);
+        quadrants[i].imageExtent =
             (VkExtent3D){(RCS_RESOLUTION / 2), (RCS_RESOLUTION / 2), 1};
-        quads[i].imageSubresource =
+        quadrants[i].imageSubresource =
             (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
     }
-    const u32 texelsize = sizeof(float) * 2;
+    const u32 texelsize = sizeof(float) * 2; // fft image is R32G32_SFLOAT
     // 0: top left to bottom right
-    quads[0].imageOffset = (VkOffset3D){0, 0, 0};
-    quads[0].bufferOffset =
+    quadrants[0].imageOffset = (VkOffset3D){0, 0, 0};
+    quadrants[0].bufferOffset =
         ((RCS_RESOLUTION) * (RCS_RESOLUTION / 2) + (RCS_RESOLUTION / 2)) *
         texelsize;
 
     // 1: top right to bottom left
-    quads[1].imageOffset = (VkOffset3D){(RCS_RESOLUTION / 2), 0, 0};
-    quads[1].bufferOffset =
+    quadrants[1].imageOffset = (VkOffset3D){(RCS_RESOLUTION / 2), 0, 0};
+    quadrants[1].bufferOffset =
         ((RCS_RESOLUTION) * (RCS_RESOLUTION / 2)) * texelsize;
 
     // 2: bottom left to top right
-    quads[2].imageOffset = (VkOffset3D){0, (RCS_RESOLUTION / 2), 0};
-    quads[2].bufferOffset = ((RCS_RESOLUTION / 2)) * texelsize;
+    quadrants[2].imageOffset = (VkOffset3D){0, (RCS_RESOLUTION / 2), 0};
+    quadrants[2].bufferOffset = ((RCS_RESOLUTION / 2)) * texelsize;
 
     // 3: bottom right to top left
-    quads[3].imageOffset = (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
-    quads[3].bufferOffset = 0;
-
-    /*
-    VkBufferImageCopy reg = {};
-    reg.bufferOffset = 0;
-    reg.bufferRowLength = 0;
-    reg.bufferImageHeight = 0;
-
-    reg.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    reg.imageSubresource.mipLevel = 0;
-    reg.imageSubresource.baseArrayLayer = 0;
-    reg.imageSubresource.layerCount = 1;
-
-    reg.imageOffset = (VkOffset3D){0, 0, 0};
-    reg.imageExtent = (VkExtent3D){RCS_RESOLUTION, RCS_RESOLUTION, 1};*/
+    quadrants[3].imageOffset =
+        (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
+    quadrants[3].bufferOffset = 0;
 
     vkCmdCopyImageToBuffer(cmdbuf, ctx->rcs_resources.rendtargets[0].img,
                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4,
-                           quads);
+                           quadrants);
 
     VkBufferMemoryBarrier bar_bufpostcp = {};
     bar_bufpostcp.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -248,25 +285,13 @@ void render_rcs_imgs(RenderContext* ctx) {
     bar_bufpostfft.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     bar_bufpostfft.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-    /*VkImageMemoryBarrier bar_imgpostfft = {};
-    bar_imgpostfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_imgpostfft.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    bar_imgpostfft.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    bar_imgpostfft.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    bar_imgpostfft.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_imgpostfft.image =
-        ctx->rcs_resources.rendtargets[0].img; // Your offscreen image
-    bar_imgpostfft.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};*/
-
     VkImageMemoryBarrier bar_fftimg_postfft = {};
     bar_fftimg_postfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bar_fftimg_postfft.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     bar_fftimg_postfft.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     bar_fftimg_postfft.srcAccessMask = VK_ACCESS_NONE;
     bar_fftimg_postfft.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_fftimg_postfft.image =
-        ctx->rcs_resources.fft_img.img; // Your offscreen image
+    bar_fftimg_postfft.image = ctx->rcs_resources.fft_img.img;
     bar_fftimg_postfft.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -280,17 +305,7 @@ void render_rcs_imgs(RenderContext* ctx) {
         0, 0, NULL, 1, &bar_bufpostfft, 1, postfft_imgbars);
 
     vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.fft_img.img,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quads);
-
-    VkImageMemoryBarrier bar_imgpostfftcopy = {};
-    bar_imgpostfftcopy.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_imgpostfftcopy.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    bar_imgpostfftcopy.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    bar_imgpostfftcopy.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_imgpostfftcopy.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    bar_imgpostfftcopy.image = ctx->rcs_resources.fft_img.img;
-    bar_imgpostfftcopy.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quadrants);
 
     VkImageMemoryBarrier bar_raw = {}, bar_intens = {}, bar_phase = {},
                          bar_fft = {};
@@ -356,5 +371,5 @@ void render_rcs_imgs(RenderContext* ctx) {
                       VK_NULL_HANDLE);
     assert(r == VK_SUCCESS);
 
-    vkQueueWaitIdle(ctx->backend.queues.graphics_queue);
+    // vkQueueWaitIdle(ctx->backend.queues.graphics_queue);
 }

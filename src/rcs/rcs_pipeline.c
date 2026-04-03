@@ -2,18 +2,19 @@
 #include "cleanupdb.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include "context.h"
-#include <vulkan/vulkan_core.h>
 
 VkResult make_shadermodule(VkDevice dev, const char* path, VkShaderModule* sm);
 
-bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout descset_layout,
-                       VkRenderPass renderpass, VkPipelineLayout* pipeline_layout,
-                       VkPipeline* pipeline, Error* e_out, CleanupStack* cs) {
+bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext,
+                       VkDescriptorSetLayout descset_layout, VkFormat* formats,
+                       VkFormat* depth_format,
+                       VkPipelineLayout* pipeline_layout, VkPipeline* pipeline,
+                       Error* e_out, CleanupStack* cs) {
 
     VkShaderModule vertexshader, fragshader;
 
-    VkResult r = make_shadermodule(rb->dev, "shaders/rcs/vert.spv", &vertexshader);
+    VkResult r =
+        make_shadermodule(rb->dev, "shaders/rcs/vert.spv", &vertexshader);
     // VERIFY("vert shader", r)
 
     r = make_shadermodule(rb->dev, "shaders/rcs/frag.spv", &fragshader);
@@ -99,15 +100,15 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
     bci.logicOpEnable = VK_FALSE;
     bci.logicOp = VK_LOGIC_OP_COPY;
     bci.attachmentCount = 3;
-    bci.pAttachments = (VkPipelineColorBlendAttachmentState[]){bas,bas,bas};
+    bci.pAttachments = (VkPipelineColorBlendAttachmentState[]){bas, bas, bas};
 
-    VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+    VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT,
+                                  VK_DYNAMIC_STATE_SCISSOR};
 
     VkPipelineDynamicStateCreateInfo dsci = {};
     dsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dsci.dynamicStateCount = 2;
     dsci.pDynamicStates = dynstate;
-
 
     VkPipelineDepthStencilStateCreateInfo dci = {};
     dci.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -117,7 +118,6 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
     dci.depthBoundsTestEnable = VK_FALSE;
     dci.stencilTestEnable = VK_FALSE;
 
-
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.setLayoutCount = 1;
@@ -125,9 +125,16 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
 
     r = vkCreatePipelineLayout(rb->dev, &plci, NULL, pipeline_layout);
 
-    CLEANUP_START(PipelineLayoutCleanup){rb->dev, *pipeline_layout} CLEANUP_END(pipelinelayout)
+    CLEANUP_START(PipelineLayoutCleanup){rb->dev, *pipeline_layout} CLEANUP_END(
+        pipelinelayout)
 
         VERIFY("pipeline layout", r);
+
+    VkPipelineRenderingCreateInfo prci = {};
+    prci.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    prci.colorAttachmentCount = 3;
+    prci.pColorAttachmentFormats = formats;
+    prci.depthAttachmentFormat = *depth_format;
 
     VkGraphicsPipelineCreateInfo gpci = {};
     gpci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -142,12 +149,14 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext, VkDescriptorSetLayout 
     gpci.pColorBlendState = &bci;
     gpci.pDynamicState = &dsci;
     gpci.layout = *pipeline_layout;
-    gpci.renderPass = renderpass;
+    gpci.renderPass = VK_NULL_HANDLE; // dynamic rendering, see pnext
     gpci.subpass = 0;
     gpci.basePipelineHandle = VK_NULL_HANDLE;
     gpci.basePipelineIndex = -1;
+    gpci.pNext = &prci;
 
-    r = vkCreateGraphicsPipelines(rb->dev, VK_NULL_HANDLE, 1, &gpci, NULL, pipeline);
+    r = vkCreateGraphicsPipelines(rb->dev, VK_NULL_HANDLE, 1, &gpci, NULL,
+                                  pipeline);
 
     CLEANUP_START(PipelineCleanup){rb->dev, *pipeline} CLEANUP_END(pipeline)
 

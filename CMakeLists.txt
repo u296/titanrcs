@@ -79,11 +79,10 @@ add_executable(titanrcs
     src/resources/sync.c
     src/resources/renderresources.c
     src/rcs/rcs.c
-    src/rcs/rcs_renderpass.c
     src/rcs/rcs_descset.c
     src/rcs/rcs_pipeline.c
     src/rcs/rcs_imgs.c
-    src/rcs/rcs_fb.c
+    src/rcs/rcs_cmdbuf.c
     src/rcs/rcs_ubo.c
     src/rcs/rcs_mesh.c
     src/rcs/rcs_render.c
