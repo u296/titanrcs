@@ -27,7 +27,7 @@ vec2 mul(vec2 a, vec2 b) {
 vec4 make_color(float phase) {
     phase = mod(phase, 2.0 * pi);
 
-    return vec4(cos(phase), cos(phase + 2.0*pi/3.0), cos(phase + 4.0*pi/3.0), 1.0);
+    return vec4(vec3(cos(phase), cos(phase + 2.0*pi/3.0), cos(phase + 4.0*pi/3.0))/1.5, 1.0);
 }
 
 float refl_fac(float cosx) {
