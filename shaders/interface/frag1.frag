@@ -24,20 +24,25 @@ vec3 make_color(float phase) {
 
 void main() {
 
-    vec3 mycol = texture(mytex[pc.texture_i], uv).rgb;
+    float zoom = 0.1;
 
     if (pc.texture_i == 3) {
+
+        vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*zoom;
+
+        vec3 mycol = texture(mytex[pc.texture_i], newuv).rgb;
         // let's do the modulus in case of complex value
         float phase = atan(mycol.g, mycol.r);
 
         vec3 base_col = vec3(1,1,1);//make_color(phase);
         vec3 norm_col = base_col / length(base_col);
 
-        float i = length(mycol.rg) / (1024);
+        float i = length(mycol.rg)/100000;
 
         //outColor = vec4(i,i,i,1.0);
         outColor = vec4(norm_col * i, 1.0);
     } else {
+        vec3 mycol = texture(mytex[pc.texture_i], uv).rgb;
         outColor = vec4(mycol, 1.0);
     }
     
