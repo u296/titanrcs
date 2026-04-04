@@ -23,6 +23,8 @@ layout(set = 0, binding = 1) uniform sampler2D mytex[4];
 
 #define pi 3.14159265
 
+const float fft_res = 8192;
+
 vec3 make_color(float phase) {
     phase = mod(phase, 2.0 * pi);
 
@@ -37,7 +39,10 @@ void main() {
 
         vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*ubo.fzoom_.x;
 
-        vec3 mycol = texture(mytex[pc.texture_i], newuv).rgb;
+        vec2 mycol = texture(mytex[pc.texture_i], newuv).rg;
+
+        mycol *= (1.0/sqrt(fft_res*fft_res)); // normalize fft 
+
         // let's do the modulus in case of complex value
         float phase = atan(mycol.g, mycol.r);
 
