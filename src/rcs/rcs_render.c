@@ -39,16 +39,23 @@ void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
     Mat4 rotx = ident4;
-    static f32 ang = 40.0f * (3.141592f / 180.0f);
+    Mat4 roty = ident4;
+    static f32 angx = -10.0f * (3.141592f / 180.0f);
+    static f32 angy = 0.0f * (3.141592f / 180.0f);
 
-    ang += 1.0f * (3.1415 / 180);
+    angy += 1.0f * (3.1415 / 180);
 
-    *pindex_m4(&rotx, 1, 1) = cosf(ang);
-    *pindex_m4(&rotx, 1, 2) = -sinf(ang);
-    *pindex_m4(&rotx, 2, 1) = sinf(ang);
-    *pindex_m4(&rotx, 2, 2) = cosf(ang);
+    *pindex_m4(&rotx, 1, 1) = cosf(angx);
+    *pindex_m4(&rotx, 1, 2) = -sinf(angx);
+    *pindex_m4(&rotx, 2, 1) = sinf(angx);
+    *pindex_m4(&rotx, 2, 2) = cosf(angx);
 
-    myubo.model = mul_m4(transl, mul_m4(rotx, scale));
+    *pindex_m4(&roty, 0, 0) = cosf(angy);
+    *pindex_m4(&roty, 0, 2) = -sinf(angy);
+    *pindex_m4(&roty, 2, 0) = sinf(angy);
+    *pindex_m4(&roty, 2, 2) = cosf(angy);
+
+    myubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, scale)));
 
     Mat3 norm = transpose_m3(invert_m3(subm4_m3(myubo.model)));
 
@@ -247,9 +254,9 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
     quadrants[3].bufferOffset = 0;
 
-    vkCmdCopyImageToBuffer(cmdbuf, ctx->rcs_resources.sets[f].rendtargets[0].img,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4,
-                           quadrants);
+    vkCmdCopyImageToBuffer(
+        cmdbuf, ctx->rcs_resources.sets[f].rendtargets[0].img,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4, quadrants);
 
     VkBufferMemoryBarrier bar_bufpostcp = {};
     bar_bufpostcp.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -301,7 +308,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         0, 0, NULL, 1, &bar_bufpostfft, 1, postfft_imgbars);
 
-    vkCmdCopyBufferToImage(cmdbuf, fft_buf, ctx->rcs_resources.sets[f].fft_img.img,
+    vkCmdCopyBufferToImage(cmdbuf, fft_buf,
+                           ctx->rcs_resources.sets[f].fft_img.img,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quadrants);
 
     VkImageMemoryBarrier bar_raw = {}, bar_intens = {}, bar_phase = {},
@@ -358,7 +366,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     assert(r == VK_SUCCESS);
 }
 
-void render_rcs_imgs(RenderContext *ctx, u32 f) {
+void render_rcs_imgs(RenderContext* ctx, u32 f) {
     record_rcs_cmdbuf(ctx, f);
 
     VkSubmitInfo si = {};
@@ -369,6 +377,6 @@ void render_rcs_imgs(RenderContext *ctx, u32 f) {
     si.signalSemaphoreCount = 0;
 
     VkResult r = vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si,
-                      VK_NULL_HANDLE);
+                               VK_NULL_HANDLE);
     assert(r == VK_SUCCESS);
 }
