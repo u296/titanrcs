@@ -2,16 +2,15 @@
 #include "rcs/rcs_ubo.h"
 #include "backend/backend.h"
 #include "buffers.h"
-#include "cleanupstack.h"
 #include "cleanupdb.h"
+#include "cleanupstack.h"
 #include "common.h"
 #include "res.h"
-#include <vulkan/vulkan_core.h>
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
 
-    make_buffer(rb, sizeof(RcsUbo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true,
-                ubo, cs);
+    make_buffer(rb, sizeof(RcsUbo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                TR_MAPPABLE_WRITE, ubo, cs);
     vmaSetAllocationName(rb->alloc, ubo->alloc, "RCS UBO");
 
     return false;
@@ -20,13 +19,16 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
 bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs) {
 
     make_buffer(rb, RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float),
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 false, rcs_fftbuf, cs);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                TR_MAPPABLE_NONE, rcs_fftbuf, cs);
 
     return false;
 }
 
-bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, CleanupStack* cs) {
+bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
+                     CleanupStack* cs) {
 
     VkImageCreateInfo ici = {};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -41,14 +43,14 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, Clean
     ici.mipLevels = 1;
     ici.queueFamilyIndexCount = 1;
     ici.pQueueFamilyIndices = &rb->queues.i_graphics_queue_fam;
-    ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
 
-    VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &rcs_fftimg->img, &rcs_fftimg->alloc, NULL);
-
-    
+    VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &rcs_fftimg->img,
+                                &rcs_fftimg->alloc, NULL);
 
     VkImageViewCreateInfo ivci = {};
     ivci.image = rcs_fftimg->img;
@@ -63,9 +65,19 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, Clean
 
     r = vkCreateImageView(rb->dev, &ivci, NULL, &rcs_fftimg->view);
 
-    CLEANUP_START(ImageCleanup)
-    {*rcs_fftimg, rb->dev, rb->alloc}
-    CLEANUP_END(image)
+    CLEANUP_START(ImageCleanup){*rcs_fftimg, rb->dev,
+                                rb->alloc} CLEANUP_END(image)
+
+        return false;
+}
+
+bool make_rcs_extrbuf(RenderBackend* rb, Buffer* rcs_extrbuf,
+                      CleanupStack* cs) {
+
+    make_buffer(rb, sizeof(ExtractionSsbo),
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                TR_MAPPABLE_READ, rcs_extrbuf, cs);
 
     return false;
 }

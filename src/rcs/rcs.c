@@ -21,6 +21,9 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
     VkPipeline rcs_pipeline;
+    VkDescriptorSetLayout rcs_red_descset_layout;
+    VkPipelineLayout rcs_red_pipeline_layout;
+    VkPipeline rcs_red_pipeline;
     VkSampler rcs_sampler;
     Renderable rcs_mesh;
     RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
@@ -34,6 +37,10 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     make_rcs_dpool(rb->dev, &rcs_dpool, cs);
 
     make_rcs_descset_layout(rb->dev, &rcs_descset_layout, cs);
+
+    make_rcs_red_descset_layout(rb->dev, &rcs_red_descset_layout, cs);
+
+    make_sampler(rb, &rcs_sampler, cs);
 
     for (u32 i = 0; i < N_MAX_INFLIGHT; i++) {
         rcs_inflights[i] = (RcsPerInflight){};
@@ -53,16 +60,25 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 
         make_rcs_fftimg(rb, ext, &rcs_inflights[i].fft_img, cs);
 
+        make_rcs_extrbuf(rb, &rcs_inflights[i].extr_buf, cs);
+
         make_rcs_descset(rb, rcs_dpool, rcs_descset_layout,
                          rcs_inflights[i].ubo, &rcs_inflights[i].descset);
+
+        make_rcs_red_descset(rb, rcs_dpool, rcs_inflights[i].fft_img,
+                             rcs_sampler, rcs_inflights[i].extr_buf,
+                             rcs_red_descset_layout,
+                             &rcs_inflights[i].red_descset);
 
         make_rcs_cmdbuf(rb, cpool, &rcs_inflights[i].cmdbuf, cs);
     }
 
-    make_sampler(rb, &rcs_sampler, cs);
-
     make_rcs_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,
                       &rcs_pipeline_layout, &rcs_pipeline, &e, cs);
+
+    make_rcs_reduction_pipeline(rb, rcs_red_descset_layout,
+                                &rcs_red_pipeline_layout, &rcs_red_pipeline,
+                                cs);
 
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
                   &rcs_mesh.n_indices, cs);
@@ -72,9 +88,14 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                         rcs_descset_layout,
                         rcs_pipeline_layout,
                         rcs_pipeline,
+                        rcs_red_pipeline_layout,
+                        rcs_red_pipeline,
                         rcs_sampler,
                         rcs_mesh,
                         {rcs_inflights[0], rcs_inflights[1]}};
+
+    memcpy(((void*)&res) + offsetof(RcsResources, sets), rcs_inflights,
+           sizeof(RcsPerInflight) * N_MAX_INFLIGHT);
 
     *out_res = res;
     return false;

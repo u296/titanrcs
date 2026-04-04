@@ -1,8 +1,8 @@
 #ifndef RCS_UBO_H
 #define RCS_UBO_H
 
-#include "linalg.h"
 #include "backend/backend.h"
+#include "linalg.h"
 
 typedef struct RcsUbo {
     Mat4 model;
@@ -12,10 +12,17 @@ typedef struct RcsUbo {
     Vec4 resolution_xy_L_;
 } RcsUbo;
 
+typedef struct ExtractionSsbo {
+    f32 out_rcs;
+} ExtractionSsbo;
+
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
 
 bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs);
 
-bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg, CleanupStack* cs);
+bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
+                     CleanupStack* cs);
+
+bool make_rcs_extrbuf(RenderBackend* rb, Buffer* rcs_extrbuf, CleanupStack* cs);
 
 #endif

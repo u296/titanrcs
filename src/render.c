@@ -5,6 +5,7 @@
 #include "linalg.h"
 #include "rcs/rcs.h"
 #include "rcs/rcs_render.h"
+#include "rcs/rcs_ubo.h"
 #include "res.h"
 #include <math.h>
 #include <stdio.h>
@@ -82,12 +83,12 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
 
     static f32 a = 0.0;
     a += 0.2f * (3.1415f / 180.0f);
-    f32 zoom = 0.1;// 0.6f + 0.6f*sinf(a);
+    f32 zoom = 0.1; // 0.6f + 0.6f*sinf(a);
 
     u.model = transpose_m4(u.model);
     u.view = transpose_m4(u.view);
     u.proj = transpose_m4(u.proj);
-    u.fzoom_ = (Vec4){zoom,0.0,0.0,0.0};
+    u.fzoom_ = (Vec4){zoom, 0.0, 0.0, 0.0};
 
     memcpy(ubufmap, &u, sizeof(u));
 }
@@ -266,6 +267,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
     f; // to silence unused variable warning in release builds
     struct Error e = {};
 
+    bool before_first_render = true;
+
     while (!glfwWindowShouldClose(ctx->backend.wnd)) {
         glfwPollEvents();
 
@@ -278,6 +281,24 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         f = vkWaitForFences(ctx->backend.dev, 1,
                             &ctx->resources.inflight_fncs[i_inflight], VK_TRUE,
                             UINT32_MAX);
+
+        if (!before_first_render) {
+            VmaAllocation a =
+                ctx->rcs_resources.sets[i_inflight].extr_buf.alloc;
+
+            vmaInvalidateAllocation(ctx->backend.alloc, a, 0,
+                                    sizeof(ExtractionSsbo));
+            VmaAllocationInfo info = {};
+            vmaGetAllocationInfo(ctx->backend.alloc, a, &info);
+
+            ExtractionSsbo* out = info.pMappedData;
+
+            f32 rcs = out->out_rcs;
+
+            if (ctx->metadata.i_current_frame % 1 == 0) {
+                printf("RCS: %f\n", rcs);
+            }
+        }
 
         u32 i_image = UINT32_MAX;
         VkResult img_ac_res = vkAcquireNextImageKHR(
@@ -302,8 +323,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         f = vkResetCommandBuffer(ctx->resources.cmd_bufs[i_inflight], 0);
 
         write_interface_ubo(ctx->metadata.i_current_frame,
-                             ctx->swapchain.swpch_ext,
-                             ctx->resources.ubuf_mappings[i_inflight]);
+                            ctx->swapchain.swpch_ext,
+                            ctx->resources.ubuf_mappings[i_inflight]);
 
         write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_inflight].ubufmap);
 
@@ -338,6 +359,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
         vkQueueSubmit(ctx->backend.queues.graphics_queue, 1, &si,
                       ctx->resources.inflight_fncs[i_inflight]);
 
+        before_first_render = false;
+
         VkPresentInfoKHR pi = {};
         pi.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         pi.waitSemaphoreCount = 1;
@@ -359,14 +382,16 @@ LoopStatus do_renderloop(RenderContext* ctx) {
             timespec_get(&now, TIME_UTC);
             struct timespec then = ctx->metadata.last_frame_time;
 
-            f32 elapsed_time = (f32)(now.tv_sec - then.tv_sec) + (f32)(now.tv_nsec - then.tv_nsec) / 1000000000.0f;
+            f32 elapsed_time =
+                (f32)(now.tv_sec - then.tv_sec) +
+                (f32)(now.tv_nsec - then.tv_nsec) / 1000000000.0f;
 
-
-            const float fps = (float)ctx->config.n_frameratecheck_interval / elapsed_time;
+            const float fps =
+                (float)ctx->config.n_frameratecheck_interval / elapsed_time;
 
             ctx->metadata.last_frame_time = now;
 
-            printf("FPS: %.1f\n", fps);
+            // printf("FPS: %.1f\n", fps);
         }
 
         switch (pres_res) {

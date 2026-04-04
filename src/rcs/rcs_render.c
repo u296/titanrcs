@@ -359,8 +359,29 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     vkCmdPipelineBarrier(cmdbuf,
                          VK_PIPELINE_STAGE_TRANSFER_BIT |
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0,
-                         NULL, 4, fin_img_bars);
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0, 0, NULL, 0, NULL, 4, fin_img_bars);
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      ctx->rcs_resources.reduction_pipeline);
+
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            ctx->rcs_resources.reduction_pipeline_layout, 0, 1,
+                            &ctx->rcs_resources.sets[f].red_descset, 0, NULL);
+
+    vkCmdDispatch(cmdbuf, 1, 1, 1);
+
+    VkBufferMemoryBarrier extr = {};
+    extr.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    extr.buffer = ctx->rcs_resources.sets[f].extr_buf.buf;
+    extr.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    extr.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    extr.size = sizeof(ExtractionSsbo);
+
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         VK_PIPELINE_STAGE_HOST_BIT, 0, 0, NULL, 1, &extr, 0,
+                         NULL);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);

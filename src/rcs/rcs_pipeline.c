@@ -1,4 +1,5 @@
 #include "rcs/rcs_pipeline.h"
+#include "backend/backend.h"
 #include "cleanupdb.h"
 #include "cleanupstack.h"
 #include "common.h"
@@ -164,6 +165,48 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext,
 
             vkDestroyShaderModule(rb->dev, vertexshader, NULL);
     vkDestroyShaderModule(rb->dev, fragshader, NULL);
+
+    return false;
+}
+
+bool make_rcs_reduction_pipeline(RenderBackend* rb,
+                                 VkDescriptorSetLayout desc_layout,
+                                 VkPipelineLayout* out_red_pipeline_layout,
+                                 VkPipeline* out_red_pipeline,
+                                 CleanupStack* cs) {
+
+    VkResult r;
+
+    VkPipelineLayoutCreateInfo plci = {};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.setLayoutCount = 1;
+    plci.pSetLayouts = &desc_layout;
+
+    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_red_pipeline_layout);
+    CLEANUP_START(PipelineLayoutCleanup){
+        rb->dev, *out_red_pipeline_layout} CLEANUP_END(pipelinelayout);
+
+    VkShaderModule reduction_module = VK_NULL_HANDLE;
+    make_shadermodule(rb->dev, "shaders/rcs/reduction.spv", &reduction_module);
+
+    VkPipelineShaderStageCreateInfo sci = {};
+    sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci.module = reduction_module;
+    sci.pName = "main";
+
+    VkComputePipelineCreateInfo cpci = {};
+    cpci.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci.stage = sci;
+    cpci.basePipelineHandle = VK_NULL_HANDLE;
+    cpci.basePipelineIndex = -1;
+    cpci.layout = *out_red_pipeline_layout;
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci, NULL,
+                                 out_red_pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, *out_red_pipeline};
+    CLEANUP_END(pipeline);
 
     return false;
 }

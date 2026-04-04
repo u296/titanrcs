@@ -82,7 +82,7 @@ props) == props) { printf("selecting memory type index %u\n", i); return i;
 */
 
 bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
-                 bool mappable, Buffer* buf, CleanupStack* cs) {
+                 Mappable mappable, Buffer* buf, CleanupStack* cs) {
     VkBufferCreateInfo bci = {};
     bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bci.size = size;
@@ -91,12 +91,13 @@ bool make_buffer(RenderBackend* rb, VkDeviceSize size, VkBufferUsageFlags usage,
 
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
-    if (mappable) {
+    if (mappable == TR_MAPPABLE_WRITE) {
         aci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
                     VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    } else if (mappable == TR_MAPPABLE_READ) {
+        aci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
+                    VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
-
-    VmaAllocation alloc;
 
     VkResult r =
         vmaCreateBuffer(rb->alloc, &bci, &aci, &buf->buf, &buf->alloc, NULL);
@@ -203,9 +204,9 @@ bool make_local_buffer_staged(RenderBackend* rb, VkDeviceSize size,
 bool make_vertexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* vbuf,
                        CleanupStack* cs) {
 
-    bool res = make_local_buffer_staged(rb, sizeof(overview_verts), overview_verts,
-                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pool,
-                                        vbuf, cs);
+    bool res = make_local_buffer_staged(
+        rb, sizeof(overview_verts), overview_verts,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pool, vbuf, cs);
     vmaSetAllocationName(rb->alloc, vbuf->alloc, "VERTEX BUFFER MAINSCREEN");
     return res;
 }
@@ -213,9 +214,9 @@ bool make_vertexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* vbuf,
 bool make_indexbuffer(RenderBackend* rb, VkCommandPool pool, Buffer* ibuf,
                       CleanupStack* cs) {
 
-    bool res = make_local_buffer_staged(rb, sizeof(overview_inds), overview_inds,
-                                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pool,
-                                        ibuf, cs);
+    bool res = make_local_buffer_staged(
+        rb, sizeof(overview_inds), overview_inds,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pool, ibuf, cs);
     vmaSetAllocationName(rb->alloc, ibuf->alloc, "INDEX BUFFER MAINSCREEN");
     return res;
 }
