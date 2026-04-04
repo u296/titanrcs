@@ -46,7 +46,7 @@ void main() {
 
     const vec3 toscreen = vec3(0.0, 0.0, -1.0);
 
-    const vec2 reflfield = albedo * infield * refl_fac(dot(normalize(norm), toscreen));
+    const vec2 reflfield = albedo * infield;// * refl_fac(dot(normalize(norm), toscreen));
     const float refl_intens = length(reflfield) * length(reflfield);
 
     const float k = 6.18 / (25e-3);
