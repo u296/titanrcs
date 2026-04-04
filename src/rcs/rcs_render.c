@@ -26,7 +26,7 @@ void write_rcs_ubo(RenderContext* ctx, void* mapping) {
 
     Mat4 scale = ident4;
 
-    const f32 s = 1.0f;
+    const f32 s = 0.5f;
 
     *pindex_m4(&scale, 0, 0) = s;
     *pindex_m4(&scale, 1, 1) = s;

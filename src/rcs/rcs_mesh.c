@@ -97,7 +97,7 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
     // VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool, ibuf, cs);
 
     // NEEDS TO BE BINARY STL FILE, CAN'T USE RAW EXPORT FROM OPENVSP
-    FILE* fp = fopen("rcsmesh3.stl", "r");
+    FILE* fp = fopen("models/f35.stl", "r");
 
     assert(fp != NULL);
 

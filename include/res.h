@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-constexpr u32 RCS_RESOLUTION = 1024u;
+constexpr u32 RCS_RESOLUTION = 4096u;
 constexpr bool WANT_VALIDATION = true;
 constexpr u32 N_MAX_INFLIGHT = 2;
 
