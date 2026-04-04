@@ -43,7 +43,7 @@ void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     static f32 angx = -10.0f * (3.141592f / 180.0f);
     static f32 angy = 0.0f * (3.141592f / 180.0f);
 
-    angy += 1.0f * (3.1415 / 180);
+    angx += 0.1f * (3.1415 / 180);
 
     *pindex_m4(&rotx, 1, 1) = cosf(angx);
     *pindex_m4(&rotx, 1, 2) = -sinf(angx);

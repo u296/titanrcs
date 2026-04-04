@@ -8,6 +8,13 @@ layout(location = 0) in vec2 uv;
 
 layout(location = 0) out vec4 outColor;
 
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    vec4 fzoom_;
+} ubo;
+
 layout(set = 0, binding = 1) uniform sampler2D mytex[4];
 
 #define prefft mytex[0]
@@ -28,7 +35,7 @@ void main() {
 
     if (pc.texture_i == 3) {
 
-        vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*zoom;
+        vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*ubo.fzoom_.x;
 
         vec3 mycol = texture(mytex[pc.texture_i], newuv).rgb;
         // let's do the modulus in case of complex value

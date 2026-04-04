@@ -35,7 +35,7 @@ bool make_uniform_buffers(const u32 n_max_inflight, RenderBackend* rb,
         char bufname[32];
         sprintf(bufname, "Uniform Buffer %u", i);
 
-        make_buffer(rb, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, &(*ubufs)[i], cs);
+        make_buffer(rb, sizeof(InterfaceUbo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, &(*ubufs)[i], cs);
         vmaMapMemory(rb->alloc, (*ubufs)[i].alloc, &(*ubuf_mappings)[i]);
         vmaSetAllocationName(rb->alloc, (*ubufs)[i].alloc, bufname);
         CLEANUP_START_NORES(MappingCleanup){

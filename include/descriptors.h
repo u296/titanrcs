@@ -10,11 +10,12 @@ typedef struct UniformBufferObject {
     Mat4 model;
     Mat4 view;
     Mat4 proj;
-} UniformBufferObject;
+    Vec4 fzoom_;
+} InterfaceUbo;
 
 bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout, CleanupStack* cs);
 
-void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void* ubufmap);
+void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap);
 
 bool make_descriptor_pool(const u32 n_max_inflight, VkDevice dev, VkDescriptorPool* dpool,
                           Error* e_out, CleanupStack* cs);

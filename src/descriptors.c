@@ -120,7 +120,7 @@ bool make_descriptor_sets(const u32 n_max_inflight, VkDevice dev,
         VkDescriptorBufferInfo dbi = {};
         dbi.buffer = ubufs[i].buf;
         dbi.offset = 0;
-        dbi.range = sizeof(UniformBufferObject);
+        dbi.range = sizeof(InterfaceUbo);
 
         VkWriteDescriptorSet wds = {};
         wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

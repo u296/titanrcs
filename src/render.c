@@ -2,6 +2,7 @@
 #include "common.h"
 #include "context.h"
 #include "descriptors.h"
+#include "linalg.h"
 #include "rcs/rcs.h"
 #include "rcs/rcs_render.h"
 #include "res.h"
@@ -12,8 +13,8 @@
 #include <unistd.h>
 #include <vulkan/vulkan_core.h>
 
-void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
-    UniformBufferObject u = {};
+void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
+    InterfaceUbo u = {};
 
     f32 I[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
@@ -79,9 +80,14 @@ void update_uniformbuffer(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
     memcpy(&u.view, &mixed_translation, sizeof(I));
     memcpy(&u.proj, &mixed_perspective, sizeof(I));
 
+    static f32 a = 0.0;
+    a += 0.2f * (3.1415f / 180.0f);
+    f32 zoom = 0.6f + 0.6f*sinf(a);
+
     u.model = transpose_m4(u.model);
     u.view = transpose_m4(u.view);
     u.proj = transpose_m4(u.proj);
+    u.fzoom_ = (Vec4){zoom,0.0,0.0,0.0};
 
     memcpy(ubufmap, &u, sizeof(u));
 }
@@ -295,7 +301,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
                           &ctx->resources.inflight_fncs[i_inflight]);
         f = vkResetCommandBuffer(ctx->resources.cmd_bufs[i_inflight], 0);
 
-        update_uniformbuffer(ctx->metadata.i_current_frame,
+        write_interface_ubo(ctx->metadata.i_current_frame,
                              ctx->swapchain.swpch_ext,
                              ctx->resources.ubuf_mappings[i_inflight]);
 
