@@ -208,5 +208,7 @@ bool make_rcs_reduction_pipeline(RenderBackend* rb,
     CLEANUP_START(PipelineCleanup){rb->dev, *out_red_pipeline};
     CLEANUP_END(pipeline);
 
+    vkDestroyShaderModule(rb->dev, reduction_module, NULL);
+
     return false;
 }
