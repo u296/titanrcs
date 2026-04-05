@@ -6,5 +6,5 @@ shaders/**/*.spv
 compile_commands.json
 include/glslang
 *.stl
-computepass.csv
+*.csv
 
