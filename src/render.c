@@ -7,6 +7,7 @@
 #include "rcs/rcs_render.h"
 #include "rcs/rcs_ubo.h"
 #include "res.h"
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -93,10 +94,10 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
     memcpy(ubufmap, &u, sizeof(u));
 }
 
-bool recordcommandbuffer(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
+bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
                          VkPipelineLayout pipeline_layout, VkPipeline pipeline,
                          VkDescriptorSet desc_set, Renderable ren,
-                         struct Error* e_out, RenderContext* ctx,
+                          RenderContext* ctx,
                          const u32 swpch_img_i) {
 
     VkCommandBufferBeginInfo cbbi = {};
@@ -257,12 +258,12 @@ bool recordcommandbuffer(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
     // END HACK
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
-    VERIFY("recording", r)
+    assert(r == VK_SUCCESS);
 
     return false;
 }
 
-LoopStatus do_renderloop(RenderContext* ctx) {
+LoopStatus renderloop_visualonly(RenderContext* ctx) {
     volatile VkResult f = VK_ERROR_UNKNOWN;
     f; // to silence unused variable warning in release builds
     struct Error e = {};
@@ -328,14 +329,14 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
         write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_inflight].ubufmap);
 
-        f = recordcommandbuffer(ctx->swapchain.swpch_ext,
+        f = record_interface_cmdbuf(ctx->swapchain.swpch_ext,
 
                                 ctx->resources.cmd_bufs[i_inflight],
 
                                 ctx->framegraph.pipeline_layout,
                                 ctx->framegraph.pipeline,
                                 ctx->framegraph.desc_sets[i_inflight],
-                                ctx->framegraph.the_object, &e, ctx, i_image);
+                                ctx->framegraph.the_object, ctx, i_image);
 
         VkCommandBuffer cmdbufs[2] = {
             ctx->rcs_resources.sets[i_inflight].cmdbuf,

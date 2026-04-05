@@ -3,7 +3,7 @@
 layout(set=0, binding=0) uniform sampler2D fft_img;
 
 layout(set=0, binding=1) buffer Results {
-    float sum_sq_mag;
+    float avg_sq_mag;
 } res;
 
 const float fft_res = 8192;
@@ -17,7 +17,7 @@ void main() {
 
     for (int i = 0; i < squaresize; i++) {
         for (int j = 0; j < squaresize; j++) {
-            vec2 val = texelFetch(fft_img, center + ivec2(i,j), 0).rg;
+            vec2 val = texelFetch(fft_img, center + ivec2(i-squaresize/2,j-squaresize/2), 0).rg;
 
             val *= (1.0 / sqrt(fft_res*fft_res)); // normalize fft to preserve power
 
@@ -25,5 +25,5 @@ void main() {
         }
     }
 
-    res.sum_sq_mag = total;
+    res.avg_sq_mag = total / (squaresize*squaresize);
 }

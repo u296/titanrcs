@@ -5,6 +5,6 @@
 
 typedef enum LoopStatus { REMAKE_SWAPCHAIN, EXIT_PROGRAM } LoopStatus;
 
-LoopStatus do_renderloop(RenderContext* ctx);
+LoopStatus renderloop_visualonly(RenderContext* ctx);
 
 #endif

@@ -12,6 +12,7 @@
 #include "buffers.h"
 #include "pipeline.h"
 #include "rcs/rcs.h"
+#include "rcs/rcs_computepass.h"
 #include "rcs/rcs_render.h"
 #include "render.h"
 #include "res.h"
@@ -82,7 +83,7 @@ int main() {
     for (u32 i = 0; i < N_MAX_INFLIGHT; i++) {
         record_rcs_cmdbuf(&ctx, i);
     }
-    //vkQueueWaitIdle(ctx.backend.queues.graphics_queue); // 
+    // vkQueueWaitIdle(ctx.backend.queues.graphics_queue); //
 
     f = make_descriptor_sets(ctx.resources.n_inflight_frames, ctx.backend.dev,
                              ctx.resources.dpool, ctx.resources.ubufs,
@@ -99,6 +100,8 @@ int main() {
     bool firstiter = true;
 
     bool shouldclose = false;
+
+    
 
     // make rendercontext here
     /*
@@ -145,6 +148,10 @@ int main() {
     // ctx.framegraph.pipeline=tri.pipeline;
     ctx.framegraph.the_object = tri;
 
+
+    run_visual_computepass(&ctx, &swp_cs);
+    return 0;
+
     do {
         // this is the loop that owns the swapchain and recreates it whenever
         // the renderloop exits because the swapchain needs renewal
@@ -165,7 +172,7 @@ int main() {
             make_swapchain_context(ctx.backend, &ctx.swapchain, &swp_cs);
         }
 
-        LoopStatus l = do_renderloop(&ctx);
+        LoopStatus l = renderloop_visualonly(&ctx);
 
         vkDeviceWaitIdle(ctx.backend.dev);
 
