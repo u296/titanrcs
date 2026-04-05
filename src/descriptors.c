@@ -23,7 +23,7 @@ bool make_descriptorsetlayout(VkDevice dev, VkDescriptorSetLayout* desc_layout,
     dslb.binding = 0;
     dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     dslb.descriptorCount = 1;
-    dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    dslb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     dslb.pImmutableSamplers = NULL;
 
     VkDescriptorSetLayoutBinding sampler = {};

@@ -33,11 +33,11 @@ vec3 make_color(float phase) {
 
 void main() {
 
-    float zoom = 0.1;
+    float zoom = ubo.fzoom_.x;
 
     if (pc.texture_i == 3) {
 
-        vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*ubo.fzoom_.x;
+        vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*zoom;
 
         vec2 mycol = texture(mytex[pc.texture_i], newuv).rg;
 
@@ -49,10 +49,19 @@ void main() {
         vec3 base_col = vec3(1,1,1);//make_color(phase);
         vec3 norm_col = base_col / length(base_col);
 
-        float i = length(mycol.rg)/100000;
+        float i = length(mycol.rg)/100;
 
-        //outColor = vec4(i,i,i,1.0);
-        outColor = vec4(norm_col * i, 1.0);
+        vec4 finalcol = vec4(norm_col * i, 1.0);
+
+        float delta = 1.0/fft_res;
+
+        float dist_from_cent = length(newuv - vec2(0.5+delta,0.5+delta));
+
+        if (dist_from_cent > 0.0005 && dist_from_cent < 0.001) {
+            finalcol.yz = vec2(0.0, 0.0);
+        }
+
+        outColor = finalcol;
     } else {
         vec3 mycol = texture(mytex[pc.texture_i], uv).rgb;
         outColor = vec4(mycol, 1.0);
