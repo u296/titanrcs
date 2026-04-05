@@ -49,16 +49,19 @@ void main() {
         vec3 base_col = vec3(1,1,1);//make_color(phase);
         vec3 norm_col = base_col / length(base_col);
 
-        float i = length(mycol.rg)/100;
+        float i = length(mycol.rg)/10;
 
         vec4 finalcol = vec4(norm_col * i, 1.0);
 
-        float delta = 1.0/fft_res;
+        float delta = 0.0;//1.0/fft_res;
 
         float dist_from_cent = length(newuv - vec2(0.5+delta,0.5+delta));
 
-        if (dist_from_cent > 0.0005 && dist_from_cent < 0.001) {
-            finalcol.yz = vec2(0.0, 0.0);
+        float ringinner = 0.003;
+        float ringthick = 0.001;
+
+        if (dist_from_cent > ringinner && dist_from_cent < (ringinner + ringthick)) {
+            finalcol.xyz = vec3(max(finalcol.x,0.5),0.0, 0.0);
         }
 
         outColor = finalcol;

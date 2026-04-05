@@ -20,7 +20,7 @@ layout(binding = 1) uniform sampler2D radar_infield;
 
 const float pi = 3.1415926535897932384626433832795;
 
-vec2 mul(vec2 a, vec2 b) {
+vec2 cmul(vec2 a, vec2 b) {
     return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
@@ -59,7 +59,7 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
 
-    out_prefouriertransform = mul(reflfield, phasefactor);
+    out_prefouriertransform = cmul(vec2(reflfield.x, 0.0), phasefactor);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 

@@ -13,7 +13,7 @@ void main() {
 
     float total = 0.0;
 
-    int squaresize = 2;
+    int squaresize = 4;
 
     for (int i = 0; i < squaresize; i++) {
         for (int j = 0; j < squaresize; j++) {
@@ -24,6 +24,16 @@ void main() {
             total += dot(val,val);
         }
     }
+
+    /*vec2 topleft = texelFetch(fft_img, center + ivec2(-1,-1), 0).rg / 4096;
+    vec2 topright = texelFetch(fft_img, center + ivec2(0,-1), 0).rg / 4096;
+    vec2 botleft = texelFetch(fft_img, center + ivec2(-1,0), 0).rg / 4096;
+    vec2 botright = texelFetch(fft_img, center + ivec2(0,0), 0).rg / 4096;
+
+    total += dot(topleft,topleft) / 4096.0;
+    total += dot(topright,topright) / 4096.0;
+    total += dot(botleft,botleft) / 4096.0;
+    total += dot(botright,botright) / 4096.0;*/
 
     res.avg_sq_mag = total / (squaresize*squaresize);
 }
