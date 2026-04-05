@@ -29,8 +29,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
 
     VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT,
-                               VK_FORMAT_R32G32B32A32_SFLOAT,
-                               VK_FORMAT_R32G32B32A32_SFLOAT};
+                               VK_FORMAT_R8G8B8A8_SRGB,
+                               VK_FORMAT_R8G8B8A8_SRGB};
 
     VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 

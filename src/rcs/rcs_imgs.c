@@ -65,7 +65,7 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
                             const u32 n_targets, Image* rendtargets,
                             CleanupStack* cs) {
 
-    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    VkFormat mainformat = VK_FORMAT_R8G8B8A8_SRGB;
 
     
 
@@ -75,7 +75,7 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
     ici.extent = (VkExtent3D){ext.width, ext.height, 1};
     ici.mipLevels = 1;
     ici.arrayLayers = 1;
-    ici.format = format;
+    ici.format = mainformat;
     ici.tiling = VK_IMAGE_TILING_OPTIMAL;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     ici.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -87,7 +87,7 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
     VkImageViewCreateInfo ivci = {};
     ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    ivci.format = format;
+    ivci.format = mainformat;
     ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     ivci.subresourceRange.baseMipLevel = 0;
     ivci.subresourceRange.levelCount = 1;
@@ -102,8 +102,8 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
             ici.format = VK_FORMAT_R32G32_SFLOAT;
             ivci.format = ici.format;
         } else {
-            ici.format = format;
-            ivci.format = format;
+            ici.format = mainformat;
+            ivci.format = mainformat;
         }
 
         vmaCreateImage(rb->alloc, &ici, &aci, &rendtargets[i].img,
