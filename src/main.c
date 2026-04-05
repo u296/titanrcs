@@ -91,7 +91,7 @@ int main() {
     MAINCHECK
 
     // u64 i_frame = 0;
-    constexpr u64 n_frameratecheck = 100;
+    constexpr u64 n_frameratecheck = 10;
 
     struct timespec startprogtime = {};
     timespec_get(&startprogtime, TIME_UTC);

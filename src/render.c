@@ -295,8 +295,8 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
             f32 rcs = out->out_rcs;
 
-            if (ctx->metadata.i_current_frame % 3 == 0) {
-                printf("RCS: %f\n", rcs);
+            if (ctx->metadata.i_current_frame % 1 == 0) {
+                printf("RCS: %8.1f    ", rcs); // leave space for fps print
             }
         }
 
@@ -391,7 +391,9 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
             ctx->metadata.last_frame_time = now;
 
-            // printf("FPS: %.1f\n", fps);
+            printf("FPS: %.1f\n", fps);
+        } else {
+            printf("\n");
         }
 
         switch (pres_res) {
