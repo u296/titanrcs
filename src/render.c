@@ -295,7 +295,7 @@ LoopStatus do_renderloop(RenderContext* ctx) {
 
             f32 rcs = out->out_rcs;
 
-            if (ctx->metadata.i_current_frame % 1 == 0) {
+            if (ctx->metadata.i_current_frame % 3 == 0) {
                 printf("RCS: %f\n", rcs);
             }
         }
