@@ -11,13 +11,32 @@
 #include <assert.h>
 #include <stdio.h>
 
+#define PI (3.1415926535f)
+#define RADIANS (3.1415926535f / 180.0f)
+
 typedef struct Path {
-    f32 angle;
+    f32 time;
+    f32 offset_pitch;
+    f32 pitchangle;
+    f32 yawangle;
 } Path;
 
-void path_advance(Path* p) { p->angle += 1.0f * (3.1415f / 180.0f); }
+void path_advance(Path* p) {
+    p->yawangle += 0.1f * RADIANS;
+}
 
-void path_init(Path* p) { p->angle = 0.0f; }
+void path_init(Path* p) {
+    p-> time = 0;
+    p->pitchangle = 0.0f * (PI / 180.0f);
+    p->yawangle = -180.0f * (PI / 180.0f);
+    p->offset_pitch = 0.0f * (PI / 180.0f);
+}
+
+bool path_is_complete(Path* p) { return p->yawangle > 180.0f * (PI / 180.0f); }
+
+void path_write_statcols(Path* p, FILE* fp) {
+    fprintf(fp, "%f, ", p->yawangle);
+}
 
 void path_write_ubo(Path* p, void* mapping) {
     RcsUbo ubo = {};
@@ -35,7 +54,7 @@ void path_write_ubo(Path* p, void* mapping) {
 
     Mat4 scale = ident4;
 
-    const f32 s = 0.5f;
+    const f32 s = 1.0f;
 
     *pindex_m4(&scale, 0, 0) = s;
     *pindex_m4(&scale, 1, 1) = s;
@@ -43,14 +62,16 @@ void path_write_ubo(Path* p, void* mapping) {
 
     Mat4 transl = ident4;
 
-    *pindex_m4(&transl, 0, 3) = -0.0f;
+    *pindex_m4(&transl, 0, 3) = 0.0f;
     *pindex_m4(&transl, 1, 3) = 0.0f;
     *pindex_m4(&transl, 2, 3) = 0.0f;
 
     Mat4 rotx = ident4;
     Mat4 roty = ident4;
-    f32 angx = p->angle;
-    f32 angy = 0.0f * (3.141592f / 180.0f);
+    Mat4 rotz = ident4;
+    f32 angx = p->offset_pitch + p->pitchangle;
+    f32 angy = p->yawangle;
+    f32 angz = 0.0f;//p->yawangle;
 
     *pindex_m4(&rotx, 1, 1) = cosf(angx);
     *pindex_m4(&rotx, 1, 2) = -sinf(angx);
@@ -62,7 +83,14 @@ void path_write_ubo(Path* p, void* mapping) {
     *pindex_m4(&roty, 2, 0) = sinf(angy);
     *pindex_m4(&roty, 2, 2) = cosf(angy);
 
-    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, scale)));
+    *pindex_m4(&rotz, 0, 0) = cosf(angz);
+    *pindex_m4(&rotz, 0, 1) = -sinf(angz);
+    *pindex_m4(&rotz, 1, 0) = sinf(angz);
+    *pindex_m4(&rotz, 1, 1) = cosf(angz);
+
+
+
+    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, mul_m4(rotz,scale))));
 
     Mat3 norm = transpose_m3(invert_m3(subm4_m3(ubo.model)));
 
@@ -71,7 +99,7 @@ void path_write_ubo(Path* p, void* mapping) {
 
     ubo.norm_trans = norm4;
 
-    const f32 near = -100.0f, far = 100.0f, left = -10.0f, right = 10.0f,
+    const f32 near = -10.0f, far = 10.0f, left = -10.0f, right = 10.0f,
               top = -10.0f, bot = 10.0f;
 
     *pindex_m4(&ubo.proj, 0, 0) = 2.0f / (right - left);
@@ -85,9 +113,7 @@ void path_write_ubo(Path* p, void* mapping) {
     memcpy(mapping, &ubo, sizeof(ubo));
 }
 
-void path_write_statcols(Path* p, FILE* fp) { fprintf(fp, "%f, ", p->angle); }
 
-bool path_is_complete(Path* p) { return p->angle > 6.18f; }
 
 void extract_and_write(FILE* output, void* extr_map, Path* path) {
     ExtractionSsbo* extr = extr_map;
@@ -253,7 +279,6 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
 
         path_write_ubo(master_path, ubo_mapping);
         *slave_path = *master_path;
-                                  
 
         r = record_interface_cmdbuf(ctx->swapchain.swpch_ext,
 
@@ -315,7 +340,6 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
             ctx->backend.fb_resized = false;
             return COMP_REMAKE_SWAPCHAIN;
         }
-
 
         path_advance(master_path);
     }

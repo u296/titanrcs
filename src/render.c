@@ -84,7 +84,9 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
 
     static f32 a = 0.0;
     a += 0.2f * (3.1415f / 180.0f);
-    f32 zoom = 0.1; // 0.6f + 0.6f*sinf(a);
+    f32 zoom = 1.0f;
+
+    // 0.005 for high zoom
 
     u.model = transpose_m4(u.model);
     u.view = transpose_m4(u.view);

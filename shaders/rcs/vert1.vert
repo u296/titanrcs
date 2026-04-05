@@ -19,10 +19,13 @@ void main() {
     vec4 proj_pos = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
 
     gl_Position = proj_pos;
-    out_pos = proj_pos.xyz;
-    vec3 v1 =  normalize((ubo.model * vec4(in_norm,1.0)).xyz);
+    //out_pos = proj_pos.xyz;
+    
+    
+    //vec3 v1 =  normalize((ubo.model * vec4(in_norm,1.0)).xyz);
     vec3 v2 = normalize(mat3(ubo.norm_trans) * in_norm);
 
-    out_norm = v1;
+    out_norm = v2;
+    out_pos = mat3(ubo.model) * in_pos;
 
 }
