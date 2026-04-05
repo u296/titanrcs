@@ -7,4 +7,4 @@ compile_commands.json
 include/glslang
 *.stl
 *.csv
-
+*.ipynb
