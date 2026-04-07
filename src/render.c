@@ -84,7 +84,7 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
 
     static f32 a = 0.0;
     a += 0.2f * (3.1415f / 180.0f);
-    f32 zoom = 1.0f;
+    f32 zoom = 0.01f;
 
     // 0.005 for high zoom
 
@@ -97,10 +97,10 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
 }
 
 bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
-                         VkPipelineLayout pipeline_layout, VkPipeline pipeline,
-                         VkDescriptorSet desc_set, Renderable ren,
-                          RenderContext* ctx,
-                         const u32 swpch_img_i) {
+                             VkPipelineLayout pipeline_layout,
+                             VkPipeline pipeline, VkDescriptorSet desc_set,
+                             Renderable ren, RenderContext* ctx,
+                             const u32 swpch_img_i) {
 
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -145,7 +145,7 @@ bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 
-    VkImageMemoryBarrier bar_pre = {};
+    /*VkImageMemoryBarrier bar_pre = {};
     bar_pre.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bar_pre.image = ctx->swapchain.swpch_imgs[swpch_img_i];
     bar_pre.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -155,11 +155,32 @@ bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
     bar_pre.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     bar_pre.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     bar_pre.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};*/
+
+    VkImageMemoryBarrier2 barpre2 = {};
+    barpre2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barpre2.image = ctx->swapchain.swpch_imgs[swpch_img_i];
+    barpre2.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    barpre2.srcAccessMask = VK_ACCESS_2_NONE;
+    barpre2.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barpre2.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    barpre2.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    barpre2.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    barpre2.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barpre2.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barpre2.subresourceRange =
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    VkDependencyInfo prerenddep = {};
+    prerenddep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    prerenddep.imageMemoryBarrierCount = 1;
+    prerenddep.pImageMemoryBarriers = &barpre2;
+
+    vkCmdPipelineBarrier2(cmdbuf, &prerenddep);
+
+    /*vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
-                         NULL, 0, NULL, 1, &bar_pre);
+                         NULL, 0, NULL, 1, &bar_pre);*/
 
     // vkCmdBeginRenderPass(cmdbuf, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBeginRendering(cmdbuf, &ri);
@@ -185,7 +206,7 @@ bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
     // vkCmdEndRenderPass(cmdbuf);
     vkCmdEndRendering(cmdbuf);
 
-    VkImageMemoryBarrier bar_post = {};
+    /*VkImageMemoryBarrier bar_post = {};
     bar_post.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bar_post.image = ctx->swapchain.swpch_imgs[swpch_img_i];
     bar_post.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -199,65 +220,28 @@ bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
 
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                          VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
-                         NULL, 1, &bar_post);
+                         NULL, 1, &bar_post);*/
 
-    const bool blittoscreenbuffer = false;
+    VkImageMemoryBarrier2 barpost2 = {};
+    barpost2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barpost2.image = ctx->swapchain.swpch_imgs[swpch_img_i];
+    barpost2.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    barpost2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barpost2.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    barpost2.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
+    barpost2.dstAccessMask = VK_ACCESS_2_NONE;
+    barpost2.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    barpost2.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barpost2.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barpost2.subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-    // TEMPORARY HACK TO BLIT TO SCREENBUFFER
-    if (blittoscreenbuffer) {
-        VkImageMemoryBarrier swapBarrier = {};
-        swapBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        swapBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        swapBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        swapBarrier.srcAccessMask = 0;
-        swapBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        swapBarrier.image = ctx->swapchain.swpch_imgs[swpch_img_i];
-        swapBarrier.subresourceRange =
-            (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    VkDependencyInfo postrenddep = {};
+    postrenddep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    postrenddep.imageMemoryBarrierCount = 1;
+    postrenddep.pImageMemoryBarriers = &barpost2;
 
-        vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0,
-                             NULL, 1, &swapBarrier);
-
-        VkImageBlit bi = {};
-        bi.srcOffsets[0] = (VkOffset3D){0, 0, 0};
-        bi.srcOffsets[1] = (VkOffset3D){RCS_RESOLUTION, RCS_RESOLUTION, 1};
-        bi.srcSubresource =
-            (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-
-        i32 x = ctx->swapchain.swpch_ext.width;
-        i32 y = ctx->swapchain.swpch_ext.height;
-
-        bi.dstOffsets[0] = (VkOffset3D){0, 0, 0};
-        bi.dstOffsets[1] = (VkOffset3D){x, y, 1};
-        bi.dstSubresource =
-            (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-
-        vkCmdBlitImage(cmdbuf, ctx->rcs_resources.sets[0].fft_img.img,
-                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       ctx->swapchain.swpch_imgs[swpch_img_i],
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bi,
-                       VK_FILTER_NEAREST);
-
-        VkImageMemoryBarrier presentBarrier = {};
-        presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        presentBarrier.srcAccessMask =
-            VK_ACCESS_TRANSFER_WRITE_BIT; // Wait for blit to finish
-        presentBarrier.dstAccessMask =
-            0; // Presentation doesn't need specific access
-        presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        presentBarrier.image = ctx->swapchain.swpch_imgs[swpch_img_i];
-        presentBarrier.subresourceRange =
-            (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-
-        vkCmdPipelineBarrier(
-            cmdbuf,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,       // From the blit stage
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // To the very end
-            0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
-    }
-    // END HACK
+    vkCmdPipelineBarrier2(cmdbuf, &postrenddep);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);
@@ -333,12 +317,12 @@ LoopStatus renderloop_visualonly(RenderContext* ctx) {
 
         f = record_interface_cmdbuf(ctx->swapchain.swpch_ext,
 
-                                ctx->resources.cmd_bufs[i_inflight],
+                                    ctx->resources.cmd_bufs[i_inflight],
 
-                                ctx->framegraph.pipeline_layout,
-                                ctx->framegraph.pipeline,
-                                ctx->framegraph.desc_sets[i_inflight],
-                                ctx->framegraph.the_object, ctx, i_image);
+                                    ctx->framegraph.pipeline_layout,
+                                    ctx->framegraph.pipeline,
+                                    ctx->framegraph.desc_sets[i_inflight],
+                                    ctx->framegraph.the_object, ctx, i_image);
 
         VkCommandBuffer cmdbufs[2] = {
             ctx->rcs_resources.sets[i_inflight].cmdbuf,
