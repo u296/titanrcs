@@ -5,9 +5,6 @@
 #include "linalg.h"
 #include "rcs/rcs_ubo.h"
 #include "res.h"
-#include "vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h"
-#include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
-#include "vulkan/vulkan_core.h"
 #include <assert.h>
 
 void write_rcs_ubo(RenderContext* ctx, void* mapping) {
@@ -144,44 +141,40 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 
-    VkImageMemoryBarrier rsb[4];
+    VkImageMemoryBarrier2 rsb2[4];
 
     for (u32 i = 0; i < 4; i++) {
-        rsb[i] = (VkImageMemoryBarrier){};
-        rsb[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        rsb[i].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        rsb[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        rsb[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        rsb[i].subresourceRange.baseArrayLayer = 0;
-        rsb[i].subresourceRange.layerCount = 1;
-        rsb[i].subresourceRange.levelCount = 1;
-        rsb[i].subresourceRange.baseMipLevel = 0;
-        rsb[i].srcAccessMask = VK_ACCESS_NONE;
+        rsb2[i] = (VkImageMemoryBarrier2){
+            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            NULL,
+            VK_PIPELINE_STAGE_2_NONE,
+            VK_ACCESS_2_NONE,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_QUEUE_FAMILY_IGNORED,
+            VK_QUEUE_FAMILY_IGNORED,
+
+        };
     }
-    rsb[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    rsb[0].image = ctx->rcs_resources.sets[f].rendtargets[0].img;
-    rsb[0].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    rsb[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    for (u32 i = 0; i < 3; i++) {
+        rsb2[i].image = ctx->rcs_resources.sets[f].rendtargets[i].img;
+        rsb2[i].subresourceRange =
+            (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    }
 
-    rsb[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    rsb[1].image = ctx->rcs_resources.sets[f].rendtargets[1].img;
-    rsb[1].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    rsb[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    rsb2[3].dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+    rsb2[3].dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    rsb2[3].newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    rsb2[3].image = ctx->rcs_resources.sets[f].depthimg.img;
+    rsb2[3].subresourceRange =
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
 
-    rsb[2].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    rsb[2].image = ctx->rcs_resources.sets[f].rendtargets[2].img;
-    rsb[2].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    rsb[2].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    VkDependencyInfo prerenddep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO, NULL, 0, 0, NULL, 0, NULL, 4, rsb2};
 
-    rsb[3].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    rsb[3].image = ctx->rcs_resources.sets[f].depthimg.img;
-    rsb[3].newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-    rsb[3].subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                         0, 0, NULL, 0, NULL, 4, rsb);
+    vkCmdPipelineBarrier2(cmdbuf, &prerenddep);
 
     vkCmdBeginRendering(cmdbuf, &ri);
 
@@ -204,19 +197,31 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     // barrier to transfer to fft buffer
 
-    VkImageMemoryBarrier renderBarrier = {};
-    renderBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    renderBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    renderBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    renderBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    renderBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    renderBarrier.image = ctx->rcs_resources.sets[f].rendtargets[0].img;
-    renderBarrier.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    VkImageMemoryBarrier2 rendtocp = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COPY_BIT,
+        VK_ACCESS_2_TRANSFER_READ_BIT,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].rendtargets[0].img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
-                         &renderBarrier);
+    VkDependencyInfo rendtocpdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+                                    NULL,
+                                    0,
+                                    0,
+                                    NULL,
+                                    0,
+                                    NULL,
+                                    1,
+                                    &rendtocp};
+
+    vkCmdPipelineBarrier2(cmdbuf, &rendtocpdep);
 
     VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf.buf;
 
@@ -258,20 +263,30 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         cmdbuf, ctx->rcs_resources.sets[f].rendtargets[0].img,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4, quadrants);
 
-    VkBufferMemoryBarrier bar_bufpostcp = {};
-    bar_bufpostcp.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    bar_bufpostcp.buffer = fft_buf;
-    bar_bufpostcp.offset = 0;
-    bar_bufpostcp.size = VK_WHOLE_SIZE;
-    bar_bufpostcp.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_bufpostcp.dstAccessMask =
-        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-    bar_bufpostcp.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar_bufpostcp.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    VkBufferMemoryBarrier2 bufpostcp = {
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COPY_BIT,
+        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        fft_buf,
+        0,
+        VK_WHOLE_SIZE};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 1,
-                         &bar_bufpostcp, 0, NULL);
+    VkDependencyInfo bufpostcpdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+                                     NULL,
+                                     0,
+                                     0,
+                                     NULL,
+                                     1,
+                                     &bufpostcp,
+                                     0,
+                                     NULL};
+
+    vkCmdPipelineBarrier2(cmdbuf, &bufpostcpdep);
 
     VkFFTLaunchParams lp = {};
     lp.commandBuffer = &cmdbuf;
@@ -279,89 +294,96 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     VkFFTAppend(ctx->backend.fft[f], -1, &lp);
 
-    VkBufferMemoryBarrier bar_bufpostfft = {};
-    bar_bufpostfft.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    bar_bufpostfft.buffer = fft_buf;
-    bar_bufpostfft.offset = 0;
-    bar_bufpostfft.size = VK_WHOLE_SIZE;
-    bar_bufpostfft.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    bar_bufpostfft.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    bar_bufpostfft.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar_bufpostfft.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    VkBufferMemoryBarrier2 bufpostfft = {
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COPY_BIT,
+        VK_ACCESS_2_TRANSFER_READ_BIT,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        fft_buf,
+        0,
+        VK_WHOLE_SIZE};
 
-    VkImageMemoryBarrier bar_fftimg_postfft = {};
-    bar_fftimg_postfft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_fftimg_postfft.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    bar_fftimg_postfft.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    bar_fftimg_postfft.srcAccessMask = VK_ACCESS_NONE;
-    bar_fftimg_postfft.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar_fftimg_postfft.image = ctx->rcs_resources.sets[f].fft_img.img;
-    bar_fftimg_postfft.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    VkImageMemoryBarrier2 imgpostfft = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_NONE,
+        VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_COPY_BIT,
+        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    const VkImageMemoryBarrier postfft_imgbars[1] = {
-        bar_fftimg_postfft}; //, bar_fftimg_postfft};
+    VkDependencyInfo postfftdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                                   NULL,
+                                   0,
+                                   0,
+                                   NULL,
+                                   1,
+                                   &bufpostfft,
+                                   1,
+                                   &imgpostfft};
 
-    vkCmdPipelineBarrier(
-        cmdbuf,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0, 0, NULL, 1, &bar_bufpostfft, 1, postfft_imgbars);
+    vkCmdPipelineBarrier2(cmdbuf, &postfftdep);
 
     vkCmdCopyBufferToImage(cmdbuf, fft_buf,
                            ctx->rcs_resources.sets[f].fft_img.img,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quadrants);
 
-    VkImageMemoryBarrier bar_raw = {}, bar_intens = {}, bar_phase = {},
-                         bar_fft = {};
-    bar_raw.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_intens.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_phase.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_fft.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    VkImageMemoryBarrier2 postfftcp[4];
 
-    bar_raw.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    bar_intens.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    bar_phase.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    bar_fft.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    for (u32 i = 0; i < 3; i++) {
+        postfftcp[i] = (VkImageMemoryBarrier2){
+            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            NULL,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_QUEUE_FAMILY_IGNORED,
+            VK_QUEUE_FAMILY_IGNORED,
+            ctx->rcs_resources.sets[f].rendtargets[i].img,
+            (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+    }
 
-    bar_raw.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    bar_intens.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    bar_phase.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    bar_fft.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    postfftcp[0].srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+    postfftcp[0].srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    postfftcp[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-    bar_raw.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    bar_intens.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    bar_phase.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    bar_fft.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    postfftcp[3] = (VkImageMemoryBarrier2){
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COPY_BIT,
+        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    bar_raw.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    bar_intens.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    bar_phase.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    bar_fft.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VkDependencyInfo postfftcpdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                                     NULL,
+                                     0,
+                                     0,
+                                     NULL,
+                                     0,
+                                     NULL,
+                                     4,
+                                     postfftcp};
 
-    bar_raw.image = ctx->rcs_resources.sets[f].rendtargets[0].img;
-    bar_intens.image = ctx->rcs_resources.sets[f].rendtargets[1].img;
-    bar_phase.image = ctx->rcs_resources.sets[f].rendtargets[2].img;
-    bar_fft.image = ctx->rcs_resources.sets[f].fft_img.img;
-
-    bar_raw.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    bar_intens.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    bar_phase.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    bar_fft.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-
-    VkImageMemoryBarrier fin_img_bars[] = {bar_raw, bar_intens, bar_phase,
-                                           bar_fft};
-
-    vkCmdPipelineBarrier(cmdbuf,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT |
-                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         0, 0, NULL, 0, NULL, 4, fin_img_bars);
+    vkCmdPipelineBarrier2(cmdbuf, &postfftcpdep);
 
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
                       ctx->rcs_resources.reduction_pipeline);
@@ -372,16 +394,22 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdDispatch(cmdbuf, 1, 1, 1);
 
-    VkBufferMemoryBarrier extr = {};
-    extr.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    extr.buffer = ctx->rcs_resources.sets[f].extr_buf.buf;
-    extr.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    extr.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-    extr.size = sizeof(ExtractionSsbo);
+    VkBufferMemoryBarrier2 extr = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+                                   NULL,
+                                   VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                   VK_ACCESS_2_SHADER_WRITE_BIT,
+                                   VK_PIPELINE_STAGE_2_HOST_BIT,
+                                   VK_ACCESS_2_HOST_READ_BIT,
+                                   VK_QUEUE_FAMILY_IGNORED,
+                                   VK_QUEUE_FAMILY_IGNORED,
+                                   ctx->rcs_resources.sets[f].extr_buf.buf,
+                                   0,
+                                   VK_WHOLE_SIZE};
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_PIPELINE_STAGE_HOST_BIT, 0, 0, NULL, 1, &extr, 0,
-                         NULL);
+    VkDependencyInfo extrdep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO, NULL, 0, 0, NULL, 1, &extr, 0, NULL};
+
+    vkCmdPipelineBarrier2(cmdbuf, &extrdep);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);

@@ -11,9 +11,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <vulkan/vulkan_core.h>
 
 void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
     InterfaceUbo u = {};
@@ -145,18 +142,6 @@ bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
 
     vkBeginCommandBuffer(cmdbuf, &cbbi);
 
-    /*VkImageMemoryBarrier bar_pre = {};
-    bar_pre.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_pre.image = ctx->swapchain.swpch_imgs[swpch_img_i];
-    bar_pre.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar_pre.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar_pre.srcAccessMask = VK_ACCESS_NONE;
-    bar_pre.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    bar_pre.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    bar_pre.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    bar_pre.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};*/
-
     VkImageMemoryBarrier2 barpre2 = {};
     barpre2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     barpre2.image = ctx->swapchain.swpch_imgs[swpch_img_i];
@@ -205,22 +190,6 @@ bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
     }
     // vkCmdEndRenderPass(cmdbuf);
     vkCmdEndRendering(cmdbuf);
-
-    /*VkImageMemoryBarrier bar_post = {};
-    bar_post.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bar_post.image = ctx->swapchain.swpch_imgs[swpch_img_i];
-    bar_post.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar_post.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar_post.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    bar_post.dstAccessMask = VK_ACCESS_NONE;
-    bar_post.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    bar_post.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    bar_post.subresourceRange =
-        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
-                         NULL, 1, &bar_post);*/
 
     VkImageMemoryBarrier2 barpost2 = {};
     barpost2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
