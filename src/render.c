@@ -88,7 +88,7 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
     u.model = transpose_m4(u.model);
     u.view = transpose_m4(u.view);
     u.proj = transpose_m4(u.proj);
-    u.fzoom_ = (Vec4){zoom, 0.0, 0.0, 0.0};
+    u.fzoom_ = (Vec4){zoom, RCS_RESOLUTION, 0.0, 0.0};
 
     memcpy(ubufmap, &u, sizeof(u));
 }

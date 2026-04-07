@@ -12,7 +12,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
-    vec4 fzoom_;
+    vec4 fzoom_fftres_;
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D mytex[4];
@@ -23,7 +23,6 @@ layout(set = 0, binding = 1) uniform sampler2D mytex[4];
 
 #define pi 3.14159265
 
-const float fft_res = 8192;
 
 vec3 make_color(float phase) {
     phase = mod(phase, 2.0 * pi);
@@ -32,8 +31,9 @@ vec3 make_color(float phase) {
 }
 
 void main() {
+    float fft_res = ubo.fzoom_fftres_.y;
 
-    float zoom = ubo.fzoom_.x;
+    float zoom = ubo.fzoom_fftres_.x;
 
     if (pc.texture_i == 3) {
 
@@ -50,6 +50,8 @@ void main() {
         vec3 norm_col = base_col / length(base_col);
 
         float i = length(mycol.rg)/10;
+
+        i = log(1.0 + length(mycol.rg)) / 1.5;
 
         vec4 finalcol = vec4(norm_col * i, 1.0);
 

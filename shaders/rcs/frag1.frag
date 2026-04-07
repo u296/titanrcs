@@ -49,7 +49,7 @@ void main() {
     const vec2 reflfield = albedo * infield;// * refl_fac(dot(normalize(norm), toscreen));
     const float refl_intens = length(reflfield) * length(reflfield) * refl_fac(dot(normalize(norm),toscreen));
 
-    const float k = 6.18 / (25e-3);
+    const float k = 6.18 / (10e-2);
 
     vec2 sq = pos.xy * pos.xy;
 
