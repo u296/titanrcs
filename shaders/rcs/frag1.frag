@@ -31,9 +31,9 @@ vec4 make_color(float phase) {
 }
 
 float refl_fac(float cosx) {
-    float h = (cosx-1)/0.1;
+    float h = (cosx-1)/0.3;
     h = h*h;
-    return exp(-h);
+    return 0.01 + 0.99*exp(-h);
 }
 
 void main() {
