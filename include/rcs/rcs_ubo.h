@@ -9,7 +9,7 @@ typedef struct RcsUbo {
     Mat4 view;
     Mat4 proj;
     Mat4 norm_trans;
-    Vec4 resolution_xy_L_;
+    Vec4 resolution_xy_L_lambda;
 } RcsUbo;
 
 typedef struct ExtractionSsbo {

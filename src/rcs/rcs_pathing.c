@@ -175,6 +175,7 @@ void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
     f32 p_scalex = 1.0f;
     f32 p_scaley = 1.0f;
     f32 p_scalez = 1.0f;
+    f32 p_lambda = 15e-2f;
 
     {
         PyObject* args = PyTuple_Pack(1, p->pypath);
@@ -210,6 +211,8 @@ void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
                         try_assign_float(&p_scaley, val);
                     } else if (PyUnicode_CompareWithASCIIString(key, "scale.z") == 0) {
                         try_assign_float(&p_scalez, val);
+                    } else if (PyUnicode_CompareWithASCIIString(key, "lambda") == 0) {
+                        try_assign_float(&p_lambda, val);
                     }
                 } else {
                     printf("non-string key in dict returned from path_get_params! ignoring\n");
@@ -231,7 +234,7 @@ void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
     ubo.view = ident4;
     ubo.proj = ident4;
     ubo.norm_trans = ident4;
-    ubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 0.0};
+    ubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, p_lambda};
 
     Mat4 scale = ident4;
 

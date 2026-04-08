@@ -12,7 +12,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     mat4 norm_proj;
-    vec4 resolution_xy_L_;
+    vec4 resolution_xy_L_lambda;
 } ubo;
 
 layout(binding = 1) uniform sampler2D radar_infield;
@@ -37,8 +37,9 @@ float refl_fac(float cosx) {
 }
 
 void main() {
-    const vec2 resolution = ubo.resolution_xy_L_.xy;
-    const float L = ubo.resolution_xy_L_.z;
+    const vec2 resolution = ubo.resolution_xy_L_lambda.xy;
+    const float L = ubo.resolution_xy_L_lambda.z;
+    const float lambda = ubo.resolution_xy_L_lambda.w;
 
     vec2 infield = vec2(1.0,0.0);//texelFetch(radar_infield, ivec2(pos.xy), 0).xy;
 
@@ -49,7 +50,7 @@ void main() {
     const vec2 reflfield = albedo * infield;// * refl_fac(dot(normalize(norm), toscreen));
     const float refl_intens = length(reflfield) * length(reflfield) * refl_fac(dot(normalize(norm),toscreen));
 
-    const float k = 6.18 / (10e-2);
+    const float k = 6.18 / lambda;
 
     vec2 sq = pos.xy * pos.xy;
 

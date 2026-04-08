@@ -19,7 +19,7 @@ void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     myubo.view = ident4;
     myubo.proj = ident4;
     myubo.norm_trans = ident4;
-    myubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 0.0};
+    myubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 15e-2f};
 
     Mat4 scale = ident4;
 
