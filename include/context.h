@@ -20,6 +20,7 @@ typedef struct RenderContext {
     } metadata;
     struct {
         u32 n_frameratecheck_interval;
+        f32 zoom;
     } config;
     RenderBackend backend;
     SwapchainContext swapchain;

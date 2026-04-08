@@ -1,4 +1,5 @@
 #include "backend/backend.h"
+#include "GLFW/glfw3.h"
 #include "cleanupstack.h"
 #include <assert.h>
 
@@ -6,6 +7,7 @@
 #include "backend/device.h"
 #include "backend/instance.h"
 #include "backend/fft.h"
+#include "context.h"
 #include "res.h"
 
 #define CHECK assert(f == false)
@@ -31,8 +33,23 @@ void destroy_window(void* obj) {
 }
 
 void fb_resize_callback(GLFWwindow* wnd, int width, int height) {
-    bool* fbresize = (bool*)glfwGetWindowUserPointer(wnd);
-    *fbresize = true;
+    RenderContext* ctx = (RenderContext*)glfwGetWindowUserPointer(wnd);
+    ctx->backend.fb_resized = true;
+}
+
+
+
+void keypress_callback(GLFWwindow* wnd, int key, int scancode, int action, int mods) {
+    RenderContext* ctx = (RenderContext*)glfwGetWindowUserPointer(wnd);
+
+    constexpr f32 ZOOMSTEP = 1.1f;
+
+    if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+        ctx->config.zoom *= ZOOMSTEP;
+    } else if(key == GLFW_KEY_DOWN && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+        ctx->config.zoom *= (1.0f) / ZOOMSTEP;
+    }
+    printf("action: %i\n", action);
 }
 
 void init_backend(RenderBackend* rb, CleanupStack* cs) {
@@ -45,8 +62,9 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
     CLEANUP_START_ONORES(GLFWwindow*)
     rb->wnd CLEANUP_END(window)
 
-        glfwSetWindowUserPointer(rb->wnd, &rb->fb_resized);
+        
     glfwSetFramebufferSizeCallback(rb->wnd, fb_resize_callback);
+    glfwSetKeyCallback(rb->wnd, keypress_callback);
 
     f = make_instance(&rb->inst, &e, cs);
     CHECK;

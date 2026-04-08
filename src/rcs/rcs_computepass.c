@@ -180,7 +180,8 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
 
         write_interface_ubo(ctx->metadata.i_current_frame,
                             ctx->swapchain.swpch_ext,
-                            ctx->resources.ubuf_mappings[f]);
+                            ctx->resources.ubuf_mappings[f],
+                        ctx->config.zoom);
 
         path_write_ubo(&ctx->rcs_resources.pathres, master_path, ubo_mapping);
 

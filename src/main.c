@@ -44,6 +44,7 @@ int main() {
     Renderable tri;
 
     init_backend(&ctx.backend, &cs);
+    glfwSetWindowUserPointer(ctx.backend.wnd, &ctx);
 
     CleanupStack swp_cs = {};
     cs_init(&swp_cs);
@@ -142,6 +143,7 @@ int main() {
     ctx.metadata.last_frame_time = startprogtime;
     // ctx.config.max_inflight_frames = n_max_inflight;
     ctx.config.n_frameratecheck_interval = n_frameratecheck;
+    ctx.config.zoom = 20.0f;
 
     // ctx.backend = my_rendbackend;
     // ctx.swapchain = my_swpctx;

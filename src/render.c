@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
+void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap, f32 ctxzoom) {
     InterfaceUbo u = {};
 
     f32 I[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
@@ -81,7 +81,7 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap) {
 
     static f32 a = 0.0;
     a += 0.2f * (3.1415f / 180.0f);
-    f32 zoom = 0.01f;
+    f32 zoom = 1.0f/ctxzoom;//0.01f;
 
     // 0.005 for high zoom
 
@@ -280,7 +280,8 @@ LoopStatus renderloop_visualonly(RenderContext* ctx) {
 
         write_interface_ubo(ctx->metadata.i_current_frame,
                             ctx->swapchain.swpch_ext,
-                            ctx->resources.ubuf_mappings[i_inflight]);
+                            ctx->resources.ubuf_mappings[i_inflight],
+                        ctx->config.zoom);
 
         write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_inflight].ubufmap);
 

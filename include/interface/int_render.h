@@ -3,7 +3,7 @@
 #include "common.h"
 #include "context.h"
 
-void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap);
+void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap, f32 ctxzoom);
 
 bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
                              VkPipelineLayout pipeline_layout,
