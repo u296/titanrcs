@@ -46,7 +46,8 @@ void main() {
         // let's do the modulus in case of complex value
         float phase = atan(mycol.g, mycol.r);
 
-        vec3 base_col = vec3(1,1,1);//make_color(phase);
+        vec3 base_col = vec3(1,1,1);
+        //vec3 base_col = make_color(phase);
         vec3 norm_col = base_col / length(base_col);
 
         float i = length(mycol.rg)/10;
