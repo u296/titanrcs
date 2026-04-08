@@ -140,10 +140,12 @@ void path_write_statcols(PathingResources* pres, Path* p, FILE* fp) {
 }
 
 void try_assign_float(f32* dst, PyObject* val) {
-    if (PyFloat_Check(val)) {
-        *dst = PyFloat_AS_DOUBLE(val);
+    double myval = PyFloat_AsDouble(val);
+
+    if (myval == -1.0 && PyErr_Occurred()) {
+        printf("value could not be made into a float! ignoring\n");
     } else {
-        printf("value was not a float! ignoring\n");
+        *dst = (f32)myval;
     }
 }
 
