@@ -82,6 +82,20 @@ void path_advance(PathingResources* res, Path* p) {
 
     PyObject* pnewpathstate = PyObject_CallObject(res->pypath_advance, args);
 
+    if (pnewpathstate == NULL) {
+        PyObject* exc = PyErr_GetRaisedException();
+
+        PyObject* err = PyObject_Str(exc);
+
+        const char* message = PyUnicode_AsUTF8(err);
+
+        printf("path_advance: failed to advance path: %s\n", message);
+
+        Py_XDECREF(exc);
+        Py_XDECREF(err);
+        abort();
+    }
+
     Py_XDECREF(p->pypath);
     p->pypath = pnewpathstate;
 
