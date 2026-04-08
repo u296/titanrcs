@@ -8,3 +8,4 @@ include/glslang
 *.stl
 *.csv
 *.ipynb
+*.pyc

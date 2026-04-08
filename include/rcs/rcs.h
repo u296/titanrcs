@@ -3,7 +3,7 @@
 
 #include "backend/backend.h"
 #include "res.h"
-#include <vulkan/vulkan_core.h>
+#include "rcs/rcs_pathing.h"
 
 typedef struct RcsPerInflight {
     VkDescriptorSet descset;
@@ -28,6 +28,7 @@ typedef struct RcsResources {
     VkPipeline reduction_pipeline;
     VkSampler sampler;
     Renderable mesh;
+    PathingResources pathres;
     RcsPerInflight sets[N_MAX_INFLIGHT];
 } RcsResources;
 

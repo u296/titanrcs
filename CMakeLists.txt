@@ -51,6 +51,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(libstl)
 
+find_package(Python3 COMPONENTS Interpreter Development.Embed REQUIRED)
+
 
 if(TARGET SPIRV)
     if(MSVC)
@@ -85,6 +87,7 @@ add_executable(titanrcs
     src/rcs/rcs_mesh.c
     src/rcs/rcs_render.c
     src/rcs/rcs_computepass.c
+    src/rcs/rcs_pathing.c
     src/pipeline.c
     src/buffers.c
     src/linalg.c
@@ -115,7 +118,7 @@ target_include_directories(volk
 
 
 
-target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator SPIRV glslang VkFFT stl)
+target_link_libraries(titanrcs PRIVATE volk glfw VulkanMemoryAllocator SPIRV glslang VkFFT stl Python3::Python)
 
 
 if(APPLE)

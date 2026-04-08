@@ -5,120 +5,25 @@
 #include "descriptors.h"
 #include "interface/int_render.h"
 #include "rcs/rcs.h"
+#include "rcs/rcs_pathing.h"
 #include "rcs/rcs_ubo.h"
 #include "render.h"
 #include "res.h"
 #include <assert.h>
 #include <stdio.h>
+#include <Python.h>
 
 #define PI (3.1415926535f)
 #define RADIANS (3.1415926535f / 180.0f)
 
-typedef struct Path {
-    f32 time;
-    f32 offset_pitch;
-    f32 pitchangle;
-    f32 yawangle;
-} Path;
-
-void path_advance(Path* p) {
-    p->yawangle += 0.1f * RADIANS;
-}
-
-void path_init(Path* p) {
-    p-> time = 0;
-    p->pitchangle = 0.0f * (PI / 180.0f);
-    p->yawangle = -180.0f * (PI / 180.0f);
-    p->offset_pitch = 0.0f * (PI / 180.0f);
-}
-
-bool path_is_complete(Path* p) { return p->yawangle > 180.0f * (PI / 180.0f); }
-
-void path_write_statcols(Path* p, FILE* fp) {
-    fprintf(fp, "%f, ", p->yawangle);
-}
-
-void path_write_ubo(Path* p, void* mapping) {
-    RcsUbo ubo = {};
-
-    Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                    0.0, 0.0, 0.0, 1.0}};
-
-    const f32 L = 1000.0f;
-
-    ubo.model = ident4;
-    ubo.view = ident4;
-    ubo.proj = ident4;
-    ubo.norm_trans = ident4;
-    ubo.resolution_xy_L_ = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 0.0};
-
-    Mat4 scale = ident4;
-
-    const f32 s = 1.0f;
-
-    *pindex_m4(&scale, 0, 0) = s;
-    *pindex_m4(&scale, 1, 1) = s;
-    *pindex_m4(&scale, 2, 2) = s;
-
-    Mat4 transl = ident4;
-
-    *pindex_m4(&transl, 0, 3) = 0.0f;
-    *pindex_m4(&transl, 1, 3) = 0.0f;
-    *pindex_m4(&transl, 2, 3) = 0.0f;
-
-    Mat4 rotx = ident4;
-    Mat4 roty = ident4;
-    Mat4 rotz = ident4;
-    f32 angx = p->offset_pitch + p->pitchangle;
-    f32 angy = p->yawangle;
-    f32 angz = 0.0f;//p->yawangle;
-
-    *pindex_m4(&rotx, 1, 1) = cosf(angx);
-    *pindex_m4(&rotx, 1, 2) = -sinf(angx);
-    *pindex_m4(&rotx, 2, 1) = sinf(angx);
-    *pindex_m4(&rotx, 2, 2) = cosf(angx);
-
-    *pindex_m4(&roty, 0, 0) = cosf(angy);
-    *pindex_m4(&roty, 0, 2) = -sinf(angy);
-    *pindex_m4(&roty, 2, 0) = sinf(angy);
-    *pindex_m4(&roty, 2, 2) = cosf(angy);
-
-    *pindex_m4(&rotz, 0, 0) = cosf(angz);
-    *pindex_m4(&rotz, 0, 1) = -sinf(angz);
-    *pindex_m4(&rotz, 1, 0) = sinf(angz);
-    *pindex_m4(&rotz, 1, 1) = cosf(angz);
 
 
 
-    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, mul_m4(rotz,scale))));
 
-    Mat3 norm = transpose_m3(invert_m3(subm4_m3(ubo.model)));
-
-    Mat4 norm4 = zeroed_from_m3(norm);
-    *pindex_m4(&norm4, 3, 3) = 1.0f; // set corner
-
-    ubo.norm_trans = norm4;
-
-    const f32 near = -10.0f, far = 10.0f, left = -10.0f, right = 10.0f,
-              top = -10.0f, bot = 10.0f;
-
-    *pindex_m4(&ubo.proj, 0, 0) = 2.0f / (right - left);
-    *pindex_m4(&ubo.proj, 1, 1) = 2.0f / (bot - top);
-    *pindex_m4(&ubo.proj, 2, 2) = 1.0f / (far - near);
-
-    *pindex_m4(&ubo.proj, 0, 3) = -(right + left) / (right - left);
-    *pindex_m4(&ubo.proj, 1, 3) = -(bot + top) / (bot - top);
-    *pindex_m4(&ubo.proj, 2, 3) = -(near) / (far - near);
-
-    memcpy(mapping, &ubo, sizeof(ubo));
-}
-
-
-
-void extract_and_write(FILE* output, void* extr_map, Path* path) {
+void extract_and_write(FILE* output, void* extr_map, PathingResources* pres, Path* path) {
     ExtractionSsbo* extr = extr_map;
 
-    path_write_statcols(path, output);
+    path_write_statcols(pres,path, output);
 
     fprintf(output, "%f\n", extr->out_rcs);
 }
@@ -146,7 +51,7 @@ void run_computepass(RenderContext* ctx) {
 
     Path* mypath = malloc(sizeof(Path));
 
-    path_init(mypath);
+    path_init(&ctx->rcs_resources.pathres,mypath);
 
     struct timespec start;
     timespec_get(&start, TIME_UTC);
@@ -155,7 +60,7 @@ void run_computepass(RenderContext* ctx) {
     r;
 
     u32 i = 0;
-    for (; !path_is_complete(mypath); i++) {
+    for (; !path_is_complete(&ctx->rcs_resources.pathres, mypath); i++) {
 
         const u32 f = i % N_MAX_INFLIGHT;
 
@@ -167,17 +72,17 @@ void run_computepass(RenderContext* ctx) {
         VkFence inflight_fen = ctx->resources.inflight_fncs[f];
         VkCommandBuffer cmdbuf = ctx->rcs_resources.sets[f].cmdbuf;
 
-        path_write_ubo(mypath, ctx->rcs_resources.sets[f].ubufmap);
+        path_write_ubo(&ctx->rcs_resources.pathres, mypath, ctx->rcs_resources.sets[f].ubufmap);
 
         r = vkWaitForFences(rb->dev, 1, &inflight_fen, VK_TRUE, UINT64_MAX);
         assert(r == VK_SUCCESS);
         if (!*first_render) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
                                     sizeof(ExtractionSsbo));
-            extract_and_write(outputfile, extraction_mapping, mypath);
+            extract_and_write(outputfile, extraction_mapping, &ctx->rcs_resources.pathres, mypath);
         }
 
-        path_write_ubo(mypath, ubo_mapping);
+        path_write_ubo(&ctx->rcs_resources.pathres, mypath, ubo_mapping);
 
         r = vkResetFences(rb->dev, 1, &inflight_fen);
         assert(r == VK_SUCCESS);
@@ -192,7 +97,7 @@ void run_computepass(RenderContext* ctx) {
         assert(r == VK_SUCCESS);
         *first_render = false;
 
-        path_advance(mypath);
+        path_advance(&ctx->rcs_resources.pathres, mypath);
     }
 
     struct timespec end;
@@ -225,7 +130,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
                                        bool* first_render_stats) {
     VkResult r = VK_RESULT_MAX_ENUM;
 
-    for (; !path_is_complete(master_path); (*i)++) {
+    for (; !path_is_complete(&ctx->rcs_resources.pathres, master_path); (*i)++) {
         glfwPollEvents();
         if (glfwWindowShouldClose(ctx->backend.wnd)) {
             return COMP_WINDOW_CLOSED;
@@ -248,7 +153,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         if (!*first_render) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
                                     sizeof(ExtractionSsbo));
-            extract_and_write(outputfile, extraction_mapping, slave_path);
+            extract_and_write(outputfile, extraction_mapping,&ctx->rcs_resources.pathres, slave_path);
         }
 
         r = vkResetFences(rb->dev, 1, &inflight_fen);
@@ -277,8 +182,10 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
                             ctx->swapchain.swpch_ext,
                             ctx->resources.ubuf_mappings[f]);
 
-        path_write_ubo(master_path, ubo_mapping);
-        *slave_path = *master_path;
+        path_write_ubo(&ctx->rcs_resources.pathres, master_path, ubo_mapping);
+
+        //*slave_path = *master_path;
+        path_copy(slave_path, master_path);
 
         r = record_interface_cmdbuf(ctx->swapchain.swpch_ext,
 
@@ -341,12 +248,15 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
             return COMP_REMAKE_SWAPCHAIN;
         }
 
-        path_advance(master_path);
+        path_advance(&ctx->rcs_resources.pathres, master_path);
     }
     return COMP_COMPLETE;
 }
 
 void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
+    
+
+
     FILE* outputfile = NULL;
 
     outputfile = fopen("computepass.csv", "w");
@@ -367,11 +277,15 @@ void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
         extraction_maps[i] = info.pMappedData;
     }
 
-    Path* mypath = malloc(sizeof(Path));
+    Path mypath;
 
     Path slave_paths[N_MAX_INFLIGHT];
 
-    path_init(mypath);
+    for (u32 i = 0; i < N_MAX_INFLIGHT; i++) {
+        slave_paths[i] = (Path){};
+    }
+
+    path_init(&ctx->rcs_resources.pathres, &mypath);
 
     struct timespec start;
     timespec_get(&start, TIME_UTC);
@@ -383,9 +297,9 @@ void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
 
     bool premature_exit = false;
 
-    while (!path_is_complete(mypath)) {
+    while (!path_is_complete(&ctx->rcs_resources.pathres, &mypath)) {
         CompLoopStatus status = visual_compute_mainloop(
-            ctx, outputfile, mypath, slave_paths, &i, extraction_allocs,
+            ctx, outputfile, &mypath, slave_paths, &i, extraction_allocs,
             extraction_maps, first_render_stats);
 
         switch (status) {
@@ -437,6 +351,4 @@ void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
            fps);
 
     fclose(outputfile);
-
-    free(mypath);
 }

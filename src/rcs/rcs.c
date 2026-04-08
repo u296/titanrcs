@@ -6,6 +6,7 @@
 #include "rcs/rcs_descset.h"
 #include "rcs/rcs_imgs.h"
 #include "rcs/rcs_mesh.h"
+#include "rcs/rcs_pathing.h"
 #include "rcs/rcs_pipeline.h"
 #include "rcs/rcs_ubo.h"
 #include "res.h"
@@ -17,6 +18,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     constexpr u32 N_RENDTARGETS = 3;
     VkExtent2D ext = {RCS_RESOLUTION, RCS_RESOLUTION};
 
+    PathingResources pathres = {};
     VkDescriptorPool rcs_dpool;
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
@@ -33,6 +35,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                                VK_FORMAT_R8G8B8A8_SRGB};
 
     VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
+
+    make_rcs_pathingresources(&pathres, cs);
 
     make_rcs_dpool(rb->dev, &rcs_dpool, cs);
 
@@ -92,7 +96,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                         rcs_red_pipeline,
                         rcs_sampler,
                         rcs_mesh,
-                        {rcs_inflights[0], rcs_inflights[1]}};
+                        pathres,
+                        };
 
     memcpy(((void*)&res) + offsetof(RcsResources, sets), rcs_inflights,
            sizeof(RcsPerInflight) * N_MAX_INFLIGHT);
