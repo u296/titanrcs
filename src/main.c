@@ -143,7 +143,7 @@ int main() {
     ctx.metadata.last_frame_time = startprogtime;
     // ctx.config.max_inflight_frames = n_max_inflight;
     ctx.config.n_frameratecheck_interval = n_frameratecheck;
-    ctx.config.zoom = 20.0f;
+    ctx.config.zoom = 1.0f;//20.0f;
 
     // ctx.backend = my_rendbackend;
     // ctx.swapchain = my_swpctx;

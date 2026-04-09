@@ -7,6 +7,8 @@
 #include "res.h"
 #include <assert.h>
 
+#define QUADRANTSHIFT_YES
+
 void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     RcsUbo myubo = {};
 
@@ -19,7 +21,8 @@ void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     myubo.view = ident4;
     myubo.proj = ident4;
     myubo.norm_trans = ident4;
-    myubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 15e-2f};
+    myubo.resolution_xy_L_lambda =
+        (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 15e-2f};
 
     Mat4 scale = ident4;
 
@@ -228,7 +231,25 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     // the buffer copies can be configured to do the layout shifting to center
     // the fft
 
-    VkBufferImageCopy quadrants[4] = {{}, {}, {}, {}};
+#ifdef QUADRANTSHIFT_NO
+    // non-shifting copy
+    constexpr u32 N_QUADRANTS = 1;
+    VkBufferImageCopy quadrants[N_QUADRANTS] = {{}};
+
+    quadrants[0].bufferImageHeight = (RCS_RESOLUTION);
+    quadrants[0].bufferRowLength = (RCS_RESOLUTION);
+    quadrants[0].imageExtent =
+        (VkExtent3D){(RCS_RESOLUTION), (RCS_RESOLUTION), 1};
+    quadrants[0].imageSubresource =
+        (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+
+    const u32 texelsize = sizeof(float) * 2; // fft image is R32G32_SFLOAT
+    // 0: top left to bottom right
+    quadrants[0].imageOffset = (VkOffset3D){0, 0, 0};
+    quadrants[0].bufferOffset =0;
+#elifdef QUADRANTSHIFT_YES
+    constexpr u32 N_QUADRANTS = 4;
+    VkBufferImageCopy quadrants[N_QUADRANTS] = {{}, {}, {}, {}};
 
     for (u32 i = 0; i < 4; i++) {
         quadrants[i].bufferImageHeight = (RCS_RESOLUTION);
@@ -258,10 +279,13 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     quadrants[3].imageOffset =
         (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
     quadrants[3].bufferOffset = 0;
+#else
+#error must define QUADRANTSHIFT_YES or NO
+#endif
 
     vkCmdCopyImageToBuffer(
         cmdbuf, ctx->rcs_resources.sets[f].rendtargets[0].img,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, 4, quadrants);
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, N_QUADRANTS, quadrants);
 
     VkBufferMemoryBarrier2 bufpostcp = {
         VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
@@ -333,9 +357,9 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPipelineBarrier2(cmdbuf, &postfftdep);
 
-    vkCmdCopyBufferToImage(cmdbuf, fft_buf,
-                           ctx->rcs_resources.sets[f].fft_img.img,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 4, quadrants);
+    vkCmdCopyBufferToImage(
+        cmdbuf, fft_buf, ctx->rcs_resources.sets[f].fft_img.img,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, N_QUADRANTS, quadrants);
 
     VkImageMemoryBarrier2 postfftcp[4];
 

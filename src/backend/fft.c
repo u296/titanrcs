@@ -79,6 +79,19 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp, CleanupStack* c
     cfg.size[1] = RCS_RESOLUTION;
     cfg.size[2] = 1;
     cfg.isInputFormatted = 0;
+    cfg.isOutputFormatted = 0;
+
+    constexpr u32 VIEWSIZE = 1024;
+
+    cfg.frequencyZeroPadding = 1;
+    cfg.performZeropadding[0] = 1;
+    cfg.performZeropadding[1] = 1;
+    cfg.fft_zeropad_left[0] = 512;
+    cfg.fft_zeropad_right[0] = 8192-512;
+    cfg.fft_zeropad_left[1] = 512;
+    cfg.fft_zeropad_right[1] = 8192-512;
+    cfg.keepShaderCode = 1;
+
 
     cfg.bufferSize = &fftbuf_size;
 

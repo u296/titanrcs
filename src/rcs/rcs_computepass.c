@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <Python.h>
+#include <unistd.h>
 
 #define PI (3.1415926535f)
 #define RADIANS (3.1415926535f / 180.0f)
@@ -135,6 +136,8 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         if (glfwWindowShouldClose(ctx->backend.wnd)) {
             return COMP_WINDOW_CLOSED;
         }
+
+        //usleep(1000*300);
 
         const u32 f = *i % N_MAX_INFLIGHT;
 
