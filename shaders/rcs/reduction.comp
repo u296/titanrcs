@@ -6,10 +6,10 @@ layout(set=0, binding=1) buffer Results {
     float avg_sq_mag;
 } res;
 
-const float fft_res = 8192;
-
 void main() {
     ivec2 center = textureSize(fft_img,0) / 2;
+
+    float fft_res = textureSize(fft_img,0).x;
 
     float total = 0.0;
 
