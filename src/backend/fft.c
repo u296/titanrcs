@@ -81,16 +81,16 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp, CleanupStack* c
     cfg.isInputFormatted = 0;
     cfg.isOutputFormatted = 0;
 
-    constexpr u32 VIEWSIZE = 1024;
+    constexpr u32 VIEWSIZE = RCS_RESOLUTION/16; // We only need a tiny part of the image
 
     cfg.frequencyZeroPadding = 1;
-    cfg.performZeropadding[0] = 1;
-    cfg.performZeropadding[1] = 1;
-    cfg.fft_zeropad_left[0] = 512;
-    cfg.fft_zeropad_right[0] = 8192-512;
-    cfg.fft_zeropad_left[1] = 512;
-    cfg.fft_zeropad_right[1] = 8192-512;
-    cfg.keepShaderCode = 1;
+    cfg.performZeropadding[0] = 2;
+    cfg.performZeropadding[1] = 2;
+    cfg.fft_zeropad_left[0] = VIEWSIZE/2;
+    cfg.fft_zeropad_right[0] = RCS_RESOLUTION-VIEWSIZE/2;
+    cfg.fft_zeropad_left[1] = VIEWSIZE/2;
+    cfg.fft_zeropad_right[1] = RCS_RESOLUTION-VIEWSIZE/2;
+    
 
 
     cfg.bufferSize = &fftbuf_size;

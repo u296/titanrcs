@@ -277,7 +277,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     // 3: bottom right to top left
     quadrants[3].imageOffset =
-        (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2};
+        (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2, 0};
     quadrants[3].bufferOffset = 0;
 #else
 #error must define QUADRANTSHIFT_YES or NO
