@@ -1,0 +1,9 @@
+
+
+Optimization:
+
+* swap out the traditional image render target for a storage texel buffer
+
+this will make the expensive copies obsolete
+
+especially important for running on M1
