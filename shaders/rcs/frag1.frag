@@ -50,7 +50,7 @@ void main() {
     const vec2 reflfield = albedo * infield;// * refl_fac(dot(normalize(norm), toscreen));
     const float refl_intens = length(reflfield) * length(reflfield) * refl_fac(dot(normalize(norm),toscreen));
 
-    const float k = 6.18 / lambda;
+    const float k = 2.0*pi / lambda;
 
     vec2 sq = pos.xy * pos.xy;
 
@@ -60,7 +60,7 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
 
-    out_prefouriertransform = cmul(vec2(reflfield.x, 0.0), phasefactor);
+    out_prefouriertransform = cmul(reflfield, phasefactor);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 

@@ -2,6 +2,7 @@
 #include "cleanupstack.h"
 #include "common.h"
 #include "rcs/rcs_ubo.h"
+#include "res.h"
 #include <Python.h>
 
 PyObject* loadpyfunc(PyObject* module, const char* name) {
@@ -228,13 +229,12 @@ void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
     Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                     0.0, 0.0, 0.0, 1.0}};
 
-    const f32 L = 1000.0f;
 
     ubo.model = ident4;
     ubo.view = ident4;
     ubo.proj = ident4;
     ubo.norm_trans = ident4;
-    ubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, p_lambda};
+    ubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, p_lambda};
 
     Mat4 scale = ident4;
 
@@ -280,8 +280,10 @@ void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
 
     ubo.norm_trans = norm4;
 
-    const f32 near = -10.0f, far = 10.0f, left = -10.0f, right = 10.0f,
-              top = -10.0f, bot = 10.0f;
+    
+
+    const f32 near = -RCS_BOXSIZE/2.0f, far = RCS_BOXSIZE/2.0f, left = -RCS_BOXSIZE/2.0f, right = RCS_BOXSIZE/2.0f,
+              top = -RCS_BOXSIZE/2.0f, bot = RCS_BOXSIZE/2.0f;
 
     *pindex_m4(&ubo.proj, 0, 0) = 2.0f / (right - left);
     *pindex_m4(&ubo.proj, 1, 1) = 2.0f / (bot - top);

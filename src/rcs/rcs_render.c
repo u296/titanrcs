@@ -15,14 +15,12 @@ void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                     0.0, 0.0, 0.0, 1.0}};
 
-    const f32 L = 1000.0f;
-
     myubo.model = ident4;
     myubo.view = ident4;
     myubo.proj = ident4;
     myubo.norm_trans = ident4;
     myubo.resolution_xy_L_lambda =
-        (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, L, 15e-2f};
+        (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, 15e-2f};
 
     Mat4 scale = ident4;
 

@@ -28,7 +28,19 @@ void extract_and_write(FILE* output, void* extr_map, PathingResources* pres, Pat
 
     path_write_statcols(pres,path, output);
 
-    f32 rcs = calc_rcs(1.0, extr->out_intensity, 1000.0);
+    f32 out_s = extr->out_intensity; // this is per square pixel, need to convert to si 
+
+    const f32 lambda = 0.15f; // BAD: SET IN PYTHON
+
+    f32 farfieldpixel = powf((lambda * RCS_RANGE) / RCS_BOXSIZE, 2.0f);
+    f32 nearfieldpixel = powf(RCS_BOXSIZE/RCS_RESOLUTION,2.0f);
+
+    out_s /= farfieldpixel;
+
+    //out_s /= (RCS_RANGE*RCS_RANGE);
+    // this takes itself out
+
+    f32 rcs = calc_rcs(1.0/nearfieldpixel, out_s, RCS_RANGE);
 
     fprintf(output, "%f\n", rcs);
 }

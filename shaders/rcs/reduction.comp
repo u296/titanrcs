@@ -19,7 +19,7 @@ void main() {
         for (int j = 0; j < squaresize; j++) {
             vec2 val = texelFetch(fft_img, center + ivec2(i-squaresize/2,j-squaresize/2), 0).rg;
 
-            val *= (1.0 / sqrt(fft_res*fft_res) / fft_res); // normalize fft to preserve power
+            val *= (1.0 / fft_res); // normalize fft to preserve power - should not be squared, this was tested
 
             total += dot(val,val);
         }

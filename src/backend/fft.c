@@ -23,7 +23,7 @@ void destroy_fftapp(void* obj) {
 // I'm thinking about just pointing to the backend but that makes it impossible to ever move the backend
 // which sucks because the whole point of the backend was to be a movable package
 
-
+#define ZEROPAD_FFTOUTPUT
 
 static VkDevice persist_dev;
 static VkPhysicalDevice persist_physdev;
@@ -81,15 +81,18 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp, CleanupStack* c
     cfg.isInputFormatted = 0;
     cfg.isOutputFormatted = 0;
 
+#ifdef ZEROPAD_FFTOUTPUT
     constexpr u32 VIEWSIZE = RCS_RESOLUTION/16; // We only need a tiny part of the image
 
+
     cfg.frequencyZeroPadding = 1;
-    cfg.performZeropadding[0] = 2;
-    cfg.performZeropadding[1] = 2;
+    cfg.performZeropadding[0] = 1;
+    cfg.performZeropadding[1] = 1;
     cfg.fft_zeropad_left[0] = VIEWSIZE/2;
     cfg.fft_zeropad_right[0] = RCS_RESOLUTION-VIEWSIZE/2;
     cfg.fft_zeropad_left[1] = VIEWSIZE/2;
     cfg.fft_zeropad_right[1] = RCS_RESOLUTION-VIEWSIZE/2;
+#endif
     
 
 
