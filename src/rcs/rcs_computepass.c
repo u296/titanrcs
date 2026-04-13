@@ -18,7 +18,9 @@
 #define RADIANS (3.1415926535f / 180.0f)
 
 
-
+f32 calc_rcs(f32 s_at_object, f32 s_at_observer, f32 dist) {
+    return s_at_observer * 4.0f * PI * dist * dist / s_at_object;
+}
 
 
 void extract_and_write(FILE* output, void* extr_map, PathingResources* pres, Path* path) {
@@ -26,7 +28,9 @@ void extract_and_write(FILE* output, void* extr_map, PathingResources* pres, Pat
 
     path_write_statcols(pres,path, output);
 
-    fprintf(output, "%f\n", extr->out_rcs);
+    f32 rcs = calc_rcs(1.0, extr->out_intensity, 1000.0);
+
+    fprintf(output, "%f\n", rcs);
 }
 
 void run_computepass(RenderContext* ctx) {

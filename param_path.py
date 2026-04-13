@@ -19,7 +19,7 @@ def path_get_params(path):
 
     }
 
-spacing = 0.2*degtorad
+spacing = 2*degtorad
 # advances a path by returning the next step
 def path_advance(path):
     vert, pitch, direction = path

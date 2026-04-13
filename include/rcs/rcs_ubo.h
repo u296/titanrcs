@@ -13,7 +13,7 @@ typedef struct RcsUbo {
 } RcsUbo;
 
 typedef struct ExtractionSsbo {
-    f32 out_rcs;
+    f32 out_intensity; // square of the E field, NOT compensated with eta0
 } ExtractionSsbo;
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
