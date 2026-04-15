@@ -29,7 +29,7 @@ def path_is_complete(path):
     return path[0] > 180.0*degtorad
 
 def path_get_colnames(path):
-    return ["a"]
+    return ["yaw", "pitch"]
 
 def path_get_colvals(path):
     return [path[0],path[1]]

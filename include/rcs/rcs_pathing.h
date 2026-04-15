@@ -29,6 +29,8 @@ void path_advance(PathingResources* res, Path* p);
 
 bool path_is_complete(PathingResources* pres, Path* p);
 
+void path_write_statnames(PathingResources* pres, Path* p, FILE* fp);
+
 void path_write_statcols(PathingResources* pres, Path* p, FILE* fp);
 
 void path_write_ubo(PathingResources* pres, Path* p, void* mapping);

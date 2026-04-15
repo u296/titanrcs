@@ -124,6 +124,37 @@ bool path_is_complete(PathingResources* pres, Path* p) {
     return truth;
 }
 
+void path_write_statnames(PathingResources* pres, Path* p, FILE* fp) {
+    PyObject* args = PyTuple_Pack(1, p->pypath);
+
+    PyObject* retlist = PyObject_CallObject(pres->pypath_get_colnames, args);
+
+    Py_DECREF(args);
+
+    if(retlist && PyList_Check(retlist)) {
+        const Py_ssize_t len = PyList_Size(retlist);
+
+        for (u32 i = 0; i < len; i++) {
+            PyObject* rawitem = PyList_GetItem(retlist, i);
+
+            PyObject* str = PyObject_Str(rawitem);
+
+            if (str != NULL) {
+                const char* c_str = PyUnicode_AsUTF8(str);
+                fprintf(fp, "%s, ", c_str);
+            } else {
+                printf("path_get_colnames: value couldn't be turned into string!\n");
+                fprintf(fp, "unknown_col%u",i);
+            }
+            Py_XDECREF(str);
+        }
+    } else {
+        printf("path_get_colnames: didn't return a list of names\n");
+    }
+
+    Py_XDECREF(retlist);
+}
+
 void path_write_statcols(PathingResources* pres, Path* p, FILE* fp) {
 
     PyObject* args = PyTuple_Pack(1, p->pypath);

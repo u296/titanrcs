@@ -307,7 +307,9 @@ void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
 
     outputfile = fopen("computepass.csv", "w");
 
-    fprintf(outputfile, "hello\n");
+    //fprintf(outputfile, "hello\n");
+
+   
 
     VmaAllocation extraction_allocs[N_MAX_INFLIGHT];
     void* extraction_maps[N_MAX_INFLIGHT];
@@ -332,6 +334,10 @@ void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
     }
 
     path_init(&ctx->rcs_resources.pathres, &mypath);
+
+    path_write_statnames(&ctx->rcs_resources.pathres, &mypath, outputfile);
+
+    fprintf(outputfile, "rcs\n");
 
     struct timespec start;
     timespec_get(&start, TIME_UTC);
