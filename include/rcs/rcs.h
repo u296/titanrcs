@@ -28,7 +28,7 @@ typedef struct RcsResources {
     VkPipelineLayout reduction_pipeline_layout;
     VkPipeline reduction_pipeline;
     VkSampler sampler;
-    Renderable mesh;
+    RcsRenderMesh mesh;
     PathingResources pathres;
     RcsPerInflight sets[N_MAX_INFLIGHT];
 } RcsResources;

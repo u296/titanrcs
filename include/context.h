@@ -11,7 +11,7 @@ typedef struct FrameGraph {
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
     VkDescriptorSet* desc_sets;
-    Renderable the_object;
+    RcsRenderMesh the_object;
 } FrameGraph;
 
 typedef struct ManualControlState {

@@ -31,9 +31,11 @@ typedef struct Mat4 {
 
 Vec3 sub_v3(Vec3 a, Vec3 b);
 Vec3 add_v3(Vec3 a, Vec3 b);
+f32 dot_v3(Vec3 a, Vec3 b);
 Vec3 cross_v3(Vec3 a, Vec3 b);
 Vec3 muls_v3(f32 a, Vec3 b);
 f32 len_v3(Vec3 a);
+Vec3 normalize_v3(Vec3 a);
 
 Mat3 transpose_m3(Mat3 A);
 Mat3 invert_m3(Mat3 A);

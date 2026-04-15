@@ -96,7 +96,7 @@ void write_interface_ubo(u64 frame, VkExtent2D swp_ext, void* ubufmap, f32 ctxzo
 bool record_interface_cmdbuf(VkExtent2D swapchainextent, VkCommandBuffer cmdbuf,
                              VkPipelineLayout pipeline_layout,
                              VkPipeline pipeline, VkDescriptorSet desc_set,
-                             Renderable ren, RenderContext* ctx,
+                             RcsRenderMesh ren, RenderContext* ctx,
                              const u32 swpch_img_i) {
 
     VkCommandBufferBeginInfo cbbi = {};

@@ -10,6 +10,11 @@ Vec3 sub_v3(Vec3 a, Vec3 b) {
 Vec3 add_v3(Vec3 a, Vec3 b) {
     return (Vec3){a.x+b.x, a.y+b.y, a.z+b.z};
 }
+
+f32 dot_v3(Vec3 a, Vec3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
 Vec3 cross_v3(Vec3 a, Vec3 b) {
     return (Vec3){
         a.y*b.z - a.z*b.y,
@@ -20,6 +25,44 @@ Vec3 cross_v3(Vec3 a, Vec3 b) {
 
 f32 len_v3(Vec3 a) {
     return sqrtf(a.x*a.x+a.y*a.y+a.z*a.z);
+}
+
+Vec3 normalize_v3(Vec3 a) {
+
+    if (fabsf(a.x) > 1e6 && fabsf(a.y) > 1e6 && fabsf(a.z) > 1e6) {
+        a.x /= 1 << 20;
+        a.y /= 1 << 20;
+        a.z /= 1 << 20;
+
+        f32 len = sqrtf(a.x * a.x + a.y * a.y * a.z * a.z) * (1 << 20);
+
+        f32 invlen = 1.0f / len;
+
+        a.x *= invlen;
+        a.y *= invlen;
+        a.z *= invlen;
+    }
+    else if (fabsf(a.x) < 1e-6 && fabsf(a.y) < 1e-6 && fabsf(a.z) < 1e-6) {
+        a.x *= 1 << 20;
+        a.y *= 1 << 20;
+        a.z *= 1 << 20;
+
+        f32 len = sqrtf(a.x * a.x + a.y * a.y * a.z * a.z) / (1 << 20);
+
+        f32 invlen = 1.0f / len;
+
+        a.x *= invlen;
+        a.y *= invlen;
+        a.z *= invlen;
+    }
+
+    f32 normlen = len_v3(a);
+
+    a.x /= normlen;
+    a.y /= normlen;
+    a.z /= normlen;
+
+    return a;
 }
 
 

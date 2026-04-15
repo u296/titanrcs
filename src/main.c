@@ -41,7 +41,7 @@ int main() {
     struct Error e = {.code = 0, .origin = ""};
 
     VkDescriptorSetLayout my_desc_set_layout;
-    Renderable tri;
+    RcsRenderMesh tri;
 
     init_backend(&ctx.backend, &cs);
     glfwSetWindowUserPointer(ctx.backend.wnd, &ctx);

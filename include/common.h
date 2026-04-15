@@ -56,10 +56,12 @@ typedef struct Buffer {
     VmaAllocation alloc;
 } Buffer;
 
-typedef struct Renderable {
+typedef struct RcsRenderMesh {
     Buffer vertexbuf;
     Buffer indexbuf;
+    Buffer sharpindexbuf;
     u32 n_indices;
-} Renderable;
+    u32 n_sharp_indices;
+} RcsRenderMesh;
 
 #endif

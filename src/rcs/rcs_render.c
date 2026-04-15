@@ -212,7 +212,9 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                            pushblock);
     }
 
-    vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
+    vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.sharpindexbuf.buf, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_sharp_indices, 1, 0, 0, 0);
 
     vkCmdEndRendering(cmdbuf);
 

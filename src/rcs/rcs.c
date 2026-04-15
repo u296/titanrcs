@@ -28,7 +28,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     VkPipelineLayout rcs_red_pipeline_layout;
     VkPipeline rcs_red_pipeline;
     VkSampler rcs_sampler;
-    Renderable rcs_mesh;
+    RcsRenderMesh rcs_mesh;
     RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
 
     VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R8G8B8A8_SRGB,
@@ -88,7 +88,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                                 cs);
 
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
-                  &rcs_mesh.n_indices, cs);
+                  &rcs_mesh.n_indices, &rcs_mesh.sharpindexbuf, &rcs_mesh.n_sharp_indices, cs);
 
     RcsResources res = {
         ext,

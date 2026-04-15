@@ -134,7 +134,7 @@ bool make_sampler(RenderBackend* rb, VkSampler* out_sampler, CleanupStack* cs) {
 
     VkSamplerCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sci.magFilter = VK_FILTER_NEAREST;
+    sci.magFilter = VK_FILTER_LINEAR;
     sci.minFilter = VK_FILTER_NEAREST;
     sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
