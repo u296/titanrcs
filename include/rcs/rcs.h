@@ -23,7 +23,8 @@ typedef struct RcsResources {
     VkDescriptorPool dpool;
     VkDescriptorSetLayout descset_layout;
     VkPipelineLayout pipeline_layout;
-    VkPipeline pipeline;
+    VkPipeline po_pipeline;
+    VkPipeline ptd_pipeline;
     VkPipelineLayout reduction_pipeline_layout;
     VkPipeline reduction_pipeline;
     VkSampler sampler;

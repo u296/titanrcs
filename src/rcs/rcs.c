@@ -22,7 +22,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     VkDescriptorPool rcs_dpool;
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
-    VkPipeline rcs_pipeline;
+    VkPipeline po_pipeline;
+    VkPipeline ptd_pipeline;
     VkDescriptorSetLayout rcs_red_descset_layout;
     VkPipelineLayout rcs_red_pipeline_layout;
     VkPipeline rcs_red_pipeline;
@@ -30,8 +31,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     Renderable rcs_mesh;
     RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
 
-    VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT,
-                               VK_FORMAT_R8G8B8A8_SRGB,
+    VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R8G8B8A8_SRGB,
                                VK_FORMAT_R8G8B8A8_SRGB};
 
     VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
@@ -78,7 +78,10 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     }
 
     make_rcs_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,
-                      &rcs_pipeline_layout, &rcs_pipeline, &e, cs);
+                      &rcs_pipeline_layout, &po_pipeline, &e, cs);
+
+    make_ptd_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,
+                      rcs_pipeline_layout, &ptd_pipeline, cs);
 
     make_rcs_reduction_pipeline(rb, rcs_red_descset_layout,
                                 &rcs_red_pipeline_layout, &rcs_red_pipeline,
@@ -87,17 +90,19 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
                   &rcs_mesh.n_indices, cs);
 
-    RcsResources res = {ext,
-                        rcs_dpool,
-                        rcs_descset_layout,
-                        rcs_pipeline_layout,
-                        rcs_pipeline,
-                        rcs_red_pipeline_layout,
-                        rcs_red_pipeline,
-                        rcs_sampler,
-                        rcs_mesh,
-                        pathres,
-                        };
+    RcsResources res = {
+        ext,
+        rcs_dpool,
+        rcs_descset_layout,
+        rcs_pipeline_layout,
+        po_pipeline,
+        ptd_pipeline,
+        rcs_red_pipeline_layout,
+        rcs_red_pipeline,
+        rcs_sampler,
+        rcs_mesh,
+        pathres,
+    };
 
     memcpy(((void*)&res) + offsetof(RcsResources, sets), rcs_inflights,
            sizeof(RcsPerInflight) * N_MAX_INFLIGHT);

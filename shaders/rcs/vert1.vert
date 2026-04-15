@@ -14,14 +14,21 @@ layout(binding = 0) uniform UniformBufferObject {
     vec4 resolution_xy_L_;
 } ubo;
 
+layout(push_constant) uniform PushBlock {
+    float scale;
+} push;
+
 void main() {
 
-    vec4 proj_pos = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
+    vec3 base_vert_pos = in_pos + (push.scale-1.0)*in_norm;
+
+    vec4 proj_pos = ubo.proj * ubo.view * ubo.model * vec4(base_vert_pos,1.0);
 
     gl_Position = proj_pos;
     //out_pos = proj_pos.xyz;
     
     
+
     //vec3 v1 =  normalize((ubo.model * vec4(in_norm,1.0)).xyz);
     vec3 v2 = normalize(mat3(ubo.norm_trans) * in_norm);
 

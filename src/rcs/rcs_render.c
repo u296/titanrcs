@@ -180,7 +180,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     vkCmdBeginRendering(cmdbuf, &ri);
 
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      ctx->rcs_resources.pipeline);
+                      ctx->rcs_resources.po_pipeline);
 
     vkCmdBindVertexBuffers(cmdbuf, 0, 1, vbufs, vbuf_offsets);
     vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.indexbuf.buf, 0,
@@ -191,6 +191,26 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
     vkCmdSetScissor(cmdbuf, 0, 1, &scissor);
+    {
+        float pushblock[1] = {
+            1.0 // scale
+        };
+        vkCmdPushConstants(cmdbuf, ctx->rcs_resources.pipeline_layout,
+                           VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock),
+                           pushblock);
+    }
+    vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      ctx->rcs_resources.ptd_pipeline);
+    {
+        float pushblock[1] = {
+            1.2 // scale
+        };
+        vkCmdPushConstants(cmdbuf, ctx->rcs_resources.pipeline_layout,
+                           VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock),
+                           pushblock);
+    }
 
     vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
 
@@ -244,7 +264,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     const u32 texelsize = sizeof(float) * 2; // fft image is R32G32_SFLOAT
     // 0: top left to bottom right
     quadrants[0].imageOffset = (VkOffset3D){0, 0, 0};
-    quadrants[0].bufferOffset =0;
+    quadrants[0].bufferOffset = 0;
 #elifdef QUADRANTSHIFT_YES
     constexpr u32 N_QUADRANTS = 4;
     VkBufferImageCopy quadrants[N_QUADRANTS] = {{}, {}, {}, {}};

@@ -26,6 +26,12 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext,
                        VkPipelineLayout* pipeline_layout, VkPipeline* pipeline,
                        Error* e_out, CleanupStack* cs);
 
+bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
+                       VkDescriptorSetLayout descset_layout, VkFormat* formats,
+                       VkFormat* depth_format,
+                       VkPipelineLayout pipeline_layout, VkPipeline* pipeline,
+                       CleanupStack* cs);
+
 bool make_rcs_reduction_pipeline(RenderBackend* rb,
                                  VkDescriptorSetLayout desc_layout,
                                  VkPipelineLayout* out_red_pipeline_layout,
