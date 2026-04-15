@@ -153,7 +153,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
                                        Path* master_path, Path* slave_paths,
                                        u32* i, VmaAllocation* extraction_allocs,
                                        void** extraction_maps,
-                                       bool* first_render_stats) {
+                                       bool* rcsdata_dirty_stats) {
     VkResult r = VK_RESULT_MAX_ENUM;
 
     for (; !path_is_complete(&ctx->rcs_resources.pathres, master_path); (*i)++) {
@@ -171,19 +171,20 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         void* ubo_mapping = ctx->rcs_resources.sets[f].ubufmap;
         VmaAllocation extraction_alloc = extraction_allocs[f];
         void* extraction_mapping = extraction_maps[f];
-        bool* first_render = &first_render_stats[f];
+        bool* rcsdata_dirty = &rcsdata_dirty_stats[f];
         VkFence inflight_fen = ctx->resources.inflight_fncs[f];
         VkCommandBuffer rcs_cmdbuf = ctx->rcs_resources.sets[f].cmdbuf;
         VkCommandBuffer int_cmdbuf = ctx->resources.cmd_bufs[f];
 
         r = vkWaitForFences(rb->dev, 1, &inflight_fen, VK_TRUE, UINT64_MAX);
         assert(r == VK_SUCCESS);
-        if (!*first_render) {
+        
+        if (!*rcsdata_dirty) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
                                     sizeof(ExtractionSsbo));
-            if (!ctx->manual_control.active) {
-                extract_and_write(outputfile, extraction_mapping,&ctx->rcs_resources.pathres, slave_path);
-            }
+            
+            extract_and_write(outputfile, extraction_mapping,&ctx->rcs_resources.pathres, slave_path);
+            
         }
 
         r = vkResetFences(rb->dev, 1, &inflight_fen);
@@ -254,7 +255,11 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
 
         r = vkQueueSubmit(rb->queues.graphics_queue, 1, &submit, inflight_fen);
         assert(r == VK_SUCCESS);
-        *first_render = false;
+        if (ctx->manual_control.active) {
+            *rcsdata_dirty = true;
+        } else {
+            *rcsdata_dirty = false;
+        }
 
         VkPresentInfoKHR pres = {};
 
