@@ -20,6 +20,9 @@ typedef double f64;
 
 typedef uintptr_t usize;
 
+constexpr f32 PI = 3.1415926535f;
+constexpr f32 DEG_TO_RAD = 0.01745329251f;
+
 #define CLAMP(a, min, max) (a < min ? min : (a > max ? max : a))
 
 #define VERIFY(o, r)                                                                               \

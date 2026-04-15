@@ -1,9 +1,11 @@
 #include "rcs/rcs_pathing.h"
 #include "cleanupstack.h"
 #include "common.h"
+#include "context.h"
 #include "rcs/rcs_ubo.h"
 #include "res.h"
 #include <Python.h>
+#include <string.h>
 
 PyObject* loadpyfunc(PyObject* module, const char* name) {
     PyObject* pfunc = PyObject_GetAttrString(module, name);
@@ -164,9 +166,115 @@ void try_assign_float(f32* dst, PyObject* val) {
     }
 }
 
-void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
-    RcsUbo ubo = {};
+// params is array of
+/*
+scale xyz
+translation xyz
+rotation xyz
+lambda
+*/
+void raw_write_rcsubo(void* mapping, f32* params) {
 
+    f32 p_scalex = params[0];
+    f32 p_scaley = params[1];
+    f32 p_scalez = params[2];
+    f32 p_posx = params[3];
+    f32 p_posy = params[4];
+    f32 p_posz = params[5];
+    f32 p_rotx = params[6];
+    f32 p_roty = params[7];
+    f32 p_rotz = params[8];
+    f32 p_lambda = params[9];
+
+    RcsUbo ubo = {0};
+    Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0}};
+
+
+    ubo.model = ident4;
+    ubo.view = ident4;
+    ubo.proj = ident4;
+    ubo.norm_trans = ident4;
+    ubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, p_lambda};
+
+    Mat4 scale = ident4;
+
+    *pindex_m4(&scale, 0, 0) = p_scalex;
+    *pindex_m4(&scale, 1, 1) = p_scaley;
+    *pindex_m4(&scale, 2, 2) = p_scalez;
+
+    Mat4 transl = ident4;
+
+    *pindex_m4(&transl, 0, 3) = p_posx;
+    *pindex_m4(&transl, 1, 3) = p_posy;
+    *pindex_m4(&transl, 2, 3) = p_posz;
+
+    Mat4 rotx = ident4;
+    Mat4 roty = ident4;
+    Mat4 rotz = ident4;
+
+    *pindex_m4(&rotx, 1, 1) = cosf(p_rotx);
+    *pindex_m4(&rotx, 1, 2) = -sinf(p_rotx);
+    *pindex_m4(&rotx, 2, 1) = sinf(p_rotx);
+    *pindex_m4(&rotx, 2, 2) = cosf(p_rotx);
+
+    *pindex_m4(&roty, 0, 0) = cosf(p_roty);
+    *pindex_m4(&roty, 0, 2) = -sinf(p_roty);
+    *pindex_m4(&roty, 2, 0) = sinf(p_roty);
+    *pindex_m4(&roty, 2, 2) = cosf(p_roty);
+
+    *pindex_m4(&rotz, 0, 0) = cosf(p_rotz);
+    *pindex_m4(&rotz, 0, 1) = -sinf(p_rotz);
+    *pindex_m4(&rotz, 1, 0) = sinf(p_rotz);
+    *pindex_m4(&rotz, 1, 1) = cosf(p_rotz);
+
+
+
+    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, mul_m4(rotz,scale))));
+
+    Mat3 norm = transpose_m3(invert_m3(subm4_m3(ubo.model)));
+
+    Mat4 norm4 = zeroed_from_m3(norm);
+    *pindex_m4(&norm4, 3, 3) = 1.0f; // set corner
+
+    ubo.norm_trans = norm4;
+
+    
+
+    const f32 near = -RCS_BOXSIZE/2.0f, far = RCS_BOXSIZE/2.0f, left = -RCS_BOXSIZE/2.0f, right = RCS_BOXSIZE/2.0f,
+              top = -RCS_BOXSIZE/2.0f, bot = RCS_BOXSIZE/2.0f;
+
+    *pindex_m4(&ubo.proj, 0, 0) = 2.0f / (right - left);
+    *pindex_m4(&ubo.proj, 1, 1) = 2.0f / (bot - top);
+    *pindex_m4(&ubo.proj, 2, 2) = 1.0f / (far - near);
+
+    *pindex_m4(&ubo.proj, 0, 3) = -(right + left) / (right - left);
+    *pindex_m4(&ubo.proj, 1, 3) = -(bot + top) / (bot - top);
+    *pindex_m4(&ubo.proj, 2, 3) = -(near) / (far - near);
+
+    memcpy(mapping, &ubo, sizeof(ubo));
+}
+
+void manualcontrol_write_rcsubo(RenderContext* ctx, void* mapping) {
+    
+    f32 pars[10] = {
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        ctx->manual_control.pitch,
+        ctx->manual_control.yaw,
+        0.0,
+        ctx->manual_control.lambda
+    };
+
+    raw_write_rcsubo(mapping, pars);
+}
+
+// writes into param buffer of 10 floats
+void get_path_params(PathingResources* pres, Path* p, f32* out_params) {
     f32 p_rotx = 0.0f;
     f32 p_roty = 0.0f;
     f32 p_rotz = 0.0f;
@@ -225,75 +333,30 @@ void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
         Py_XDECREF(vals_dict);
     }
 
+    f32 pars[10] = {
+        p_scalex,
+        p_scaley,
+        p_scalez,
+        p_posx,
+        p_posy,
+        p_posz,
+        p_rotx,
+        p_roty,
+        p_rotz,
+        p_lambda
+    };
 
-    Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                    0.0, 0.0, 0.0, 1.0}};
+    memcpy(out_params, pars, sizeof(pars));
+}
 
+void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
 
-    ubo.model = ident4;
-    ubo.view = ident4;
-    ubo.proj = ident4;
-    ubo.norm_trans = ident4;
-    ubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, p_lambda};
+    f32 pars[10] = {0};
 
-    Mat4 scale = ident4;
-
-    const f32 s = 1.0f;
-
-    *pindex_m4(&scale, 0, 0) = p_scalex;
-    *pindex_m4(&scale, 1, 1) = p_scaley;
-    *pindex_m4(&scale, 2, 2) = p_scalez;
-
-    Mat4 transl = ident4;
-
-    *pindex_m4(&transl, 0, 3) = p_posx;
-    *pindex_m4(&transl, 1, 3) = p_posy;
-    *pindex_m4(&transl, 2, 3) = p_posz;
-
-    Mat4 rotx = ident4;
-    Mat4 roty = ident4;
-    Mat4 rotz = ident4;
-
-    *pindex_m4(&rotx, 1, 1) = cosf(p_rotx);
-    *pindex_m4(&rotx, 1, 2) = -sinf(p_rotx);
-    *pindex_m4(&rotx, 2, 1) = sinf(p_rotx);
-    *pindex_m4(&rotx, 2, 2) = cosf(p_rotx);
-
-    *pindex_m4(&roty, 0, 0) = cosf(p_roty);
-    *pindex_m4(&roty, 0, 2) = -sinf(p_roty);
-    *pindex_m4(&roty, 2, 0) = sinf(p_roty);
-    *pindex_m4(&roty, 2, 2) = cosf(p_roty);
-
-    *pindex_m4(&rotz, 0, 0) = cosf(p_rotz);
-    *pindex_m4(&rotz, 0, 1) = -sinf(p_rotz);
-    *pindex_m4(&rotz, 1, 0) = sinf(p_rotz);
-    *pindex_m4(&rotz, 1, 1) = cosf(p_rotz);
+    get_path_params(pres, p, pars);
 
 
-
-    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, mul_m4(rotz,scale))));
-
-    Mat3 norm = transpose_m3(invert_m3(subm4_m3(ubo.model)));
-
-    Mat4 norm4 = zeroed_from_m3(norm);
-    *pindex_m4(&norm4, 3, 3) = 1.0f; // set corner
-
-    ubo.norm_trans = norm4;
-
-    
-
-    const f32 near = -RCS_BOXSIZE/2.0f, far = RCS_BOXSIZE/2.0f, left = -RCS_BOXSIZE/2.0f, right = RCS_BOXSIZE/2.0f,
-              top = -RCS_BOXSIZE/2.0f, bot = RCS_BOXSIZE/2.0f;
-
-    *pindex_m4(&ubo.proj, 0, 0) = 2.0f / (right - left);
-    *pindex_m4(&ubo.proj, 1, 1) = 2.0f / (bot - top);
-    *pindex_m4(&ubo.proj, 2, 2) = 1.0f / (far - near);
-
-    *pindex_m4(&ubo.proj, 0, 3) = -(right + left) / (right - left);
-    *pindex_m4(&ubo.proj, 1, 3) = -(bot + top) / (bot - top);
-    *pindex_m4(&ubo.proj, 2, 3) = -(near) / (far - near);
-
-    memcpy(mapping, &ubo, sizeof(ubo));
+    raw_write_rcsubo(mapping, pars);
 }
 
 void path_discard(Path* p) {

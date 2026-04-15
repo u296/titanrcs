@@ -8,7 +8,7 @@ degtorad = pi / 180.0
 # returns a path object that will then be given as argument
 # to all other functions
 def path_init():
-    return (-180.0*degtorad,0.0, 1.0)
+    return (-180.0*degtorad,-5.0*degtorad, 1.0)
 
 # from a path state, give a dictionary of parameter values.
 # unmentioned parameters are set to default value.

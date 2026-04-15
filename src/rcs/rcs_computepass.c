@@ -133,6 +133,15 @@ void run_computepass(RenderContext* ctx) {
     free(mypath);
 }
 
+void manualcontrol_set_from_path(ManualControlState* man, PathingResources* pres, Path* path) {
+    f32 pars[10] = {0};
+    get_path_params(pres, path, pars);
+
+    man->pitch = pars[6];
+    man->yaw = pars[7];
+    man->lambda = pars[9];
+}
+
 typedef enum CompLoopStatus {
     COMP_REMAKE_SWAPCHAIN = 1,
     COMP_FAILURE = 2,
@@ -172,7 +181,9 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         if (!*first_render) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
                                     sizeof(ExtractionSsbo));
-            extract_and_write(outputfile, extraction_mapping,&ctx->rcs_resources.pathres, slave_path);
+            if (!ctx->manual_control.active) {
+                extract_and_write(outputfile, extraction_mapping,&ctx->rcs_resources.pathres, slave_path);
+            }
         }
 
         r = vkResetFences(rb->dev, 1, &inflight_fen);
@@ -202,7 +213,15 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
                             ctx->resources.ubuf_mappings[f],
                         ctx->config.zoom);
 
-        path_write_ubo(&ctx->rcs_resources.pathres, master_path, ubo_mapping);
+        if (ctx->manual_control.active) {
+            manualcontrol_write_rcsubo(ctx, ubo_mapping);
+        } else {
+            path_write_ubo(&ctx->rcs_resources.pathres, master_path, ubo_mapping);
+
+            // update manual control
+
+            manualcontrol_set_from_path(&ctx->manual_control, &ctx->rcs_resources.pathres, master_path);
+        }
 
         //*slave_path = *master_path;
         path_copy(slave_path, master_path);
@@ -267,8 +286,10 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
             ctx->backend.fb_resized = false;
             return COMP_REMAKE_SWAPCHAIN;
         }
-
-        path_advance(&ctx->rcs_resources.pathres, master_path);
+        
+        if (!ctx->manual_control.active) {
+            path_advance(&ctx->rcs_resources.pathres, master_path);
+        }
     }
     return COMP_COMPLETE;
 }

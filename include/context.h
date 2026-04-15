@@ -1,5 +1,6 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
+#include "common.h"
 #include "backend/backend.h"
 #include "resources/renderresources.h"
 #include "swapchaincontext/swapchaincontext.h"
@@ -12,6 +13,13 @@ typedef struct FrameGraph {
     VkDescriptorSet* desc_sets;
     Renderable the_object;
 } FrameGraph;
+
+typedef struct ManualControlState {
+    f32 pitch;
+    f32 yaw;
+    f32 lambda;
+    bool active;
+} ManualControlState;
 
 typedef struct RenderContext {
     struct {
@@ -27,7 +35,7 @@ typedef struct RenderContext {
     RenderResources resources;
     FrameGraph framegraph;
     RcsResources rcs_resources;
-
+    ManualControlState manual_control;
 
 } RenderContext;
 

@@ -5,8 +5,9 @@
 
 #include "backend/allocator.h"
 #include "backend/device.h"
-#include "backend/instance.h"
 #include "backend/fft.h"
+#include "backend/instance.h"
+#include "common.h"
 #include "context.h"
 #include "res.h"
 
@@ -37,19 +38,38 @@ void fb_resize_callback(GLFWwindow* wnd, int width, int height) {
     ctx->backend.fb_resized = true;
 }
 
-
-
-void keypress_callback(GLFWwindow* wnd, int key, int scancode, int action, int mods) {
+void keypress_callback(GLFWwindow* wnd, int key, int scancode, int action,
+                       int mods) {
     RenderContext* ctx = (RenderContext*)glfwGetWindowUserPointer(wnd);
 
     constexpr f32 ZOOMSTEP = 1.1f;
+    constexpr f32 MANUAL_ANGLE_STEP = 5.0f * DEG_TO_RAD;
 
-    if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
-        ctx->config.zoom *= ZOOMSTEP;
-    } else if(key == GLFW_KEY_DOWN && (action & (GLFW_PRESS | GLFW_REPEAT))) {
-        ctx->config.zoom *= (1.0f) / ZOOMSTEP;
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+        ctx->manual_control.active = !ctx->manual_control.active;
+        return;
     }
-    printf("action: %i\n", action);
+
+    if (ctx->manual_control.active) {
+        if (key == GLFW_KEY_LEFT && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+            ctx->manual_control.yaw += MANUAL_ANGLE_STEP;
+        } else if (key == GLFW_KEY_RIGHT && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+            ctx->manual_control.yaw -= MANUAL_ANGLE_STEP;
+        }
+        if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+            ctx->manual_control.pitch += MANUAL_ANGLE_STEP;
+        } else if (key == GLFW_KEY_DOWN && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+            ctx->manual_control.pitch -= MANUAL_ANGLE_STEP;
+        }
+    } else {
+
+        if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+            ctx->config.zoom *= ZOOMSTEP;
+        } else if (key == GLFW_KEY_DOWN &&
+                   (action & (GLFW_PRESS | GLFW_REPEAT))) {
+            ctx->config.zoom *= (1.0f) / ZOOMSTEP;
+        }
+    }
 }
 
 void init_backend(RenderBackend* rb, CleanupStack* cs) {
@@ -62,8 +82,7 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
     CLEANUP_START_ONORES(GLFWwindow*)
     rb->wnd CLEANUP_END(window)
 
-        
-    glfwSetFramebufferSizeCallback(rb->wnd, fb_resize_callback);
+        glfwSetFramebufferSizeCallback(rb->wnd, fb_resize_callback);
     glfwSetKeyCallback(rb->wnd, keypress_callback);
 
     f = make_instance(&rb->inst, &e, cs);
@@ -77,7 +96,8 @@ void init_backend(RenderBackend* rb, CleanupStack* cs) {
     f = make_surface(rb->inst, rb->wnd, &rb->surf, &e, cs);
     CHECK;
 
-    f = make_device(rb->inst, rb->surf, &rb->physdev, &rb->dev, &rb->queues, &e, cs);
+    f = make_device(rb->inst, rb->surf, &rb->physdev, &rb->dev, &rb->queues, &e,
+                    cs);
     CHECK;
 
     volkLoadDevice(rb->dev);
