@@ -201,20 +201,24 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     }
     vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
 
-    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      ctx->rcs_resources.ptd_pipeline);
-    {
-        float pushblock[1] = {
-            1.2 // scale
-        };
-        vkCmdPushConstants(cmdbuf, ctx->rcs_resources.pipeline_layout,
-                           VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock),
-                           pushblock);
+    if (ctx->rcs_resources.mesh.n_sharp_indices != 0) {
+        vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          ctx->rcs_resources.ptd_pipeline);
+        {
+            float pushblock[1] = {
+                1.01 // scale
+            };
+            vkCmdPushConstants(cmdbuf, ctx->rcs_resources.pipeline_layout,
+                               VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock),
+                               pushblock);
+        }
+
+        vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.sharpindexbuf.buf,
+                             0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_sharp_indices, 1, 0,
+                         0, 0);
     }
-
-    vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.sharpindexbuf.buf, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_sharp_indices, 1, 0, 0, 0);
 
     vkCmdEndRendering(cmdbuf);
 

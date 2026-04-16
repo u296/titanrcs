@@ -84,10 +84,14 @@ void build_vertex_normals(u32 n_verts, float* raw_verts, u32 n_tris,
         Vec3 a = sub_v3(this_tri[1], this_tri[0]);
         Vec3 b = sub_v3(this_tri[2], this_tri[0]);
 
-        a = muls_v3(1.0f / len_v3(a), a);
-        b = muls_v3(1.0f / len_v3(b), b);
+        // a = normalize_v3(a);
+        // b = muls_v3(1.0f / len_v3(b), b);
 
         Vec3 norm = cross_v3(a, b);
+
+        if (isnanf(norm.x) || isnanf(norm.y) || isnanf(norm.z)) {
+            printf("GOT NAN TRIANGLE NORMAL\n");
+        }
 
         out_vert_normals[this_inds[0]] =
             add_v3(out_vert_normals[this_inds[0]], norm);
@@ -142,7 +146,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
                       const f32* raw_verts, const Vec3* triangle_normals,
                       u32** out_inds) {
 
-    constexpr f32 SHARP_ANGLE = 30.0f*DEG_TO_RAD;
+    constexpr f32 SHARP_ANGLE = 30.0f * DEG_TO_RAD;
 
     EdgeRecord* edge_records = malloc(sizeof(EdgeRecord) * n_tris * 3);
     memset(edge_records, 0, sizeof(EdgeRecord) * n_tris * 3);
@@ -169,6 +173,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
     u32* built_inds = malloc(2 * 3 * n_tris * sizeof(u32));
     memset(built_inds, 0, 2 * 3 * n_tris * sizeof(u32));
     u32 i_inds_insert = 0;
+    u32 n_weird_dotprods = 0;
 
     for (u32 i = 0; i < i_edge_insert - 1; i++) {
         if (edge_records[i].v1 == edge_records[i + 1].v1 &&
@@ -180,6 +185,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
 
             if (!(d < 1.1f && d > -1.1f)) {
                 printf("weird length\n");
+                n_weird_dotprods++;
             }
 
             if (d < cosf(SHARP_ANGLE)) {
@@ -196,6 +202,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
     printf("built %u sharp edges out of maximum %u (%.1f%%)\n",
            i_inds_insert / 2, 3 * n_tris,
            100.0f * (f32)i_inds_insert / (f32)(6 * n_tris));
+    printf("encountered %u weird dot products\n", n_weird_dotprods);
 
     *out_inds = built_inds;
     return i_inds_insert;
@@ -219,7 +226,7 @@ void process_verts(float* raw_verts, u32 n_verts, Vec3* normals,
 
 bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
                    Buffer* ibuf, u32* n_indices, Buffer* sharp_ibuf,
-                   u32* n_sharp_indices, CleanupStack* cs) {
+                   u32* out_n_sharp_inds, CleanupStack* cs) {
 
     // make_local_buffer_staged(rb, sizeof(rcs_verts), rcs_verts,
     // VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, cpool, vbuf, cs);
@@ -268,17 +275,21 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
     make_local_buffer_staged(rb, sizeof(u32) * 3 * n_triangles, triangles,
                              VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool, ibuf, cs);
 
-    make_local_buffer_staged(rb, sizeof(u32) * n_sharp_inds, sharp_inds,
-                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool,
-                             sharp_ibuf, cs);
+    if (n_sharp_inds == 0) {
+
+    } else {
+        make_local_buffer_staged(rb, sizeof(u32) * n_sharp_inds, sharp_inds,
+                                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool,
+                                 sharp_ibuf, cs);
+        vmaSetAllocationName(rb->alloc, sharp_ibuf->alloc,
+                             "RCS sharp index buffer");
+    }
 
     vmaSetAllocationName(rb->alloc, vbuf->alloc, "RCS vertex buffer");
     vmaSetAllocationName(rb->alloc, ibuf->alloc, "RCS index buffer");
-    vmaSetAllocationName(rb->alloc, sharp_ibuf->alloc,
-                         "RCS sharp index buffer");
 
     *n_indices = n_triangles * 3;
-    *n_sharp_indices = n_sharp_inds;
+    *out_n_sharp_inds = n_sharp_inds;
 
     free(processed_verts);
     free(vertex_normals);

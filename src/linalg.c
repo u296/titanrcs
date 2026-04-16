@@ -43,11 +43,11 @@ Vec3 normalize_v3(Vec3 a) {
         a.z *= invlen;
     }
     else if (fabsf(a.x) < 1e-6 && fabsf(a.y) < 1e-6 && fabsf(a.z) < 1e-6) {
-        a.x *= 1 << 20;
-        a.y *= 1 << 20;
-        a.z *= 1 << 20;
+        a.x *= 1 << 30;
+        a.y *= 1 << 30;
+        a.z *= 1 << 30;
 
-        f32 len = sqrtf(a.x * a.x + a.y * a.y * a.z * a.z) / (1 << 20);
+        f32 len = sqrtf(a.x * a.x + a.y * a.y * a.z * a.z) / (1 << 30);
 
         f32 invlen = 1.0f / len;
 
