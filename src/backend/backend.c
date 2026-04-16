@@ -43,7 +43,9 @@ void keypress_callback(GLFWwindow* wnd, int key, int scancode, int action,
     RenderContext* ctx = (RenderContext*)glfwGetWindowUserPointer(wnd);
 
     constexpr f32 ZOOMSTEP = 1.1f;
-    constexpr f32 MANUAL_ANGLE_STEP = 5.0f * DEG_TO_RAD;
+    constexpr f32 MANUAL_ANGLE_STEP_COARSE = 5.0f * DEG_TO_RAD;
+    constexpr f32 MANUAL_ANGLE_STEP_FINE = 0.1f * DEG_TO_RAD;
+    static f32 manual_angle_step = MANUAL_ANGLE_STEP_COARSE;
 
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
         ctx->manual_control.active = !ctx->manual_control.active;
@@ -51,15 +53,22 @@ void keypress_callback(GLFWwindow* wnd, int key, int scancode, int action,
     }
 
     if (ctx->manual_control.active) {
+        if (key == GLFW_KEY_F && action == GLFW_PRESS) {
+            if (manual_angle_step > MANUAL_ANGLE_STEP_FINE) {
+                manual_angle_step = MANUAL_ANGLE_STEP_FINE;
+            } else {
+                manual_angle_step = MANUAL_ANGLE_STEP_COARSE;
+            }
+        }
         if (key == GLFW_KEY_LEFT && (action & (GLFW_PRESS | GLFW_REPEAT))) {
-            ctx->manual_control.yaw += MANUAL_ANGLE_STEP;
+            ctx->manual_control.yaw += manual_angle_step;
         } else if (key == GLFW_KEY_RIGHT && (action & (GLFW_PRESS | GLFW_REPEAT))) {
-            ctx->manual_control.yaw -= MANUAL_ANGLE_STEP;
+            ctx->manual_control.yaw -= manual_angle_step;
         }
         if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
-            ctx->manual_control.pitch += MANUAL_ANGLE_STEP;
+            ctx->manual_control.pitch += manual_angle_step;
         } else if (key == GLFW_KEY_DOWN && (action & (GLFW_PRESS | GLFW_REPEAT))) {
-            ctx->manual_control.pitch -= MANUAL_ANGLE_STEP;
+            ctx->manual_control.pitch -= manual_angle_step;
         }
     } else {
 
