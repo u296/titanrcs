@@ -30,7 +30,11 @@ void extract_and_write(FILE* output, void* extr_map, PathingResources* pres, Pat
 
     f32 out_s = extr->out_intensity; // this is per square pixel, need to convert to si 
 
-    const f32 lambda = 0.15f; // BAD: SET IN PYTHON
+    //const f32 lambda = 0.15f; // BAD: SET IN PYTHON
+
+    f32 params[10];
+    get_path_params(pres, path, params);
+    const f32 lambda = params[9];
 
     f32 farfieldpixel = powf((lambda * RCS_RANGE) / RCS_BOXSIZE, 2.0f);
     f32 nearfieldpixel = powf(RCS_BOXSIZE/RCS_RESOLUTION,2.0f);
