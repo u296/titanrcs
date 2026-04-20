@@ -66,7 +66,7 @@ bool make_swapchain(
 		chosen_format = formats[0];
 	}
 
-	VkPresentModeKHR chosen_presentmode = VK_PRESENT_MODE_FIFO_KHR;
+	VkPresentModeKHR chosen_presentmode = VK_PRESENT_MODE_IMMEDIATE_KHR;//VK_PRESENT_MODE_FIFO_KHR;
 
 	VkExtent2D sw_ext = {};
 
