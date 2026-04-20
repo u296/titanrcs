@@ -8,7 +8,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stlfile.h>
-#include <vulkan/vulkan_core.h>
+#include <math.h>
 
 #define S 0.03125
 
@@ -89,7 +89,7 @@ void build_vertex_normals(u32 n_verts, float* raw_verts, u32 n_tris,
 
         Vec3 norm = cross_v3(a, b);
 
-        if (isnanf(norm.x) || isnanf(norm.y) || isnanf(norm.z)) {
+        if (isnan(norm.x) || isnan(norm.y) || isnan(norm.z)) {
             printf("GOT NAN TRIANGLE NORMAL\n");
         }
 
