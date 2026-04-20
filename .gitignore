@@ -5,7 +5,7 @@ build
 shaders/**/*.spv
 compile_commands.json
 include/glslang
-*.stl
+models/
 *.csv
 *.ipynb
 *.pyc
