@@ -365,3 +365,91 @@ bool make_rcs_reduction_pipeline(RenderBackend* rb,
 
     return false;
 }
+
+bool make_imgtobuf_pipeline(RenderBackend* rb,
+                                 VkDescriptorSetLayout desc_layout,
+                                 VkPipelineLayout* out_imgtobuf_pipeline_layout,
+                                 VkPipeline* out_imgtobuf_pipeline,
+                                 CleanupStack* cs) {
+
+    VkResult r;
+
+    VkPipelineLayoutCreateInfo plci = {};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.setLayoutCount = 1;
+    plci.pSetLayouts = &desc_layout;
+
+    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_imgtobuf_pipeline_layout);
+    CLEANUP_START(PipelineLayoutCleanup){
+        rb->dev, *out_imgtobuf_pipeline_layout} CLEANUP_END(pipelinelayout);
+
+    VkShaderModule imgtobuf_module = VK_NULL_HANDLE;
+    make_shadermodule(rb->dev, "shaders/rcs/imgtobuf.spv", &imgtobuf_module);
+
+    VkPipelineShaderStageCreateInfo sci = {};
+    sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci.module = imgtobuf_module;
+    sci.pName = "main";
+
+    VkComputePipelineCreateInfo cpci = {};
+    cpci.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci.stage = sci;
+    cpci.basePipelineHandle = VK_NULL_HANDLE;
+    cpci.basePipelineIndex = -1;
+    cpci.layout = *out_imgtobuf_pipeline_layout;
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci, NULL,
+                                 out_imgtobuf_pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, *out_imgtobuf_pipeline};
+    CLEANUP_END(pipeline);
+
+    vkDestroyShaderModule(rb->dev, imgtobuf_module, NULL);
+
+    return false;
+}
+
+bool make_buftoimg_pipeline(RenderBackend* rb,
+                                 VkDescriptorSetLayout desc_layout,
+                                 VkPipelineLayout* out_buftoimg_pipeline_layout,
+                                 VkPipeline* out_buftoimg_pipeline,
+                                 CleanupStack* cs) {
+
+    VkResult r;
+
+    VkPipelineLayoutCreateInfo plci = {};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.setLayoutCount = 1;
+    plci.pSetLayouts = &desc_layout;
+
+    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_buftoimg_pipeline_layout);
+    CLEANUP_START(PipelineLayoutCleanup){
+        rb->dev, *out_buftoimg_pipeline_layout} CLEANUP_END(pipelinelayout);
+
+    VkShaderModule buftoimg_module = VK_NULL_HANDLE;
+    make_shadermodule(rb->dev, "shaders/rcs/buftoimg.spv", &buftoimg_module);
+
+    VkPipelineShaderStageCreateInfo sci = {};
+    sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci.module = buftoimg_module;
+    sci.pName = "main";
+
+    VkComputePipelineCreateInfo cpci = {};
+    cpci.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci.stage = sci;
+    cpci.basePipelineHandle = VK_NULL_HANDLE;
+    cpci.basePipelineIndex = -1;
+    cpci.layout = *out_buftoimg_pipeline_layout;
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci, NULL,
+                                 out_buftoimg_pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, *out_buftoimg_pipeline};
+    CLEANUP_END(pipeline);
+
+    vkDestroyShaderModule(rb->dev, buftoimg_module, NULL);
+
+    return false;
+}

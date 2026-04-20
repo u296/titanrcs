@@ -19,15 +19,19 @@ bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
 
     VkDescriptorPoolSize ssbo_ps = {};
     ssbo_ps.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ssbo_ps.descriptorCount = N_MAX_INFLIGHT * (1);
+    ssbo_ps.descriptorCount = N_MAX_INFLIGHT * (1 + 2*2);
 
-    VkDescriptorPoolSize pool_sizes[] = {ubo_ps, sampler_ps, ssbo_ps};
+    VkDescriptorPoolSize str_img_ps = {};
+    str_img_ps.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    str_img_ps.descriptorCount = N_MAX_INFLIGHT * (2);
+
+    VkDescriptorPoolSize pool_sizes[] = {ubo_ps, sampler_ps, ssbo_ps, str_img_ps};
 
     VkDescriptorPoolCreateInfo dpci = {};
     dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    dpci.poolSizeCount = 3;
+    dpci.poolSizeCount = 4;
     dpci.pPoolSizes = pool_sizes;
-    dpci.maxSets = N_MAX_INFLIGHT * (2);
+    dpci.maxSets = N_MAX_INFLIGHT * (1 + 1 + 2);
 
     VkResult r = vkCreateDescriptorPool(dev, &dpci, NULL, dpool);
     CLEANUP_START(DescriptorPoolCleanup){dev, *dpool} CLEANUP_END(dpool)
@@ -35,7 +39,7 @@ bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
         return false;
 }
 
-bool make_rcs_descset_layout(VkDevice dev, VkDescriptorSetLayout* desc_layout,
+bool make_rcs_po_descset_layout(VkDevice dev, VkDescriptorSetLayout* desc_layout,
                              CleanupStack* cs) {
     VkDescriptorSetLayoutBinding vert_dslb = {};
     vert_dslb.binding = 0;
@@ -142,7 +146,7 @@ bool make_rcs_red_descset(RenderBackend* rb, VkDescriptorPool dpool,
     assert(r == VK_SUCCESS);
 
     VkDescriptorImageInfo imi = {};
-    imi.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imi.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     imi.imageView = fftimg.view;
     imi.sampler = sampler;
 
@@ -173,6 +177,173 @@ bool make_rcs_red_descset(RenderBackend* rb, VkDescriptorPool dpool,
     VkWriteDescriptorSet writes[2] = {img_wds, buf_wds};
 
     vkUpdateDescriptorSets(rb->dev, 2, writes, 0, NULL);
+
+    return false;
+}
+
+
+bool make_rcs_imgtobuf_descset_layout(VkDevice dev,
+                                 VkDescriptorSetLayout* desc_layout,
+                                 CleanupStack* cs) {
+    VkDescriptorSetLayoutBinding image = {};
+    image.binding = 0;
+    image.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    image.descriptorCount = 1;
+    image.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    image.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutBinding outssbox = {};
+    outssbox.binding = 1;
+    outssbox.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    outssbox.descriptorCount = 1;
+    outssbox.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    outssbox.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutBinding outssboy = {};
+    outssboy.binding = 2;
+    outssboy.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    outssboy.descriptorCount = 1;
+    outssboy.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    outssboy.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo dsli = {};
+    dsli.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    dsli.bindingCount = 3;
+    dsli.pBindings = (VkDescriptorSetLayoutBinding[]){image, outssbox, outssboy};
+
+    VkResult r = vkCreateDescriptorSetLayout(dev, &dsli, NULL, desc_layout);
+    CLEANUP_START(DescriptorSetLayoutCleanup){dev, *desc_layout} CLEANUP_END(
+        descriptor_set_layout)
+
+        return false;
+}
+
+bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
+                          Image prefftimg, Buffer fftbuf_x, Buffer fftbuf_y,
+                          VkDescriptorSetLayout descset_layout,
+                          VkDescriptorSet* desc_set) {
+
+    VkDescriptorSetAllocateInfo dsai = {};
+    dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    dsai.descriptorPool = dpool;
+    dsai.descriptorSetCount = 1;
+    dsai.pSetLayouts = &descset_layout;
+
+    VkResult r = vkAllocateDescriptorSets(rb->dev, &dsai, desc_set);
+    assert(r == VK_SUCCESS);
+
+    VkDescriptorImageInfo imi = {};
+    imi.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imi.imageView = prefftimg.view;
+
+    VkDescriptorBufferInfo dbi_x = {};
+    dbi_x.buffer = fftbuf_x.buf;
+    dbi_x.offset = 0;
+    dbi_x.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
+
+    VkDescriptorBufferInfo dbi_y = {};
+    dbi_y.buffer = fftbuf_y.buf;
+    dbi_y.offset = 0;
+    dbi_y.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
+
+    VkWriteDescriptorSet img_wds = {};
+    img_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    img_wds.dstSet = *desc_set;
+    img_wds.dstBinding = 0;
+    img_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    img_wds.descriptorCount = 1;
+    img_wds.pImageInfo = &imi;
+
+    VkWriteDescriptorSet xbuf_wds = {};
+    xbuf_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    xbuf_wds.dstSet = *desc_set;
+    xbuf_wds.dstBinding = 1;
+    xbuf_wds.dstArrayElement = 0;
+    xbuf_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    xbuf_wds.descriptorCount = 1;
+    xbuf_wds.pBufferInfo = &dbi_x;
+    xbuf_wds.pImageInfo = NULL;
+    xbuf_wds.pTexelBufferView = NULL;
+
+    VkWriteDescriptorSet ybuf_wds = {};
+    ybuf_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    ybuf_wds.dstSet = *desc_set;
+    ybuf_wds.dstBinding = 2;
+    ybuf_wds.dstArrayElement = 0;
+    ybuf_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    ybuf_wds.descriptorCount = 1;
+    ybuf_wds.pBufferInfo = &dbi_y;
+    ybuf_wds.pImageInfo = NULL;
+    ybuf_wds.pTexelBufferView = NULL;
+
+    VkWriteDescriptorSet writes[3] = {img_wds, xbuf_wds, ybuf_wds};
+
+    vkUpdateDescriptorSets(rb->dev, 3, writes, 0, NULL);
+
+    return false;
+}
+
+bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
+                          Image postfftimg, Buffer fftbuf_x, Buffer fftbuf_y,
+                          VkDescriptorSetLayout descset_layout,
+                          VkDescriptorSet* desc_set) {
+
+    VkDescriptorSetAllocateInfo dsai = {};
+    dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    dsai.descriptorPool = dpool;
+    dsai.descriptorSetCount = 1;
+    dsai.pSetLayouts = &descset_layout;
+
+    VkResult r = vkAllocateDescriptorSets(rb->dev, &dsai, desc_set);
+    assert(r == VK_SUCCESS);
+
+    VkDescriptorImageInfo imi = {};
+    imi.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imi.imageView = postfftimg.view;
+
+    VkDescriptorBufferInfo dbi_x = {};
+    dbi_x.buffer = fftbuf_x.buf;
+    dbi_x.offset = 0;
+    dbi_x.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
+
+    VkDescriptorBufferInfo dbi_y = {};
+    dbi_y.buffer = fftbuf_y.buf;
+    dbi_y.offset = 0;
+    dbi_y.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
+
+    VkWriteDescriptorSet img_wds = {};
+    img_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    img_wds.dstSet = *desc_set;
+    img_wds.dstBinding = 0;
+    img_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    img_wds.descriptorCount = 1;
+    img_wds.pImageInfo = &imi;
+
+    VkWriteDescriptorSet xbuf_wds = {};
+    xbuf_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    xbuf_wds.dstSet = *desc_set;
+    xbuf_wds.dstBinding = 1;
+    xbuf_wds.dstArrayElement = 0;
+    xbuf_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    xbuf_wds.descriptorCount = 1;
+    xbuf_wds.pBufferInfo = &dbi_x;
+    xbuf_wds.pImageInfo = NULL;
+    xbuf_wds.pTexelBufferView = NULL;
+
+    VkWriteDescriptorSet ybuf_wds = {};
+    ybuf_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    ybuf_wds.dstSet = *desc_set;
+    ybuf_wds.dstBinding = 2;
+    ybuf_wds.dstArrayElement = 0;
+    ybuf_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    ybuf_wds.descriptorCount = 1;
+    ybuf_wds.pBufferInfo = &dbi_y;
+    ybuf_wds.pImageInfo = NULL;
+    ybuf_wds.pTexelBufferView = NULL;
+
+    VkWriteDescriptorSet writes[3] = {img_wds, xbuf_wds, ybuf_wds};
+
+    vkUpdateDescriptorSets(rb->dev, 3, writes, 0, NULL);
 
     return false;
 }

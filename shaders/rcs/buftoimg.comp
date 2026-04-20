@@ -1,0 +1,35 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set=0, binding = 0, rgba32f) uniform writeonly image2D postfftimg;
+
+layout(set=0, binding = 1) buffer x_buf {vec2 datax[];};
+layout(set=0, binding = 2) buffer y_buf {vec2 datay[];};
+
+void main() {
+    ivec2 size = imageSize(postfftimg);
+
+    ivec2 img_coord = ivec2(gl_GlobalInvocationID.xy);
+
+    if (img_coord.x >= size.x || img_coord.y >= size.y) {
+        return;
+    }
+
+    // assumes the 16th size cropping is active in the vkfft pipeline
+    if (abs(img_coord.x - (size.x/2)) > (size.x/32) ||  abs(img_coord.y - (size.y/2)) > (size.y/32)) {
+        return;
+    }
+
+    ivec2 read_coord;
+
+    read_coord.x = (img_coord.x + (size.x/2)) % size.x;
+    read_coord.y = (img_coord.y + (size.y/2)) % size.y;
+
+    vec4 pixel;
+
+    pixel.rg = datax[read_coord.y * size.x + read_coord.x];
+    pixel.ba = datay[read_coord.y * size.x + read_coord.x];
+    imageStore(postfftimg, img_coord, pixel);
+
+}

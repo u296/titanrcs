@@ -28,14 +28,25 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext,
 
 bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
                        VkDescriptorSetLayout descset_layout, VkFormat* formats,
-                       VkFormat* depth_format,
-                       VkPipelineLayout pipeline_layout, VkPipeline* pipeline,
-                       CleanupStack* cs);
+                       VkFormat* depth_format, VkPipelineLayout pipeline_layout,
+                       VkPipeline* pipeline, CleanupStack* cs);
 
 bool make_rcs_reduction_pipeline(RenderBackend* rb,
                                  VkDescriptorSetLayout desc_layout,
                                  VkPipelineLayout* out_red_pipeline_layout,
                                  VkPipeline* out_red_pipeline,
                                  CleanupStack* cs);
+
+bool make_imgtobuf_pipeline(RenderBackend* rb,
+                            VkDescriptorSetLayout desc_layout,
+                            VkPipelineLayout* out_imgtobuf_pipeline_layout,
+                            VkPipeline* out_imgtobuf_pipeline,
+                            CleanupStack* cs);
+
+bool make_buftoimg_pipeline(RenderBackend* rb,
+                            VkDescriptorSetLayout desc_layout,
+                            VkPipelineLayout* out_buftoimg_pipeline_layout,
+                            VkPipeline* out_buftoimg_pipeline,
+                            CleanupStack* cs);
 
 #endif

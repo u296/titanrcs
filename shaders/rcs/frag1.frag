@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 norm;
 
-layout(location = 0) out vec2 out_prefouriertransform;
+layout(location = 0) out vec4 out_prefouriertransform;
 layout(location = 1) out vec4 out_phasecolor;
 layout(location = 2) out vec4 out_intenscolor;
 
@@ -60,7 +60,7 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
 
-    out_prefouriertransform = cmul(reflfield, phasefactor);
+    out_prefouriertransform = vec4(cmul(reflfield, phasefactor), 0.0, 0.0);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 

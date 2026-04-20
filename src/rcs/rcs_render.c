@@ -7,7 +7,6 @@
 #include "res.h"
 #include <assert.h>
 
-#define QUADRANTSHIFT_YES
 
 void write_rcs_ubo(RenderContext* ctx, void* mapping) {
     RcsUbo myubo = {};
@@ -186,7 +185,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.indexbuf.buf, 0,
                          VK_INDEX_TYPE_UINT32);
     vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            ctx->rcs_resources.pipeline_layout, 0, 1,
+                            ctx->rcs_resources.rcs_pipline_layout, 0, 1,
                             &ctx->rcs_resources.sets[f].descset, 0, NULL);
 
     vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
@@ -195,7 +194,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         float pushblock[1] = {
             1.0 // scale
         };
-        vkCmdPushConstants(cmdbuf, ctx->rcs_resources.pipeline_layout,
+        vkCmdPushConstants(cmdbuf, ctx->rcs_resources.rcs_pipline_layout,
                            VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock),
                            pushblock);
     }
@@ -208,7 +207,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
             float pushblock[1] = {
                 1.01 // scale
             };
-            vkCmdPushConstants(cmdbuf, ctx->rcs_resources.pipeline_layout,
+            vkCmdPushConstants(cmdbuf, ctx->rcs_resources.rcs_pipline_layout,
                                VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock),
                                pushblock);
         }
@@ -222,119 +221,92 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdEndRendering(cmdbuf);
 
-    // barrier to transfer to fft buffer
+    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf_x.buf;
 
-    VkImageMemoryBarrier2 rendtocp = {
+    /*
+    This set of barriers ensures that rendertarget 0 is ready to be read from so
+    that it can be copied into the two fft buffers
+    */
+    VkImageMemoryBarrier2 rend_to_comp_cp = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         NULL,
         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_PIPELINE_STAGE_2_COPY_BIT,
-        VK_ACCESS_2_TRANSFER_READ_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_IMAGE_LAYOUT_GENERAL,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].rendtargets[0].img,
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    VkDependencyInfo rendtocpdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
-                                    NULL,
-                                    0,
-                                    0,
-                                    NULL,
-                                    0,
-                                    NULL,
-                                    1,
-                                    &rendtocp};
+    VkDependencyInfo rend_to_comp_cp_dep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+        NULL,
+        0,
+        0,
+        NULL,
+        0,
+        NULL,
+        1,
+        &rend_to_comp_cp};
 
-    vkCmdPipelineBarrier2(cmdbuf, &rendtocpdep);
+    vkCmdPipelineBarrier2(cmdbuf, &rend_to_comp_cp_dep);
 
-    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf.buf;
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            ctx->rcs_resources.imgbuftransfer_pipeline_layout,
+                            0, 1, &ctx->rcs_resources.sets[f].imgtobuf_descset,
+                            0, NULL);
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      ctx->rcs_resources.imgtobuf_pipeline);
+    vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16, RCS_RESOLUTION / 16, 1);
 
-    // the buffer copies can be configured to do the layout shifting to center
-    // the fft
-
-#ifdef QUADRANTSHIFT_NO
-    // non-shifting copy
-    constexpr u32 N_QUADRANTS = 1;
-    VkBufferImageCopy quadrants[N_QUADRANTS] = {{}};
-
-    quadrants[0].bufferImageHeight = (RCS_RESOLUTION);
-    quadrants[0].bufferRowLength = (RCS_RESOLUTION);
-    quadrants[0].imageExtent =
-        (VkExtent3D){(RCS_RESOLUTION), (RCS_RESOLUTION), 1};
-    quadrants[0].imageSubresource =
-        (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-
-    const u32 texelsize = sizeof(float) * 2; // fft image is R32G32_SFLOAT
-    // 0: top left to bottom right
-    quadrants[0].imageOffset = (VkOffset3D){0, 0, 0};
-    quadrants[0].bufferOffset = 0;
-#elifdef QUADRANTSHIFT_YES
-    constexpr u32 N_QUADRANTS = 4;
-    VkBufferImageCopy quadrants[N_QUADRANTS] = {{}, {}, {}, {}};
-
-    for (u32 i = 0; i < 4; i++) {
-        quadrants[i].bufferImageHeight = (RCS_RESOLUTION);
-        quadrants[i].bufferRowLength = (RCS_RESOLUTION);
-        quadrants[i].imageExtent =
-            (VkExtent3D){(RCS_RESOLUTION / 2), (RCS_RESOLUTION / 2), 1};
-        quadrants[i].imageSubresource =
-            (VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-    }
-    const u32 texelsize = sizeof(float) * 2; // fft image is R32G32_SFLOAT
-    // 0: top left to bottom right
-    quadrants[0].imageOffset = (VkOffset3D){0, 0, 0};
-    quadrants[0].bufferOffset =
-        ((RCS_RESOLUTION) * (RCS_RESOLUTION / 2) + (RCS_RESOLUTION / 2)) *
-        texelsize;
-
-    // 1: top right to bottom left
-    quadrants[1].imageOffset = (VkOffset3D){(RCS_RESOLUTION / 2), 0, 0};
-    quadrants[1].bufferOffset =
-        ((RCS_RESOLUTION) * (RCS_RESOLUTION / 2)) * texelsize;
-
-    // 2: bottom left to top right
-    quadrants[2].imageOffset = (VkOffset3D){0, (RCS_RESOLUTION / 2), 0};
-    quadrants[2].bufferOffset = ((RCS_RESOLUTION / 2)) * texelsize;
-
-    // 3: bottom right to top left
-    quadrants[3].imageOffset =
-        (VkOffset3D){RCS_RESOLUTION / 2, RCS_RESOLUTION / 2, 0};
-    quadrants[3].bufferOffset = 0;
-#else
-#error must define QUADRANTSHIFT_YES or NO
-#endif
-
-    vkCmdCopyImageToBuffer(
-        cmdbuf, ctx->rcs_resources.sets[f].rendtargets[0].img,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fft_buf, N_QUADRANTS, quadrants);
-
-    VkBufferMemoryBarrier2 bufpostcp = {
+    /*
+    This set of barriers ensures that the buffers are ready to be used by the
+    VkFFT compute shader dispatches
+    */
+    VkBufferMemoryBarrier2 comp_cp_to_fftx = {
         VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
         NULL,
-        VK_PIPELINE_STAGE_2_COPY_BIT,
-        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
-        fft_buf,
+        ctx->rcs_resources.sets[f].fft_buf_x.buf,
         0,
         VK_WHOLE_SIZE};
 
-    VkDependencyInfo bufpostcpdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
-                                     NULL,
-                                     0,
-                                     0,
-                                     NULL,
-                                     1,
-                                     &bufpostcp,
-                                     0,
-                                     NULL};
+    VkBufferMemoryBarrier2 comp_cp_to_ffty = {
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_buf_y.buf,
+        0,
+        VK_WHOLE_SIZE};
 
-    vkCmdPipelineBarrier2(cmdbuf, &bufpostcpdep);
+    VkBufferMemoryBarrier2 comp_cp_post_deps[2] = {comp_cp_to_fftx,
+                                                   comp_cp_to_ffty};
+
+    VkDependencyInfo comp_cp_to_fft_dep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+        NULL,
+        0,
+        0,
+        NULL,
+        2,
+        comp_cp_post_deps,
+        0,
+        NULL};
+
+    vkCmdPipelineBarrier2(cmdbuf, &comp_cp_to_fft_dep);
 
     VkFFTLaunchParams lp = {};
     lp.commandBuffer = &cmdbuf;
@@ -342,53 +314,139 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     VkFFTAppend(ctx->backend.fft[f], -1, &lp);
 
-    VkBufferMemoryBarrier2 bufpostfft = {
-        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-        NULL,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        VK_ACCESS_2_SHADER_WRITE_BIT,
-        VK_PIPELINE_STAGE_2_COPY_BIT,
-        VK_ACCESS_2_TRANSFER_READ_BIT,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        fft_buf,
-        0,
-        VK_WHOLE_SIZE};
-
-    VkImageMemoryBarrier2 imgpostfft = {
+    /*
+    This set of barriers ensures that
+    1) the post-fft image is ready to be overwritten by the buffers
+    2) the buffers are ready to be read from to write into the post-fft image
+    */
+    VkImageMemoryBarrier2 postfft_to_comp_img = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         NULL,
         VK_PIPELINE_STAGE_2_NONE,
         VK_ACCESS_2_NONE,
-        VK_PIPELINE_STAGE_2_COPY_BIT,
-        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_GENERAL,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].fft_img.img,
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    VkDependencyInfo postfftdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+    VkBufferMemoryBarrier2 postfft_to_comp_cpx = {
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_buf_x.buf,
+        0,
+        VK_WHOLE_SIZE,
+    };
+
+    VkBufferMemoryBarrier2 postfft_to_comp_cpy = {
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_buf_y.buf,
+        0,
+        VK_WHOLE_SIZE,
+    };
+
+    VkBufferMemoryBarrier2 postfft_compcp_deps[2] = {postfft_to_comp_cpx,
+                                                     postfft_to_comp_cpy};
+
+    VkDependencyInfo postfft_to_compcp_dep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+        NULL,
+        0,
+        0,
+        NULL,
+        2,
+        postfft_compcp_deps,
+        1,
+        &postfft_to_comp_img};
+
+    vkCmdPipelineBarrier2(cmdbuf, &postfft_to_compcp_dep);
+
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            ctx->rcs_resources.imgbuftransfer_pipeline_layout,
+                            0, 1, &ctx->rcs_resources.sets[f].buftoimg_descset,
+                            0, NULL);
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      ctx->rcs_resources.buftoimg_pipeline);
+    vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16, RCS_RESOLUTION / 16, 1);
+
+    /*
+    This set of barriers ensures that the post-fft image can be read by the
+    reduction compute shader
+    */
+    VkImageMemoryBarrier2 postcopy_readtohost_img = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
+        VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_GENERAL,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    VkDependencyInfo postcopy_readtohost_dep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+        NULL,
+        0,
+        0,
+        NULL,
+        0,
+        NULL,
+        1,
+        &postcopy_readtohost_img};
+
+    vkCmdPipelineBarrier2(cmdbuf, &postcopy_readtohost_dep);
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      ctx->rcs_resources.reduction_pipeline);
+
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            ctx->rcs_resources.reduction_pipeline_layout, 0, 1,
+                            &ctx->rcs_resources.sets[f].red_descset, 0, NULL);
+
+    vkCmdDispatch(cmdbuf, 1, 1, 1);
+
+    /*
+    This set of barriers ensures two things:
+    1) the reduction compute shader result can be read by the host
+    2) All of the images needed for rendering to the screen are in the correct
+    layouts
+    */
+    VkBufferMemoryBarrier2 extr = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
                                    NULL,
+                                   VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                   VK_ACCESS_2_SHADER_WRITE_BIT,
+                                   VK_PIPELINE_STAGE_2_HOST_BIT,
+                                   VK_ACCESS_2_HOST_READ_BIT,
+                                   VK_QUEUE_FAMILY_IGNORED,
+                                   VK_QUEUE_FAMILY_IGNORED,
+                                   ctx->rcs_resources.sets[f].extr_buf.buf,
                                    0,
-                                   0,
-                                   NULL,
-                                   1,
-                                   &bufpostfft,
-                                   1,
-                                   &imgpostfft};
+                                   VK_WHOLE_SIZE};
 
-    vkCmdPipelineBarrier2(cmdbuf, &postfftdep);
-
-    vkCmdCopyBufferToImage(
-        cmdbuf, fft_buf, ctx->rcs_resources.sets[f].fft_img.img,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, N_QUADRANTS, quadrants);
-
-    VkImageMemoryBarrier2 postfftcp[4];
+    VkImageMemoryBarrier2 before_rendertoscreen[4];
 
     for (u32 i = 0; i < 3; i++) {
-        postfftcp[i] = (VkImageMemoryBarrier2){
+        before_rendertoscreen[i] = (VkImageMemoryBarrier2){
             VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             NULL,
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -403,61 +461,36 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
     }
 
-    postfftcp[0].srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
-    postfftcp[0].srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-    postfftcp[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    before_rendertoscreen[0].srcStageMask =
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    before_rendertoscreen[0].srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    before_rendertoscreen[0].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-    postfftcp[3] = (VkImageMemoryBarrier2){
+    before_rendertoscreen[3] = (VkImageMemoryBarrier2){
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         NULL,
-        VK_PIPELINE_STAGE_2_COPY_BIT,
-        VK_ACCESS_2_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_GENERAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].fft_img.img,
         (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    VkDependencyInfo postfftcpdep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-                                     NULL,
-                                     0,
-                                     0,
-                                     NULL,
-                                     0,
-                                     NULL,
-                                     4,
-                                     postfftcp};
+    VkDependencyInfo post_extr_dep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                                      NULL,
+                                      0,
+                                      0,
+                                      NULL,
+                                      1,
+                                      &extr,
+                                      4,
+                                      before_rendertoscreen};
 
-    vkCmdPipelineBarrier2(cmdbuf, &postfftcpdep);
-
-    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                      ctx->rcs_resources.reduction_pipeline);
-
-    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            ctx->rcs_resources.reduction_pipeline_layout, 0, 1,
-                            &ctx->rcs_resources.sets[f].red_descset, 0, NULL);
-
-    vkCmdDispatch(cmdbuf, 1, 1, 1);
-
-    VkBufferMemoryBarrier2 extr = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-                                   NULL,
-                                   VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                   VK_ACCESS_2_SHADER_WRITE_BIT,
-                                   VK_PIPELINE_STAGE_2_HOST_BIT,
-                                   VK_ACCESS_2_HOST_READ_BIT,
-                                   VK_QUEUE_FAMILY_IGNORED,
-                                   VK_QUEUE_FAMILY_IGNORED,
-                                   ctx->rcs_resources.sets[f].extr_buf.buf,
-                                   0,
-                                   VK_WHOLE_SIZE};
-
-    VkDependencyInfo extrdep = {
-        VK_STRUCTURE_TYPE_DEPENDENCY_INFO, NULL, 0, 0, NULL, 1, &extr, 0, NULL};
-
-    vkCmdPipelineBarrier2(cmdbuf, &extrdep);
+    vkCmdPipelineBarrier2(cmdbuf, &post_extr_dep);
 
     VkResult r = vkEndCommandBuffer(cmdbuf);
     assert(r == VK_SUCCESS);

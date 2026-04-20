@@ -20,19 +20,28 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 
     PathingResources pathres = {};
     VkDescriptorPool rcs_dpool;
+
     VkDescriptorSetLayout rcs_descset_layout;
     VkPipelineLayout rcs_pipeline_layout;
     VkPipeline po_pipeline;
     VkPipeline ptd_pipeline;
+
     VkDescriptorSetLayout rcs_red_descset_layout;
     VkPipelineLayout rcs_red_pipeline_layout;
     VkPipeline rcs_red_pipeline;
+
+    VkDescriptorSetLayout rcs_imgbuftransfer_descset_layout;
+    VkPipelineLayout rcs_imgbuftransfer_pipeline_layout;
+    VkPipeline rcs_imgtobuf_pipeline;
+    VkPipeline rcs_buftoimg_pipeline;
+
     VkSampler rcs_sampler;
     RcsRenderMesh rcs_mesh;
     RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
 
-    VkFormat col_formats[3] = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R8G8B8A8_SRGB,
-                               VK_FORMAT_R8G8B8A8_SRGB};
+    VkFormat col_formats[3] = {VK_FORMAT_R32G32B32A32_SFLOAT,
+                               VK_FORMAT_R8G8B8A8_UNORM,
+                               VK_FORMAT_R8G8B8A8_UNORM};
 
     VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
@@ -40,9 +49,12 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 
     make_rcs_dpool(rb->dev, &rcs_dpool, cs);
 
-    make_rcs_descset_layout(rb->dev, &rcs_descset_layout, cs);
+    make_rcs_po_descset_layout(rb->dev, &rcs_descset_layout, cs);
 
     make_rcs_red_descset_layout(rb->dev, &rcs_red_descset_layout, cs);
+
+    make_rcs_imgtobuf_descset_layout(rb->dev,
+                                     &rcs_imgbuftransfer_descset_layout, cs);
 
     make_sampler(rb, &rcs_sampler, cs);
 
@@ -60,7 +72,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
             .alloc = rcs_inflights[i].ubo.alloc,
         } CLEANUP_END(mapping);
 
-        make_rcs_fftbuf(rb, &rcs_inflights[i].fft_buf, cs);
+        make_rcs_fftbufs(rb, &rcs_inflights[i].fft_buf_x,
+                         &rcs_inflights[i].fft_buf_y, cs);
 
         make_rcs_fftimg(rb, ext, &rcs_inflights[i].fft_img, cs);
 
@@ -73,6 +86,17 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                              rcs_sampler, rcs_inflights[i].extr_buf,
                              rcs_red_descset_layout,
                              &rcs_inflights[i].red_descset);
+
+        make_rcs_imgtobuf_descset(
+            rb, rcs_dpool, rcs_inflights[i].rendtargets[0],
+            rcs_inflights[i].fft_buf_x, rcs_inflights[i].fft_buf_y,
+            rcs_imgbuftransfer_descset_layout,
+            &rcs_inflights[i].imgtobuf_descset);
+
+        make_rcs_buftoimg_descset(
+            rb, rcs_dpool, rcs_inflights[i].fft_img, rcs_inflights[i].fft_buf_x,
+            rcs_inflights[i].fft_buf_y, rcs_imgbuftransfer_descset_layout,
+            &rcs_inflights[i].buftoimg_descset);
 
         make_rcs_cmdbuf(rb, cpool, &rcs_inflights[i].cmdbuf, cs);
     }
@@ -87,8 +111,17 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                                 &rcs_red_pipeline_layout, &rcs_red_pipeline,
                                 cs);
 
+    make_imgtobuf_pipeline(rb, rcs_imgbuftransfer_descset_layout,
+                           &rcs_imgbuftransfer_pipeline_layout,
+                           &rcs_imgtobuf_pipeline, cs);
+
+    make_buftoimg_pipeline(rb, rcs_imgbuftransfer_descset_layout,
+                           &rcs_imgbuftransfer_pipeline_layout,
+                           &rcs_buftoimg_pipeline, cs);
+
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
-                  &rcs_mesh.n_indices, &rcs_mesh.sharpindexbuf, &rcs_mesh.n_sharp_indices, cs);
+                  &rcs_mesh.n_indices, &rcs_mesh.sharpindexbuf,
+                  &rcs_mesh.n_sharp_indices, cs);
 
     RcsResources res = {
         ext,
@@ -99,6 +132,9 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
         ptd_pipeline,
         rcs_red_pipeline_layout,
         rcs_red_pipeline,
+        rcs_imgbuftransfer_pipeline_layout,
+        rcs_imgtobuf_pipeline,
+        rcs_buftoimg_pipeline,
         rcs_sampler,
         rcs_mesh,
         pathres,

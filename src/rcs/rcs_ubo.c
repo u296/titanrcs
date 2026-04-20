@@ -16,13 +16,22 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
     return false;
 }
 
-bool make_rcs_fftbuf(RenderBackend* rb, Buffer* rcs_fftbuf, CleanupStack* cs) {
+bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_rcs_fftbufx,
+                      Buffer* out_rcs_fftbufy, CleanupStack* cs) {
 
-    make_buffer(rb, RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float),
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                TR_MAPPABLE_NONE, rcs_fftbuf, cs);
+    make_buffer(
+        rb,
+        RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float), // 2 for complex
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        TR_MAPPABLE_NONE, out_rcs_fftbufx, cs);
+
+    make_buffer(
+        rb,
+        RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float), // 2 for complex
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        TR_MAPPABLE_NONE, out_rcs_fftbufy, cs);
 
     return false;
 }
@@ -34,7 +43,7 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = VK_IMAGE_TYPE_2D;
     ici.extent = (VkExtent3D){ext.width, ext.height, 1};
-    ici.format = VK_FORMAT_R32G32_SFLOAT;
+    ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     ici.arrayLayers = 1;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -44,7 +53,8 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
     ici.queueFamilyIndexCount = 1;
     ici.pQueueFamilyIndices = &rb->queues.i_graphics_queue_fam;
     ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                VK_IMAGE_USAGE_STORAGE_BIT;
 
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
@@ -56,7 +66,7 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
     ivci.image = rcs_fftimg->img;
     ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    ivci.format = VK_FORMAT_R32G32_SFLOAT;
+    ivci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     ivci.subresourceRange.baseMipLevel = 0;
     ivci.subresourceRange.levelCount = 1;

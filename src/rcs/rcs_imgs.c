@@ -65,10 +65,9 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
                             const u32 n_targets, Image* rendtargets,
                             CleanupStack* cs) {
 
-    VkFormat mainformat = VK_FORMAT_R8G8B8A8_SRGB;
+    VkFormat mainformat = VK_FORMAT_R8G8B8A8_UNORM;
 
-    
-
+    // this could be refined, not all of the images need all of those usages
     VkImageCreateInfo ici = {};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = VK_IMAGE_TYPE_2D;
@@ -80,7 +79,7 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     ici.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                 VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
     ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -99,7 +98,7 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
 
     for (u32 i = 0; i < n_targets; i++) {
         if (i == 0) {
-            ici.format = VK_FORMAT_R32G32_SFLOAT;
+            ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
             ivci.format = ici.format;
         } else {
             ici.format = mainformat;
@@ -134,7 +133,7 @@ bool make_sampler(RenderBackend* rb, VkSampler* out_sampler, CleanupStack* cs) {
 
     VkSamplerCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sci.magFilter = VK_FILTER_LINEAR;
+    sci.magFilter = VK_FILTER_NEAREST;
     sci.minFilter = VK_FILTER_NEAREST;
     sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
@@ -146,10 +145,7 @@ bool make_sampler(RenderBackend* rb, VkSampler* out_sampler, CleanupStack* cs) {
     sci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     VkResult r = vkCreateSampler(rb->dev, &sci, NULL, out_sampler);
-    CLEANUP_START(SamplerCleanup)
-    {rb->dev, *out_sampler}
-    CLEANUP_END(sampler);
-
+    CLEANUP_START(SamplerCleanup){rb->dev, *out_sampler} CLEANUP_END(sampler);
 
     return false;
 }

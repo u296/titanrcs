@@ -1,0 +1,30 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set=0, binding = 0, rgba32f) uniform readonly image2D prefftimg;
+
+layout(set=0, binding = 1) buffer x_buf {vec2 datax[];};
+layout(set=0, binding = 2) buffer y_buf {vec2 datay[];};
+
+void main() {
+    ivec2 size = imageSize(prefftimg);
+
+    ivec2 in_coord = ivec2(gl_GlobalInvocationID.xy);
+
+    if (in_coord.x >= size.x || in_coord.y >= size.y) {
+        return;
+            }
+
+    ivec2 out_coord;
+
+    out_coord.x = (in_coord.x + (size.x/2)) % size.x;
+    out_coord.y = (in_coord.y + (size.y/2)) % size.y;
+
+    vec4 in_pixel = imageLoad(prefftimg, in_coord);
+
+    uint lin_index = out_coord.y * size.x + out_coord.x;
+
+    datax[lin_index] = in_pixel.rg;
+    datay[lin_index] = in_pixel.ba;
+}
