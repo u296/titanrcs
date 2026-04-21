@@ -23,13 +23,13 @@ void destroy_fftapp(void* obj) {
 // I'm thinking about just pointing to the backend but that makes it impossible to ever move the backend
 // which sucks because the whole point of the backend was to be a movable package
 
-#define ZEROPAD_FFTOUTPUT
+//#define ZEROPAD_FFTOUTPUT
 
 static VkDevice persist_dev;
 static VkPhysicalDevice persist_physdev;
 static VkQueue persist_queue;
 static u32 persist_queue_i;
-u64 fftbuf_size = 2 * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex
+u64 fftbuf_size = 4ull * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex
 
 void fft_populate_persistents(VkDevice dev, VkPhysicalDevice physdev, Queues queues) {
     persist_dev = dev;
@@ -93,9 +93,9 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp, CleanupStack* c
     cfg.fft_zeropad_left[1] = VIEWSIZE/2;
     cfg.fft_zeropad_right[1] = RCS_RESOLUTION-VIEWSIZE/2;
 #endif
+
     
-
-
+    cfg.coordinateFeatures = 2;
     cfg.bufferSize = &fftbuf_size;
 
 

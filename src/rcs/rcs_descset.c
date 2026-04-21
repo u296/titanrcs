@@ -199,17 +199,10 @@ bool make_rcs_imgtobuf_descset_layout(VkDevice dev,
     outssbox.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     outssbox.pImmutableSamplers = NULL;
 
-    VkDescriptorSetLayoutBinding outssboy = {};
-    outssboy.binding = 2;
-    outssboy.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    outssboy.descriptorCount = 1;
-    outssboy.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    outssboy.pImmutableSamplers = NULL;
-
     VkDescriptorSetLayoutCreateInfo dsli = {};
     dsli.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dsli.bindingCount = 3;
-    dsli.pBindings = (VkDescriptorSetLayoutBinding[]){image, outssbox, outssboy};
+    dsli.bindingCount = 2;
+    dsli.pBindings = (VkDescriptorSetLayoutBinding[]){image, outssbox};
 
     VkResult r = vkCreateDescriptorSetLayout(dev, &dsli, NULL, desc_layout);
     CLEANUP_START(DescriptorSetLayoutCleanup){dev, *desc_layout} CLEANUP_END(
@@ -265,20 +258,9 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
     xbuf_wds.pImageInfo = NULL;
     xbuf_wds.pTexelBufferView = NULL;
 
-    VkWriteDescriptorSet ybuf_wds = {};
-    ybuf_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    ybuf_wds.dstSet = *desc_set;
-    ybuf_wds.dstBinding = 2;
-    ybuf_wds.dstArrayElement = 0;
-    ybuf_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ybuf_wds.descriptorCount = 1;
-    ybuf_wds.pBufferInfo = &dbi_y;
-    ybuf_wds.pImageInfo = NULL;
-    ybuf_wds.pTexelBufferView = NULL;
+    VkWriteDescriptorSet writes[2] = {img_wds, xbuf_wds};
 
-    VkWriteDescriptorSet writes[3] = {img_wds, xbuf_wds, ybuf_wds};
-
-    vkUpdateDescriptorSets(rb->dev, 3, writes, 0, NULL);
+    vkUpdateDescriptorSets(rb->dev, 2, writes, 0, NULL);
 
     return false;
 }
@@ -330,20 +312,10 @@ bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
     xbuf_wds.pImageInfo = NULL;
     xbuf_wds.pTexelBufferView = NULL;
 
-    VkWriteDescriptorSet ybuf_wds = {};
-    ybuf_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    ybuf_wds.dstSet = *desc_set;
-    ybuf_wds.dstBinding = 2;
-    ybuf_wds.dstArrayElement = 0;
-    ybuf_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ybuf_wds.descriptorCount = 1;
-    ybuf_wds.pBufferInfo = &dbi_y;
-    ybuf_wds.pImageInfo = NULL;
-    ybuf_wds.pTexelBufferView = NULL;
 
-    VkWriteDescriptorSet writes[3] = {img_wds, xbuf_wds, ybuf_wds};
+    VkWriteDescriptorSet writes[2] = {img_wds, xbuf_wds};
 
-    vkUpdateDescriptorSets(rb->dev, 3, writes, 0, NULL);
+    vkUpdateDescriptorSets(rb->dev, 2, writes, 0, NULL);
 
     return false;
 }

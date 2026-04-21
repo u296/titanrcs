@@ -16,22 +16,15 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
     return false;
 }
 
-bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_rcs_fftbufx,
+bool make_rcs_fftbuf(RenderBackend* rb, Buffer* out_rcs_fftbufx,
                       Buffer* out_rcs_fftbufy, CleanupStack* cs) {
 
     make_buffer(
         rb,
-        RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float), // 2 for complex
+        RCS_RESOLUTION * RCS_RESOLUTION * 2*2 * sizeof(float), // 4 for 2 complex numbers
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         TR_MAPPABLE_NONE, out_rcs_fftbufx, cs);
-
-    make_buffer(
-        rb,
-        RCS_RESOLUTION * RCS_RESOLUTION * 2 * sizeof(float), // 2 for complex
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        TR_MAPPABLE_NONE, out_rcs_fftbufy, cs);
 
     return false;
 }

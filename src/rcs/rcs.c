@@ -72,8 +72,9 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
             .alloc = rcs_inflights[i].ubo.alloc,
         } CLEANUP_END(mapping);
 
-        make_rcs_fftbufs(rb, &rcs_inflights[i].fft_buf_x,
+        make_rcs_fftbuf(rb, &rcs_inflights[i].fft_buf_x,
                          &rcs_inflights[i].fft_buf_y, cs);
+        rcs_inflights[i].fft_buf_y.buf = VK_NULL_HANDLE;
 
         make_rcs_fftimg(rb, ext, &rcs_inflights[i].fft_img, cs);
 
@@ -99,6 +100,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
             &rcs_inflights[i].buftoimg_descset);
 
         make_rcs_cmdbuf(rb, cpool, &rcs_inflights[i].cmdbuf, cs);
+
+        
     }
 
     make_rcs_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,

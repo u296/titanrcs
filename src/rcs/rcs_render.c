@@ -85,11 +85,17 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     cbbi.flags = 0;
     cbbi.pInheritanceInfo = NULL;
 
-    VkClearValue clearcol = {};
-    clearcol.color.float32[0] = 0.0f;
-    clearcol.color.float32[1] = 0.0f;
-    clearcol.color.float32[2] = 0.0f;
-    clearcol.color.float32[3] = 1.0f;
+    VkClearValue prefft_clearcol = {};
+    prefft_clearcol.color.float32[0] = 0.0f;
+    prefft_clearcol.color.float32[0] = 0.0f;
+    prefft_clearcol.color.float32[0] = 0.0f;
+    prefft_clearcol.color.float32[0] = 0.0f;
+
+    VkClearValue default_clearcol = {};
+    default_clearcol.color.float32[0] = 0.0f;
+    default_clearcol.color.float32[1] = 0.0f;
+    default_clearcol.color.float32[2] = 0.0f;
+    default_clearcol.color.float32[3] = 1.0f;
 
     VkClearValue clear_depth = {};
     clear_depth.depthStencil.depth = 1.0;
@@ -107,12 +113,14 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     for (u32 i = 0; i < 3; i++) {
         c[i].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        c[i].clearValue = clearcol;
+        c[i].clearValue = default_clearcol;
         c[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         c[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         c[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         c[i].imageView = ctx->rcs_resources.sets[f].rendtargets[i].view;
     }
+
+    c[0].clearValue = prefft_clearcol;
 
     VkRenderingInfo ri = {};
     ri.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -200,6 +208,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     }
     vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
 
+    
     if (ctx->rcs_resources.mesh.n_sharp_indices != 0) {
         vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           ctx->rcs_resources.ptd_pipeline);
@@ -279,21 +288,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         0,
         VK_WHOLE_SIZE};
 
-    VkBufferMemoryBarrier2 comp_cp_to_ffty = {
-        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-        NULL,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        VK_ACCESS_2_SHADER_WRITE_BIT,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        ctx->rcs_resources.sets[f].fft_buf_y.buf,
-        0,
-        VK_WHOLE_SIZE};
 
-    VkBufferMemoryBarrier2 comp_cp_post_deps[2] = {comp_cp_to_fftx,
-                                                   comp_cp_to_ffty};
+    VkBufferMemoryBarrier2 comp_cp_post_deps[1] = {comp_cp_to_fftx};
 
     VkDependencyInfo comp_cp_to_fft_dep = {
         VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
@@ -301,7 +297,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         0,
         0,
         NULL,
-        2,
+        1,
         comp_cp_post_deps,
         0,
         NULL};
@@ -347,22 +343,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_WHOLE_SIZE,
     };
 
-    VkBufferMemoryBarrier2 postfft_to_comp_cpy = {
-        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-        NULL,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        VK_ACCESS_2_SHADER_WRITE_BIT,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        VK_ACCESS_2_SHADER_READ_BIT,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        ctx->rcs_resources.sets[f].fft_buf_y.buf,
-        0,
-        VK_WHOLE_SIZE,
-    };
 
-    VkBufferMemoryBarrier2 postfft_compcp_deps[2] = {postfft_to_comp_cpx,
-                                                     postfft_to_comp_cpy};
+    VkBufferMemoryBarrier2 postfft_compcp_deps[1] = {postfft_to_comp_cpx};
 
     VkDependencyInfo postfft_to_compcp_dep = {
         VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
@@ -370,7 +352,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         0,
         0,
         NULL,
-        2,
+        1,
         postfft_compcp_deps,
         1,
         &postfft_to_comp_img};

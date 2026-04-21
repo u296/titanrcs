@@ -39,20 +39,19 @@ void main() {
 
         vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*zoom;
 
-        vec2 mycol = texture(mytex[pc.texture_i], newuv).rg;
+        vec4 mycol = texture(mytex[pc.texture_i], newuv);
 
-        mycol *= (1.0/sqrt(fft_res*fft_res)); // normalize fft 
+        mycol *= (1.0/sqrt(fft_res*fft_res)); // normalize fft for power
 
         // let's do the modulus in case of complex value
-        float phase = atan(mycol.g, mycol.r);
+        float phase = 0.0;//atan(mycol.a, mycol.b);
 
         vec3 base_col = vec3(1,1,1);
         //vec3 base_col = make_color(phase);
         vec3 norm_col = base_col / length(base_col);
 
-        float i = length(mycol.rg)/10;
 
-        i = log(1.0 + length(mycol.rg)) / 1.5;
+        float i = log(1.0 + length(mycol.ba)) / 1.5;
 
         vec4 finalcol = vec4(norm_col * i, 1.0);
 

@@ -4,9 +4,9 @@
 #include "common.h"
 
 #ifdef __APPLE__
-constexpr u32 RCS_RESOLUTION = 4096u;
+constexpr u64 RCS_RESOLUTION = 4096u;
 #else
-constexpr u32 RCS_RESOLUTION = 8192u;
+constexpr u64 RCS_RESOLUTION = 8192u;
 #endif
 constexpr f32 RCS_RANGE = 1000000.0f;
 constexpr f32 RCS_BOXSIZE = 20.0f;
