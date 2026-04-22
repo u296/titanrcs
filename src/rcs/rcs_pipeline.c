@@ -91,17 +91,30 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext,
     msci.alphaToCoverageEnable = VK_FALSE;
     msci.alphaToOneEnable = VK_FALSE;
 
-    VkPipelineColorBlendAttachmentState bas = {};
-    bas.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    bas.blendEnable = VK_FALSE;
+    VkPipelineColorBlendAttachmentState bas[3];
+    for (u32 i = 0; i < 3; i++) {
+        bas[i] = (VkPipelineColorBlendAttachmentState){};
+        bas[i].colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        bas[i].blendEnable = VK_FALSE;
+    }
+    bas[0].blendEnable = VK_TRUE;
+    bas[0].colorBlendOp = VK_BLEND_OP_ADD;
+    bas[0].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    bas[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    bas[0].alphaBlendOp = VK_BLEND_OP_ADD;
+    bas[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    bas[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+
+
 
     VkPipelineColorBlendStateCreateInfo bci = {};
     bci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     bci.logicOpEnable = VK_FALSE;
     bci.logicOp = VK_LOGIC_OP_COPY;
     bci.attachmentCount = 3;
-    bci.pAttachments = (VkPipelineColorBlendAttachmentState[]){bas, bas, bas};
+    bci.pAttachments = bas;
 
     VkDynamicState dynstate[2] = {VK_DYNAMIC_STATE_VIEWPORT,
                                   VK_DYNAMIC_STATE_SCISSOR};
@@ -342,7 +355,6 @@ bool make_rcs_reduction_pipeline(RenderBackend* rb,
     plci.pushConstantRangeCount = 1;
     plci.pPushConstantRanges = &pcr;
 
-
     r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_red_pipeline_layout);
     CLEANUP_START(PipelineLayoutCleanup){
         rb->dev, *out_red_pipeline_layout} CLEANUP_END(pipelinelayout);
@@ -428,8 +440,6 @@ bool make_imgtobuf_pipeline(RenderBackend* rb,
 
     return false;
 }
-
-
 
 bool make_buftoimg_pipeline(RenderBackend* rb,
                             VkDescriptorSetLayout desc_layout,

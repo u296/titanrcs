@@ -68,13 +68,21 @@ vec2 calc_ce_cm(float wedgeangle, float phi_i) {
 
     // need to fix something better
 
-    float epsilon = 0.1;
+    float epsilon = 0.01;
 
     float denom1 = (cos(pi/n) - 1.0);
     float denom2 = (cos(pi/n) - cos((2*phi_i)/n));
 
     denom1 = sgn(denom1) * max(abs(denom1), epsilon);
     denom2 = sgn(denom1) * max(abs(denom2), epsilon);
+
+    if (isnan(denom1) || isinf(denom1)) {
+        denom1 = 0.001;
+    }
+    if (isnan(denom2) || isinf(denom2)) {
+        denom2 = 0.001;
+    }
+    
 
     float term1 = 1.0 / denom1;
     float term2 = 1.0 / denom2;
@@ -113,7 +121,12 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));// phase factor to multiply before sending to fft
 
-    vec4 infield_local = vec4(1.0, 0.0, 0.0, 0.0);
+    vec4 infield_local = vec4(1.0, 0.0, 0.0, 0.0); // need to propagate this forward to the correct Z
+
+    vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z));
+
+    infield_local.xy = cmul(infield_local.xy, forwardphase);
+    infield_local.zw = cmul(infield_local.zw, forwardphase);
 
     vec3 face_cotangent = cross(face_normal, edgetangent);
 
@@ -127,11 +140,7 @@ void main() {
 
     float phi_i = atan(indir_local.y, indir_local.x);
 
-    //float wedgeangle = 0.5 * pi;
-
-    vec2 ce_cm = calc_ce_cm(wedge_angle, phi_i); // makes nan for some reason
-
-    //ce_cm = vec2(1,1);
+    vec2 ce_cm = calc_ce_cm(wedge_angle, phi_i);
 
     float ce = ce_cm.x;
     float cm = ce_cm.y;
@@ -143,10 +152,17 @@ void main() {
     vec4 inh = vec4(-infield_local.zw, infield_local.xy);
     vec2 hinc = edgetangent.x * inh.xy + edgetangent.y * inh.zw;
 
+    float angle_factor = max(1.0 / sqrt(1.0 - edgetangent.z), 20);
 
-    vec4 dE = vec4(beta_s_hat.x * ce * einc + phi_i_hat.x * cm * hinc, beta_s_hat.y * ce * einc + phi_i_hat.y * cm * hinc);
+    float dl_da = angle_factor;// / (20.0/8192);
 
+    vec4 dE = dl_da * vec4(beta_s_hat.x * ce * einc + phi_i_hat.x * cm * hinc, beta_s_hat.y * ce * einc + phi_i_hat.y * cm * hinc);
 
+    dE /= k;
+    //dE *= (20/8192);
+
+    dE.xy = cmul(dE.xy, vec2(0,-1));
+    dE.zw = cmul(dE.zw, vec2(0,-1));
 
     const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
 
@@ -154,19 +170,23 @@ void main() {
 
     vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,dE.xy)),cmul(phasefactor,cmul(shiftfactor,dE.zw)));
 
+    
+
+    //final /= 1000;
+
     out_prefouriertransform = final;
 
 
     vec4 col = vec4(1.0, 0.0, 0.0, 1.0);
 
     float d = dot(face_normal, vec3(0.0,0.0,-1.0));
-    if (d > 0.9) {
-        col.g = 1.0;
-    } else if (d < -0.9) {
-        col.b = 1.0;
+    if (wedge_angle > 1.0*pi) {
+        col.g = 1;
+    } else if (wedge_angle > 0.5 * pi) {
+        col.b = 1;
     }
 
-    col.xyz = visualize_vec2(vec2(length(final.xy), length(final.zw)));
+    //col.xyz = visualize_vec2(vec2(length(final.xy), length(final.zw)));
 
     out_intenscolor = col;
 
