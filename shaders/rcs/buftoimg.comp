@@ -4,7 +4,11 @@ layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(set=0, binding = 0, rgba32f) uniform writeonly image2D postfftimg;
 
-layout(set=0, binding = 1) buffer buf {vec4 data[];};
+layout(set=0, binding = 1) buffer buf {vec2 data[];};
+
+layout(push_constant) uniform PushBlock {
+    uint cropfraction;
+} pc;
 
 void main() {
     ivec2 size = imageSize(postfftimg);
@@ -15,25 +19,16 @@ void main() {
         return;
     }
 
-    // do 1/16 cropping
-    /*
-    if (abs(img_coord.x - (size.x/2)) > (size.x/32) ||  abs(img_coord.y - (size.y/2)) > (size.y/32)) {
-        return;
-    }
-    */
-
-    ivec2 read_coord = img_coord;
-
-    // shifting
-    
-    /*
-    read_coord.x = (img_coord.x + (size.x/2)) % size.x;
-    read_coord.y = (img_coord.y + (size.y/2)) % size.y;
-    */
+    uvec2 read_coord = img_coord; // we read from the same coordinate, but the image buffer we're reading from comes from a larger image
+    uvec2 read_size = size * pc.cropfraction;
 
     vec4 pixel;
 
-    pixel.rgba = data[read_coord.y * size.x + read_coord.x];
+    uint lin_index_x = read_coord.y * read_size.x + read_coord.x;
+    uint lin_index_y = (read_coord.y + read_size.y) * read_size.x + read_coord.x;
+
+    pixel.rg = data[lin_index_x];
+    pixel.ba = data[lin_index_y];
 
     imageStore(postfftimg, img_coord, pixel);
 }

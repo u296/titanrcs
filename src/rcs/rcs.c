@@ -115,7 +115,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                            &rcs_imgtobuf_pipeline, cs);
 
     make_buftoimg_pipeline(rb, rcs_imgbuftransfer_descset_layout,
-                           &rcs_imgbuftransfer_pipeline_layout,
+                           rcs_imgbuftransfer_pipeline_layout,
                            &rcs_buftoimg_pipeline, cs);
 
     make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,

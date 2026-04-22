@@ -120,9 +120,9 @@ bool make_rcs_pipeline(RenderBackend* rb, VkExtent2D ext,
     dci.stencilTestEnable = VK_FALSE;
 
     VkPushConstantRange pcr = {};
-    pcr.size = 16; // actually just need 4 
+    pcr.size = 16; // actually just need 4
     pcr.offset = 0;
-    pcr.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;    
+    pcr.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -330,10 +330,18 @@ bool make_rcs_reduction_pipeline(RenderBackend* rb,
 
     VkResult r;
 
+    VkPushConstantRange pcr = {};
+    pcr.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pcr.offset = 0;
+    pcr.size = sizeof(u32);
+
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.setLayoutCount = 1;
     plci.pSetLayouts = &desc_layout;
+    plci.pushConstantRangeCount = 1;
+    plci.pPushConstantRanges = &pcr;
+
 
     r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_red_pipeline_layout);
     CLEANUP_START(PipelineLayoutCleanup){
@@ -367,19 +375,30 @@ bool make_rcs_reduction_pipeline(RenderBackend* rb,
 }
 
 bool make_imgtobuf_pipeline(RenderBackend* rb,
-                                 VkDescriptorSetLayout desc_layout,
-                                 VkPipelineLayout* out_imgtobuf_pipeline_layout,
-                                 VkPipeline* out_imgtobuf_pipeline,
-                                 CleanupStack* cs) {
+                            VkDescriptorSetLayout desc_layout,
+                            VkPipelineLayout* out_imgtobuf_pipeline_layout,
+                            VkPipeline* out_imgtobuf_pipeline,
+                            CleanupStack* cs) {
 
     VkResult r;
+
+    /*
+    this only contains the cropping factor
+    */
+    VkPushConstantRange pcr = {};
+    pcr.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pcr.offset = 0;
+    pcr.size = sizeof(u32);
 
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.setLayoutCount = 1;
     plci.pSetLayouts = &desc_layout;
+    plci.pushConstantRangeCount = 1;
+    plci.pPushConstantRanges = &pcr;
 
-    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_imgtobuf_pipeline_layout);
+    r = vkCreatePipelineLayout(rb->dev, &plci, NULL,
+                               out_imgtobuf_pipeline_layout);
     CLEANUP_START(PipelineLayoutCleanup){
         rb->dev, *out_imgtobuf_pipeline_layout} CLEANUP_END(pipelinelayout);
 
@@ -410,22 +429,15 @@ bool make_imgtobuf_pipeline(RenderBackend* rb,
     return false;
 }
 
+
+
 bool make_buftoimg_pipeline(RenderBackend* rb,
-                                 VkDescriptorSetLayout desc_layout,
-                                 VkPipelineLayout* out_buftoimg_pipeline_layout,
-                                 VkPipeline* out_buftoimg_pipeline,
-                                 CleanupStack* cs) {
+                            VkDescriptorSetLayout desc_layout,
+                            VkPipelineLayout bufimg_transfer_pipeline_layout,
+                            VkPipeline* out_buftoimg_pipeline,
+                            CleanupStack* cs) {
 
     VkResult r;
-
-    VkPipelineLayoutCreateInfo plci = {};
-    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    plci.setLayoutCount = 1;
-    plci.pSetLayouts = &desc_layout;
-
-    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, out_buftoimg_pipeline_layout);
-    CLEANUP_START(PipelineLayoutCleanup){
-        rb->dev, *out_buftoimg_pipeline_layout} CLEANUP_END(pipelinelayout);
 
     VkShaderModule buftoimg_module = VK_NULL_HANDLE;
     make_shadermodule(rb->dev, "shaders/rcs/buftoimg.spv", &buftoimg_module);
@@ -441,7 +453,7 @@ bool make_buftoimg_pipeline(RenderBackend* rb,
     cpci.stage = sci;
     cpci.basePipelineHandle = VK_NULL_HANDLE;
     cpci.basePipelineIndex = -1;
-    cpci.layout = *out_buftoimg_pipeline_layout;
+    cpci.layout = bufimg_transfer_pipeline_layout;
 
     r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci, NULL,
                                  out_buftoimg_pipeline);

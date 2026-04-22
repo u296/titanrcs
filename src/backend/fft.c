@@ -29,7 +29,7 @@ static VkPhysicalDevice persist_physdev;
 static VkQueue persist_queue;
 static u32 persist_queue_i;
 u64 fftbuf_size =
-    4ull * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex
+    4ull * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex x2 for x and y channel
 
 void fft_populate_persistents(VkDevice dev, VkPhysicalDevice physdev,
                               Queues queues) {
@@ -78,22 +78,17 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp,
 
     // constexpr u64 totpad = (RCS_RESOLUTION-viewsize);
 
-    cfg.FFTdim = 1 + 2;
-    cfg.size[0] = 2;
-    cfg.size[1] = RCS_RESOLUTION; // x
-    cfg.size[2] = RCS_RESOLUTION; // y
+    cfg.FFTdim = 2;
+    cfg.size[0] = RCS_RESOLUTION;
+    cfg.size[1] = RCS_RESOLUTION;
 
-    // cfg.size[3] = 1; // z
-    cfg.omitDimension[0] = 1;
-    cfg.omitDimension[1] = 0;
-    cfg.omitDimension[2] = 0;
-    cfg.numberBatches = 1;
+    cfg.numberBatches = 2; // x and y channels
 
     cfg.bufferSize = &fftbuf_size;
     cfg.inputBufferSize = &fftbuf_size;
     cfg.outputBufferSize = &fftbuf_size;
 
-    cfg.maxTempLength = fftbuf_size;
+    //cfg.maxTempLength = fftbuf_size;
     // cfg.userTempBuffer = 1;
     // cfg.tempBufferSize = &fftbuf_size;
 
@@ -108,12 +103,12 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp,
     correct.
     */
 
-    cfg.isInputFormatted = 1;
+    cfg.isInputFormatted = 0;
     cfg.inputBufferStride[0] = 0;
     cfg.inputBufferStride[1] = 0;
     cfg.inputBufferStride[2] = 0;
 
-    cfg.isOutputFormatted = 1;
+    cfg.isOutputFormatted = 0;
 
     cfg.outputBufferStride[0] = 0;
     cfg.outputBufferStride[1] = 0;
@@ -135,17 +130,14 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp,
     */
 
     cfg.frequencyZeroPadding = 1;
-    cfg.performZeropadding[0] = 0;
+    cfg.performZeropadding[0] = 1;
     cfg.performZeropadding[1] = 1;
-    cfg.performZeropadding[2] = 1;
-    cfg.fft_zeropad_left[0] = 0;
-    cfg.fft_zeropad_right[0] = 0;
+    cfg.fft_zeropad_left[0] = l;
+    cfg.fft_zeropad_right[0] = RCS_RESOLUTION;
     cfg.fft_zeropad_left[1] = l;
     cfg.fft_zeropad_right[1] = RCS_RESOLUTION;
-    cfg.fft_zeropad_left[2] = l;
-    cfg.fft_zeropad_right[2] = RCS_RESOLUTION;
 
-    cfg.disableReorderFourStep = 1;
+    //cfg.disableReorderFourStep = 1;
 
 #endif
 

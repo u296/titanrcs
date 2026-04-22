@@ -45,7 +45,7 @@ bool make_imgtobuf_pipeline(RenderBackend* rb,
 
 bool make_buftoimg_pipeline(RenderBackend* rb,
                             VkDescriptorSetLayout desc_layout,
-                            VkPipelineLayout* out_buftoimg_pipeline_layout,
+                            VkPipelineLayout bufimg_transfer_pipeline_layout,
                             VkPipeline* out_buftoimg_pipeline,
                             CleanupStack* cs);
 

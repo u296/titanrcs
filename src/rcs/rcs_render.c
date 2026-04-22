@@ -190,6 +190,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         1,
         &rend_to_comp_cp};
 
+    u32 transfer_pushconsts = RCS_CROPFRACTION;
+
     vkCmdPipelineBarrier2(cmdbuf, &rend_to_comp_cp_dep);
 
     vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -198,6 +200,9 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                             0, NULL);
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
                       ctx->rcs_resources.imgtobuf_pipeline);
+    vkCmdPushConstants(
+        cmdbuf, ctx->rcs_resources.imgbuftransfer_pipeline_layout,
+        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &transfer_pushconsts);
     vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16, RCS_RESOLUTION / 16, 1);
 
     /*
@@ -303,6 +308,10 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                             0, NULL);
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
                       ctx->rcs_resources.buftoimg_pipeline);
+
+    vkCmdPushConstants(
+        cmdbuf, ctx->rcs_resources.imgbuftransfer_pipeline_layout,
+        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &transfer_pushconsts);
     vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16, RCS_RESOLUTION / 16, 1);
 
     /*
@@ -343,6 +352,11 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                             ctx->rcs_resources.reduction_pipeline_layout, 0, 1,
                             &ctx->rcs_resources.sets[f].red_descset, 0, NULL);
 
+    vkCmdPushConstants(
+        cmdbuf, ctx->rcs_resources.reduction_pipeline_layout,
+        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32),
+        &transfer_pushconsts); // should maybe get its own name, this isn't a
+                               // transfer kernel but it needs the same data
     vkCmdDispatch(cmdbuf, 1, 1, 1);
 
     /*

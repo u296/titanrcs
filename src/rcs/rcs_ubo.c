@@ -16,8 +16,8 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
     return false;
 }
 
-bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf, CleanupStack* cs)
-{
+bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
+                      CleanupStack* cs) {
 
     make_buffer(rb,
                 RCS_RESOLUTION * RCS_RESOLUTION * 2 * 2 *
@@ -27,17 +27,20 @@ bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf, CleanupStack* cs)
                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 TR_MAPPABLE_NONE, out_inputbuf, cs);
 
-
     return false;
 }
 
 bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
                      CleanupStack* cs) {
 
+    // there's no need to store the uncropped parts of the fft image, we'll just
+    // make it smaller here
+
     VkImageCreateInfo ici = {};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = VK_IMAGE_TYPE_2D;
-    ici.extent = (VkExtent3D){ext.width, ext.height, 1};
+    ici.extent = (VkExtent3D){ext.width / RCS_CROPFRACTION,
+                              ext.height / RCS_CROPFRACTION, 1};
     ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     ici.arrayLayers = 1;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;

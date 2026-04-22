@@ -8,7 +8,7 @@ constexpr u64 RCS_RESOLUTION = 4096ull;
 #else
 constexpr u64 RCS_RESOLUTION = 4096ull;
 #endif
-constexpr u64 RCS_CROPFRACTION = 4; // if ~2 or less, output will be bugged near the edges
+constexpr u64 RCS_CROPFRACTION = 16; // if ~2 or less, output will be bugged near the edges
 constexpr f32 RCS_RANGE = 1000000.0f;
 constexpr f32 RCS_BOXSIZE = 20.0f;
 constexpr bool WANT_VALIDATION = true;

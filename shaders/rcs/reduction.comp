@@ -6,10 +6,16 @@ layout(set=0, binding=1) buffer Results {
     float avg_sq_mag;
 } res;
 
+layout(push_constant) uniform PushBlock {
+    uint crop_fraction;
+} pc;
+
 void main() {
     ivec2 center = textureSize(fft_img,0) / 2;
 
-    float fft_res = textureSize(fft_img,0).x;
+    float fft_res = textureSize(fft_img,0).x; // not really, this resolution is the cropped image resolution, and needs to be adjusted
+
+    fft_res *= pc.crop_fraction;
 
     float total = 0.0;
 
@@ -17,7 +23,7 @@ void main() {
 
     for (int i = 0; i < squaresize; i++) {
         for (int j = 0; j < squaresize; j++) {
-            vec2 val = texelFetch(fft_img, center + ivec2(i-squaresize/2,j-squaresize/2), 0).rg;
+            vec4 val = texelFetch(fft_img, center + ivec2(i-squaresize/2,j-squaresize/2), 0);
 
             val *= (1.0 / fft_res); // normalize fft to preserve power - should not be squared, this was tested
 
