@@ -2,9 +2,14 @@
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_norm;
+layout(location = 2) in vec3 in_edge_tangent;
+layout(location = 3) in vec3 in_face_normal;
 
 layout(location = 0) out vec3 out_pos;
 layout(location = 1) out vec3 out_norm;
+layout(location = 2) out vec3 out_edge_tangent;
+layout(location = 3) out vec3 out_face_normal;
+layout(location = 4) out float out_wedge_angle; // encoded as the length of the in face normal vector
 
 layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
@@ -31,9 +36,18 @@ void main() {
     
 
     //vec3 v1 =  normalize((ubo.model * vec4(in_norm,1.0)).xyz);
-    vec3 v2 = normalize(mat3(ubo.norm_trans) * in_norm);
+    mat3 normtrans = mat3(ubo.norm_trans);
 
-    out_norm = v2;
+    vec3 norm = normalize(normtrans * in_norm);
+    vec3 edge_tangent = normalize(normtrans * in_edge_tangent);
+    float wedgeangle = length(in_face_normal);
+    vec3 face_normal = normalize(normtrans * in_face_normal);
+
+    
     out_pos = mat3(ubo.model) * in_pos;
+    out_norm = norm;
+    out_edge_tangent = edge_tangent;
+    out_face_normal = face_normal;
+    out_wedge_angle = wedgeangle;
 
 }

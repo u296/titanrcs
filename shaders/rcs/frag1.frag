@@ -2,6 +2,7 @@
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 norm;
+layout(location = 2) in vec3 edge_tangent;
 
 layout(location = 0) out vec4 out_prefouriertransform;
 layout(location = 1) out vec4 out_phasecolor;
@@ -62,10 +63,10 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
 
-    const float thing = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
+    const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
 
-    const vec2 shiftfactor = vec2(cos(thing), sin(thing));
-    vec2 fakeshift = vec2(cos(thing*0.5+1.0), sin(thing*0.5));
+    const vec2 shiftfactor = vec2(cos(shiftingphase), sin(shiftingphase));
+    vec2 fakeshift = vec2(cos(shiftingphase*0.5+1.0), sin(shiftingphase*0.5));
 
     vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor);
     vec2 fakething = cmul(cmul(reflfield, phasefactor), fakeshift);

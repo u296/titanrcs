@@ -312,7 +312,9 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     vkCmdPushConstants(
         cmdbuf, ctx->rcs_resources.imgbuftransfer_pipeline_layout,
         VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &transfer_pushconsts);
-    vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16, RCS_RESOLUTION / 16, 1);
+
+    vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16 / RCS_CROPFRACTION,
+                  RCS_RESOLUTION / 16 / RCS_CROPFRACTION, 1);
 
     /*
     This set of barriers ensures that the post-fft image can be read by the

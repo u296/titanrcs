@@ -21,11 +21,6 @@ void main() {
 
     ivec2 out_coord = in_coord;
 
-    /*
-    out_coord.x = (in_coord.x + (size.x/2)) % size.x;
-    out_coord.y = (in_coord.y + (size.y/2)) % size.y;
-    */
-
     vec4 in_pixel = imageLoad(prefftimg, in_coord);
     
     uint lin_index_x = out_coord.y * size.x + out_coord.x;

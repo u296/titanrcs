@@ -8,53 +8,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stlfile.h>
-#include <math.h>
-
-#define S 0.03125
-
-#define LEFT -S
-#define RIGHT S
-#define TOP S
-#define BOT -S
-
-const RcsVertex rcs_verts[4] = {{{LEFT, TOP, 0.0}, {0.0, 0.0, 1.0}},
-                                {{RIGHT, TOP, 0.0}, {0.0, 1.0, 0.0}},
-                                {{LEFT, BOT, 0.0}, {1.0, 0.0, 0.0}},
-                                {{RIGHT, BOT, 0.0}, {1.0, 1.0, 1.0}}};
-/*
-const RcsVertex rcs_verts[4] = {{{-1.0, -1.0, 0.0}, {0.0, 0.0, 1.0}},
-                         {{-1.0, -0.5, 0.0}, {0.0, 1.0, 0.0}},
-                         {{-0.5, -1.0, 0.0}, {1.0, 0.0, 0.0}},
-                         {{-0.5, -0.7, 0.0}, {1.0, 1.0, 1.0}}};*/
-
-const u16 rcs_indices[6] = {0, 1, 2, 1, 2, 3};
-
-void weld_vertices(u32 n_verts, f32* raw_verts, u32 n_tris, u32* triangles) {
-
-    const f32 len_threshold = 0.000001f;
-    u32 n_welded_verts = 0;
-
-    for (u32 i = 0; i < n_verts - 1; i++) {
-        for (u32 j = i + 1; j < n_verts; j++) {
-
-            Vec3 diff = {raw_verts[i * 3 + 0] - raw_verts[j * 3 + 0],
-                         raw_verts[i * 3 + 1] - raw_verts[j * 3 + 1],
-                         raw_verts[i * 3 + 2] - raw_verts[j * 3 + 2]};
-
-            f32 diff_l = len_v3(diff);
-
-            if (diff_l < len_threshold) {
-                for (u32 k = 0; k < n_tris * 3; k++) {
-                    if (triangles[k] == j) {
-                        triangles[k] = i;
-                        n_welded_verts++;
-                    }
-                }
-            }
-        }
-    }
-    printf("welded %u vertices \n", n_welded_verts);
-}
 
 void build_vertex_normals(u32 n_verts, float* raw_verts, u32 n_tris,
                           u32* triangles, Vec3* out_vert_normals,
@@ -142,9 +95,10 @@ i32 edge_order_compare(const void* a, const void* b) {
     }
 }
 
-u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
+u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                       const f32* raw_verts, const Vec3* triangle_normals,
-                      u32** out_inds) {
+                      u32** out_inds, Vec3* out_edge_tangents,
+                      Vec3* out_face_normals) {
 
     constexpr f32 SHARP_ANGLE = 30.0f * DEG_TO_RAD;
 
@@ -172,6 +126,12 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
 
     u32* built_inds = malloc(2 * 3 * n_tris * sizeof(u32));
     memset(built_inds, 0, 2 * 3 * n_tris * sizeof(u32));
+
+    for (u32 i = 0; i < n_verts; i++) {
+        out_edge_tangents[i] = (Vec3){0.0f, 0.0f, 0.0f};
+        out_face_normals[i] = (Vec3){0.0f, 0.0f, 0.0f};
+    }
+
     u32 i_inds_insert = 0;
     u32 n_weird_dotprods = 0;
 
@@ -196,7 +156,37 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
                 built_inds[i_inds_insert] = edge_records[i].v1;
                 built_inds[i_inds_insert + 1] = edge_records[i].v2;
                 i_inds_insert += 2;
+
+                Vec3 edgetan = cross_v3(norm1, norm2);
+
+                // we have two choices but we can't risk them taking themselves
+                // out when adding, so use the convention of positive z
+
+                if (edgetan.z < 0.0f) {
+                    edgetan = muls_v3(-1.0f, edgetan);
+                }
+
+                out_edge_tangents[edge_records[i].v1] =
+                    add_v3(out_edge_tangents[edge_records[i].v1], edgetan);
+                out_edge_tangents[edge_records[i].v2] =
+                    add_v3(out_edge_tangents[edge_records[i].v2], edgetan);
+
+                // don't do this additively. Could add a check here aswell to
+                // only set if zero. Also, set the length of this vector to
+                // the angle between the normals.
+
+                f32 ang = acosf(d);
+                out_face_normals[edge_records[i].v1] = muls_v3(ang, norm1);
+                out_face_normals[edge_records[i].v2] = muls_v3(ang, norm1);
             }
+        }
+    }
+
+    for (u32 i = 0; i < n_verts; i++) {
+        if (len_v3(out_edge_tangents[i]) < 1e-12f) {
+            out_edge_tangents[i] = (Vec3){0.0f, 0.0f, 0.0f};
+        } else {
+            out_edge_tangents[i] = normalize_v3(out_edge_tangents[i]);
         }
     }
     printf("built %u sharp edges out of maximum %u (%.1f%%)\n",
@@ -208,8 +198,8 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles,
     return i_inds_insert;
 }
 
-void process_verts(float* raw_verts, u32 n_verts, Vec3* normals,
-                   RcsVertex* new_buf) {
+void build_verts(float* raw_verts, u32 n_verts, Vec3* normals,
+                 Vec3* edge_tangents, Vec3* face_normals, RcsVertex* new_buf) {
 
     const float hardcode_scaling = 1.0;
 
@@ -220,7 +210,9 @@ void process_verts(float* raw_verts, u32 n_verts, Vec3* normals,
         new_buf[i] = (RcsVertex){{raw_verts[i * 3] * hardcode_scaling,
                                   raw_verts[i * 3 + 1] * hardcode_scaling,
                                   raw_verts[i * 3 + 2] * hardcode_scaling},
-                                 normals[i]};
+                                 normals[i],
+                                 edge_tangents[i],
+                                 face_normals[i]};
     }
 }
 
@@ -258,16 +250,20 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
 
     RcsVertex* processed_verts = malloc(sizeof(RcsVertex) * n_verts);
     Vec3* vertex_normals = malloc(sizeof(Vec3) * n_verts);
+    Vec3* vertex_edgetangents = malloc(sizeof(Vec3) * n_verts);
+    Vec3* vertex_facenormals = malloc(sizeof(Vec3) * n_verts);
     Vec3* triangle_normals = malloc(sizeof(Vec3) * n_triangles);
     u32* sharp_inds;
 
     build_vertex_normals(n_verts, vertdata, n_triangles, triangles,
                          vertex_normals, triangle_normals);
 
-    u32 n_sharp_inds = build_sharp_edges(n_triangles, triangles, vertdata,
-                                         triangle_normals, &sharp_inds);
+    u32 n_sharp_inds = build_sharp_edges(
+        n_triangles, triangles, n_verts, vertdata, triangle_normals,
+        &sharp_inds, vertex_edgetangents, vertex_facenormals);
 
-    process_verts(vertdata, n_verts, vertex_normals, processed_verts);
+    build_verts(vertdata, n_verts, vertex_normals, vertex_edgetangents,
+                vertex_facenormals, processed_verts);
 
     make_local_buffer_staged(rb, n_verts * sizeof(RcsVertex), processed_verts,
                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, cpool, vbuf,
@@ -294,6 +290,8 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
     free(processed_verts);
     free(vertex_normals);
     free(triangle_normals);
+    free(vertex_edgetangents);
+    free(vertex_facenormals);
     free(sharp_inds);
 
     return false;
