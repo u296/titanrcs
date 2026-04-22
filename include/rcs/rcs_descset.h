@@ -35,8 +35,7 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
                                VkDescriptorSet* desc_set);
 
 bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                               Image postfftimg, Buffer fftbuf_x,
-                               Buffer fftbuf_y,
+                               Image postfftimg, Buffer fftbuf,
                                VkDescriptorSetLayout descset_layout,
                                VkDescriptorSet* desc_set);
 

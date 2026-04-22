@@ -10,7 +10,6 @@
 // f is the inflight index
 void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
-
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbbi.flags = 0;
@@ -139,7 +138,6 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     }
     vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
 
-    
     if (ctx->rcs_resources.mesh.n_sharp_indices != 0) {
         vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           ctx->rcs_resources.ptd_pipeline);
@@ -161,7 +159,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdEndRendering(cmdbuf);
 
-    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf_input.buf;
+    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_work_buf.buf;
 
     /*
     This set of barriers ensures that rendertarget 0 is ready to be read from so
@@ -215,10 +213,9 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
-        ctx->rcs_resources.sets[f].fft_buf_input.buf,
+        ctx->rcs_resources.sets[f].fft_work_buf.buf,
         0,
         VK_WHOLE_SIZE};
-
 
     VkBufferMemoryBarrier2 comp_cp_post_deps[1] = {comp_cp_to_fftx};
 
@@ -235,12 +232,20 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPipelineBarrier2(cmdbuf, &comp_cp_to_fft_dep);
 
+    /*
+    After hours of experimentation, I think that doing an out-of place transform
+    results in the same bugs as doing an in-place. So to save memory We'll just
+    skip the manual temp buffer and use a single in place transform, just like
+    in the beginning.
+    */
+
     VkFFTLaunchParams lp = {};
     lp.commandBuffer = &cmdbuf;
-    //lp.tempBuffer = &ctx->rcs_resources.sets[f].fft_buf_tmp.buf;
-    lp.buffer = &ctx->rcs_resources.sets[f].fft_buf_work.buf; // this is the input for some reason
-    lp.inputBuffer = &ctx->rcs_resources.sets[f].fft_buf_input.buf;
-    lp.outputBuffer = &ctx->rcs_resources.sets[f].fft_buf_output.buf;
+    // lp.tempBuffer = &ctx->rcs_resources.sets[f].fft_buf_tmp.buf;
+    lp.buffer = &ctx->rcs_resources.sets[f]
+                     .fft_work_buf.buf; // this is the input for some reason
+    // lp.inputBuffer = &ctx->rcs_resources.sets[f].fft_buf_input.buf;
+    // lp.outputBuffer = &ctx->rcs_resources.sets[f].fft_buf_output.buf;
 
     VkFFTAppend(ctx->backend.fft[f], -1, &lp);
 
@@ -272,11 +277,10 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_ACCESS_2_SHADER_READ_BIT,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
-        ctx->rcs_resources.sets[f].fft_buf_output.buf,
+        ctx->rcs_resources.sets[f].fft_work_buf.buf,
         0,
         VK_WHOLE_SIZE,
     };
-
 
     VkBufferMemoryBarrier2 postfft_compcp_deps[1] = {postfft_to_comp_cpx};
 

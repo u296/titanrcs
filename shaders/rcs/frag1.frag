@@ -65,10 +65,12 @@ void main() {
     const float thing = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
 
     const vec2 shiftfactor = vec2(cos(thing), sin(thing));
+    vec2 fakeshift = vec2(cos(thing*0.5+1.0), sin(thing*0.5));
 
     vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor);
+    vec2 fakething = cmul(cmul(reflfield, phasefactor), fakeshift);
 
-    out_prefouriertransform = vec4(0.0,0.0, realthing);
+    out_prefouriertransform = vec4(fakething, realthing);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 

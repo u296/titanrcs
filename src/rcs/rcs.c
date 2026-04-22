@@ -72,11 +72,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
             .alloc = rcs_inflights[i].ubo.alloc,
         } CLEANUP_END(mapping);
 
-        make_rcs_fftbufs(rb, &rcs_inflights[i].fft_buf_input,
-                         &rcs_inflights[i].fft_buf_output,
-                         &rcs_inflights[i].fft_buf_work,
-                         &rcs_inflights[i].fft_buf_tmp, cs);
-        // rcs_inflights[i].fft_buf_output.buf = VK_NULL_HANDLE;
+        make_rcs_fftbufs(rb, &rcs_inflights[i].fft_work_buf, cs);
 
         make_rcs_fftimg(rb, ext, &rcs_inflights[i].fft_img, cs);
 
@@ -92,13 +88,12 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 
         make_rcs_imgtobuf_descset(
             rb, rcs_dpool, rcs_inflights[i].rendtargets[0],
-            rcs_inflights[i].fft_buf_input, rcs_inflights[i].fft_buf_output,
+            rcs_inflights[i].fft_work_buf, rcs_inflights[i].fft_work_buf,
             rcs_imgbuftransfer_descset_layout,
             &rcs_inflights[i].imgtobuf_descset);
 
         make_rcs_buftoimg_descset(rb, rcs_dpool, rcs_inflights[i].fft_img,
-                                  rcs_inflights[i].fft_buf_input,
-                                  rcs_inflights[i].fft_buf_output,
+                                  rcs_inflights[i].fft_work_buf,
                                   rcs_imgbuftransfer_descset_layout,
                                   &rcs_inflights[i].buftoimg_descset);
 

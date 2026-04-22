@@ -30,6 +30,35 @@ vec3 make_color(float phase) {
     return vec3(cos(phase), cos(phase + 2.0*pi/3.0), cos(phase + 4.0*pi/3.0));
 }
 
+vec3 visualize_vec2(vec2 data) {
+    // 1. Calculate overall intensity (magnitude)
+    float intensity = log(1.0+length(data))/1.5;
+    
+    // 2. Determine the ratio (0.0 = pure X, 1.0 = pure Y, 0.5 = equal)
+    // Using atan2/PI provides a smoother linear distribution than x/(x+y)
+    float ratio = atan(data.y, data.x) / (0.5 * pi);
+    ratio = clamp(ratio, 0.0, 1.0);
+
+    // 3. Define the Three-Channel Palette
+    vec3 colorX = vec3(0.9, 0.1, 0.5); // Pink/Purple (X dominant)
+    vec3 colorY = vec3(0.1, 0.8, 0.4); // Green (Y dominant)
+    vec3 colorMix = vec3(1.0, 1.0, 1.0); // White (Balanced)
+
+    // 4. Mix the colors based on ratio
+    // We use a smoothstep or tent function to highlight the center "Mix"
+    vec3 finalColor;
+    if (ratio < 0.5) {
+        // Blend from pure X to the Mix channel
+        finalColor = mix(colorX, colorMix, ratio * 2.0);
+    } else {
+        // Blend from the Mix channel to pure Y
+        finalColor = mix(colorMix, colorY, (ratio - 0.5) * 2.0);
+    }
+
+    // 5. Apply intensity to the final color
+    return finalColor * intensity;
+}
+
 void main() {
     float fft_res = ubo.fzoom_fftres_.y;
 
@@ -57,6 +86,10 @@ void main() {
         float iy = log(1.0 + length(mycol.ba)) / 1.5;
 
         vec4 finalcol = vec4(1 * ix, 1 * iy, 0.0, 1.0);
+
+        vec2 lens = vec2(xlen,ylen);
+
+        finalcol = vec4(visualize_vec2(lens), 1.0);
 
         float delta = 0.0;//1.0/fft_res;
 

@@ -16,9 +16,7 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
     return false;
 }
 
-bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
-                      Buffer* out_outputbuf, Buffer* out_workbuf,
-                      Buffer* out_tmpbuf, CleanupStack* cs)
+bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf, CleanupStack* cs)
 {
 
     make_buffer(rb,
@@ -29,29 +27,6 @@ bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 TR_MAPPABLE_NONE, out_inputbuf, cs);
 
-    make_buffer(rb,
-                RCS_RESOLUTION * RCS_RESOLUTION * 2 * 2 *
-                    sizeof(float), // 4 for 2 complex numbers
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                TR_MAPPABLE_NONE, out_outputbuf, cs);
-
-    make_buffer(rb,
-                RCS_RESOLUTION * RCS_RESOLUTION * 2 * 2 *
-                    sizeof(float), // 4 for 2 complex numbers
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                TR_MAPPABLE_NONE, out_workbuf, cs);
-
-    make_buffer(rb,
-                RCS_RESOLUTION * RCS_RESOLUTION * 2 * 2 *
-                    sizeof(float), // 4 for 2 complex numbers
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                TR_MAPPABLE_NONE, out_tmpbuf, cs);
 
     return false;
 }

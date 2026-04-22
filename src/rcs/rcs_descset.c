@@ -262,7 +262,7 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
 }
 
 bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image postfftimg, Buffer fftbuf_input, Buffer fftbuf_output,
+                          Image postfftimg, Buffer fftbuf_input,
                           VkDescriptorSetLayout descset_layout,
                           VkDescriptorSet* desc_set) {
 
@@ -280,7 +280,7 @@ bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
     imi.imageView = postfftimg.view;
 
     VkDescriptorBufferInfo dbi_x = {};
-    dbi_x.buffer = fftbuf_output.buf;
+    dbi_x.buffer = fftbuf_input.buf;
     dbi_x.offset = 0;
     dbi_x.range = VK_WHOLE_SIZE; // 2 for complex
 

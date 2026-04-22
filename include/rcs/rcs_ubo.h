@@ -20,7 +20,7 @@ typedef struct ExtractionSsbo {
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
 
 bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
-                      Buffer* out_outputbuf, Buffer* out_workbuf, Buffer* out_tmpbuf, CleanupStack* cs);
+                      CleanupStack* cs);
 
 bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
                      CleanupStack* cs);
