@@ -283,7 +283,8 @@ LoopStatus renderloop_visualonly(RenderContext* ctx) {
                             ctx->resources.ubuf_mappings[i_inflight],
                         ctx->config.zoom);
 
-        write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_inflight].ubufmap);
+        //write_rcs_ubo(ctx, ctx->rcs_resources.sets[i_inflight].ubufmap);
+        // deprecated
 
         f = record_interface_cmdbuf(ctx->swapchain.swpch_ext,
 

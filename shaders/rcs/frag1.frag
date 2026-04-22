@@ -13,6 +13,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
+    vec4 cropfraction_;
 } ubo;
 
 layout(binding = 1) uniform sampler2D radar_infield;
@@ -40,6 +41,7 @@ void main() {
     const vec2 resolution = ubo.resolution_xy_L_lambda.xy;
     const float L = ubo.resolution_xy_L_lambda.z;
     const float lambda = ubo.resolution_xy_L_lambda.w;
+    const float cropfraction = ubo.cropfraction_.x;
 
     vec2 infield = vec2(1.0,0.0);//texelFetch(radar_infield, ivec2(pos.xy), 0).xy;
 
@@ -60,7 +62,13 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
 
-    out_prefouriertransform = vec4(cmul(reflfield, phasefactor), 0.0, 0.0);
+    const float thing = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
+
+    const vec2 shiftfactor = vec2(cos(thing), sin(thing));
+
+    vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor);
+
+    out_prefouriertransform = vec4(0.0,0.0, realthing);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 

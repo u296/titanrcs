@@ -12,6 +12,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_trans;
     vec4 resolution_xy_L_;
+    vec4 cropfraction_;
 } ubo;
 
 layout(push_constant) uniform PushBlock {

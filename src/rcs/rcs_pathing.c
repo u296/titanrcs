@@ -283,6 +283,8 @@ void raw_write_rcsubo(void* mapping, f32* params) {
     *pindex_m4(&ubo.proj, 1, 3) = -(bot + top) / (bot - top);
     *pindex_m4(&ubo.proj, 2, 3) = -(near) / (far - near);
 
+    ubo.cropfraction_ = (Vec4){(f32)RCS_CROPFRACTION,0.0f,0.0f,0.0f};
+
     memcpy(mapping, &ubo, sizeof(ubo));
 }
 

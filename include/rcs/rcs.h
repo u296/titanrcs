@@ -13,8 +13,10 @@ typedef struct RcsPerInflight {
     Image depthimg;
     Image rendtargets[3];
     Buffer ubo;
-    Buffer fft_buf_x;
-    Buffer fft_buf_y;
+    Buffer fft_buf_input;
+    Buffer fft_buf_output;
+    Buffer fft_buf_work;
+    Buffer fft_buf_tmp;
     Image fft_img;
     Buffer extr_buf;
     void* ubufmap;

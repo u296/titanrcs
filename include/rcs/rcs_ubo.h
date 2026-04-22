@@ -10,6 +10,7 @@ typedef struct RcsUbo {
     Mat4 proj;
     Mat4 norm_trans;
     Vec4 resolution_xy_L_lambda;
+    Vec4 cropfraction_;
 } RcsUbo;
 
 typedef struct ExtractionSsbo {
@@ -18,8 +19,8 @@ typedef struct ExtractionSsbo {
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
 
-bool make_rcs_fftbuf(RenderBackend* rb, Buffer* out_rcs_fftbufx,
-                      Buffer* out_rcs_fftbufy, CleanupStack* cs);
+bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
+                      Buffer* out_outputbuf, Buffer* out_workbuf, Buffer* out_tmpbuf, CleanupStack* cs);
 
 bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
                      CleanupStack* cs);

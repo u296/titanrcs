@@ -212,7 +212,7 @@ bool make_rcs_imgtobuf_descset_layout(VkDevice dev,
 }
 
 bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image prefftimg, Buffer fftbuf_x, Buffer fftbuf_y,
+                          Image prefftimg, Buffer fftbuf_input, Buffer fftbuf_output,
                           VkDescriptorSetLayout descset_layout,
                           VkDescriptorSet* desc_set) {
 
@@ -230,14 +230,10 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
     imi.imageView = prefftimg.view;
 
     VkDescriptorBufferInfo dbi_x = {};
-    dbi_x.buffer = fftbuf_x.buf;
+    dbi_x.buffer = fftbuf_input.buf;
     dbi_x.offset = 0;
-    dbi_x.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
+    dbi_x.range = VK_WHOLE_SIZE;
 
-    VkDescriptorBufferInfo dbi_y = {};
-    dbi_y.buffer = fftbuf_y.buf;
-    dbi_y.offset = 0;
-    dbi_y.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
 
     VkWriteDescriptorSet img_wds = {};
     img_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -266,7 +262,7 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
 }
 
 bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image postfftimg, Buffer fftbuf_x, Buffer fftbuf_y,
+                          Image postfftimg, Buffer fftbuf_input, Buffer fftbuf_output,
                           VkDescriptorSetLayout descset_layout,
                           VkDescriptorSet* desc_set) {
 
@@ -284,14 +280,9 @@ bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
     imi.imageView = postfftimg.view;
 
     VkDescriptorBufferInfo dbi_x = {};
-    dbi_x.buffer = fftbuf_x.buf;
+    dbi_x.buffer = fftbuf_output.buf;
     dbi_x.offset = 0;
-    dbi_x.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
-
-    VkDescriptorBufferInfo dbi_y = {};
-    dbi_y.buffer = fftbuf_y.buf;
-    dbi_y.offset = 0;
-    dbi_y.range = sizeof(f32)*2*RCS_RESOLUTION*RCS_RESOLUTION; // 2 for complex
+    dbi_x.range = VK_WHOLE_SIZE; // 2 for complex
 
     VkWriteDescriptorSet img_wds = {};
     img_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

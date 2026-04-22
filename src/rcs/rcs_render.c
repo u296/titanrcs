@@ -7,78 +7,9 @@
 #include "res.h"
 #include <assert.h>
 
-
-void write_rcs_ubo(RenderContext* ctx, void* mapping) {
-    RcsUbo myubo = {};
-
-    Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                    0.0, 0.0, 0.0, 1.0}};
-
-    myubo.model = ident4;
-    myubo.view = ident4;
-    myubo.proj = ident4;
-    myubo.norm_trans = ident4;
-    myubo.resolution_xy_L_lambda =
-        (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, 15e-2f};
-
-    Mat4 scale = ident4;
-
-    const f32 s = 0.5f;
-
-    *pindex_m4(&scale, 0, 0) = s;
-    *pindex_m4(&scale, 1, 1) = s;
-    *pindex_m4(&scale, 2, 2) = s;
-
-    Mat4 transl = ident4;
-
-    *pindex_m4(&transl, 0, 3) = -0.0f;
-    *pindex_m4(&transl, 1, 3) = 0.0f;
-    *pindex_m4(&transl, 2, 3) = 0.0f;
-
-    Mat4 rotx = ident4;
-    Mat4 roty = ident4;
-    static f32 angx = -10.0f * (3.141592f / 180.0f);
-    static f32 angy = 0.0f * (3.141592f / 180.0f);
-
-    angx += 0.1f * (3.1415 / 180);
-
-    *pindex_m4(&rotx, 1, 1) = cosf(angx);
-    *pindex_m4(&rotx, 1, 2) = -sinf(angx);
-    *pindex_m4(&rotx, 2, 1) = sinf(angx);
-    *pindex_m4(&rotx, 2, 2) = cosf(angx);
-
-    *pindex_m4(&roty, 0, 0) = cosf(angy);
-    *pindex_m4(&roty, 0, 2) = -sinf(angy);
-    *pindex_m4(&roty, 2, 0) = sinf(angy);
-    *pindex_m4(&roty, 2, 2) = cosf(angy);
-
-    myubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, scale)));
-
-    Mat3 norm = transpose_m3(invert_m3(subm4_m3(myubo.model)));
-
-    Mat4 norm4 = zeroed_from_m3(norm);
-    *pindex_m4(&norm4, 3, 3) = 1.0f; // set corner
-
-    myubo.norm_trans = norm4;
-
-    const f32 near = -100.0f, far = 100.0f, left = -10.0f, right = 10.0f,
-              top = -10.0f, bot = 10.0f;
-
-    *pindex_m4(&myubo.proj, 0, 0) = 2.0f / (right - left);
-    *pindex_m4(&myubo.proj, 1, 1) = 2.0f / (bot - top);
-    *pindex_m4(&myubo.proj, 2, 2) = 1.0f / (far - near);
-
-    *pindex_m4(&myubo.proj, 0, 3) = -(right + left) / (right - left);
-    *pindex_m4(&myubo.proj, 1, 3) = -(bot + top) / (bot - top);
-    *pindex_m4(&myubo.proj, 2, 3) = -(near) / (far - near);
-
-    memcpy(mapping, &myubo, sizeof(myubo));
-}
-
 // f is the inflight index
 void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
-    write_rcs_ubo(ctx, ctx->rcs_resources.sets[f].ubufmap);
 
     VkCommandBufferBeginInfo cbbi = {};
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -230,7 +161,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdEndRendering(cmdbuf);
 
-    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf_x.buf;
+    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_buf_input.buf;
 
     /*
     This set of barriers ensures that rendertarget 0 is ready to be read from so
@@ -284,7 +215,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
-        ctx->rcs_resources.sets[f].fft_buf_x.buf,
+        ctx->rcs_resources.sets[f].fft_buf_input.buf,
         0,
         VK_WHOLE_SIZE};
 
@@ -306,7 +237,10 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     VkFFTLaunchParams lp = {};
     lp.commandBuffer = &cmdbuf;
-    lp.buffer = &fft_buf;
+    //lp.tempBuffer = &ctx->rcs_resources.sets[f].fft_buf_tmp.buf;
+    lp.buffer = &ctx->rcs_resources.sets[f].fft_buf_work.buf; // this is the input for some reason
+    lp.inputBuffer = &ctx->rcs_resources.sets[f].fft_buf_input.buf;
+    lp.outputBuffer = &ctx->rcs_resources.sets[f].fft_buf_output.buf;
 
     VkFFTAppend(ctx->backend.fft[f], -1, &lp);
 
@@ -338,7 +272,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_ACCESS_2_SHADER_READ_BIT,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
-        ctx->rcs_resources.sets[f].fft_buf_x.buf,
+        ctx->rcs_resources.sets[f].fft_buf_output.buf,
         0,
         VK_WHOLE_SIZE,
     };

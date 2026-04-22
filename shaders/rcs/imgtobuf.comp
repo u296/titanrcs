@@ -5,7 +5,6 @@ layout(local_size_x = 16, local_size_y = 16) in;
 layout(set=0, binding = 0, rgba32f) uniform readonly image2D prefftimg;
 
 layout(set=0, binding = 1) buffer buf {vec4 data[];};
-//layout(set=0, binding = 2) buffer _y_buf {vec2 _datay[];};
 
 void main() {
     ivec2 size = imageSize(prefftimg);
@@ -14,24 +13,18 @@ void main() {
 
     if (in_coord.x >= size.x || in_coord.y >= size.y) {
         return;
-            }
+    }
 
     ivec2 out_coord = in_coord;
-/*
+
+    /*
     out_coord.x = (in_coord.x + (size.x/2)) % size.x;
     out_coord.y = (in_coord.y + (size.y/2)) % size.y;
-*/
+    */
 
     vec4 in_pixel = imageLoad(prefftimg, in_coord);
-    //in_pixel.ba = vec2(0,0);
-
-    in_pixel.r = 0;
-    //in_pixel.g = 0;
-    //in_pixel.b = 0;
-    //in_pixel.a = 0;
-
+    
     uint lin_index = out_coord.y * size.x + out_coord.x;
 
-    data[lin_index] = in_pixel.rgba;
-    //datay[lin_index] = in_pixel.ba;
+    data[lin_index] = in_pixel;
 }
