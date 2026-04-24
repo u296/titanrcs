@@ -151,10 +151,12 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
     vk13features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vk13features.synchronization2 = VK_TRUE;
     vk13features.dynamicRendering = VK_TRUE;
+    
 
     VkPhysicalDeviceFeatures2 df2 = {};
     df2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     df2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    df2.features.independentBlend = VK_TRUE;
     df2.pNext = &vk13features;
 
     VkDeviceCreateInfo dci = {};
