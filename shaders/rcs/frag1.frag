@@ -59,7 +59,7 @@ void main() {
 
     vec2 sq = pos.xy * pos.xy;
 
-    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
+    const float moddist = 2.0*pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
     
     const float modphase = moddist * k;
 
