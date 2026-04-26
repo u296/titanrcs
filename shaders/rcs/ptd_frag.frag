@@ -172,7 +172,7 @@ void main() {
 
     
 
-    //final /= 1000;
+    final = vec4(0,0,0,0);
 
     out_prefouriertransform = final;
 
