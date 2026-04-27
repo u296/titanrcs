@@ -63,6 +63,8 @@ void main() {
     
     const float modphase = moddist * k;
 
+    const float showphase = 2*pos.z*k;
+
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
 
     const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
@@ -73,7 +75,7 @@ void main() {
     vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor);
     vec2 fakething = cmul(cmul(reflfield, phasefactor), fakeshift);
 
-    //out_prefouriertransform = vec4(realthing, 0,0);
+    out_prefouriertransform = vec4(realthing, 0,0);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 
