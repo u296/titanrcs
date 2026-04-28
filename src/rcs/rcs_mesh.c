@@ -100,6 +100,11 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                       u32** out_inds, Vec3* out_edge_tangents,
                       Vec3* out_face_normals) {
 
+    if (!BUILD_SHARP_EDGES) {
+        *out_inds = malloc(1);
+        return 0;
+    }
+
     constexpr f32 SHARP_ANGLE = 30.0f * DEG_TO_RAD;
 
     EdgeRecord* edge_records = malloc(sizeof(EdgeRecord) * n_tris * 3);
