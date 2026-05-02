@@ -94,6 +94,79 @@ vec2 calc_ce_cm(float wedgeangle, float phi_i) {
     return ce_cm;
 }
 
+vec2 complex_dir(vec4 x) {
+    vec2 lens = vec2(length(x.xy), length(x.zw));
+    return normalize(lens);
+}
+
+vec2 calc_equiv_ecurr(float k, float beta_i, float beta_s, vec3 edge_tangent, vec4 e_in, vec4 h_in) {
+    float d_par = 1.0;
+    float d_par_orth = 1.0;
+    float Z0 = 377;
+
+    
+    vec2 dotterm = vec2(edge_tangent.x * e_in.x + edge_tangent.y * e_in.z, edge_tangent.x*e_in.y+edge_tangent.y*e_in.w);
+
+    vec2 withtwoi = vec2(cmul(dotterm, vec2(0,2)));
+
+    float factor = d_par / (k * Z0 * sin(beta_i)*sin(beta_i));
+
+    vec2 withdparkzsin2betai = cmul(withtwoi, vec2(factor,0));
+
+    vec2 hdotterm = vec2(edge_tangent.x * h_in.x + edge_tangent.y * h_in.z, edge_tangent.x*h_in.y+edge_tangent.y*h_in.w);
+
+    vec2 hwithtwoi = vec2(cmul(hdotterm, vec2(0,2)));
+
+    float hfactor = d_par_orth / (k * sin(beta_i));
+
+    vec2 hwithdparkzsin2betai = cmul(hwithtwoi, vec2(hfactor,0));
+
+    vec2 equiv_ecurr = withdparkzsin2betai + hwithdparkzsin2betai;
+
+    return equiv_ecurr;
+}
+
+vec2 calc_equiv_hcurr(float k, float beta_i, float beta_s, vec3 edge_tangent, vec4 e_in, vec4 h_in) {
+    float d_orth = 1.0;
+    float Z0 = 377;
+
+    vec2 hdotterm = vec2(edge_tangent.x * h_in.x + edge_tangent.y * h_in.z, edge_tangent.x*h_in.y+edge_tangent.y*h_in.w);
+
+    vec2 hwithtwoi = vec2(cmul(hdotterm, vec2(0,2)));
+
+    float hfactor = d_orth * Z0 / (k * sin(beta_i)*sin(beta_s));
+
+    vec2 hwithdparkzsin2betai = cmul(hwithtwoi, vec2(hfactor,0));
+
+    return hwithdparkzsin2betai;
+}
+
+vec4 calc_scatterfield(float k, vec3 edge_tangent, vec4 e_in) {
+    float Z0 = 377.0;
+
+    float beta_i = acos(dot(edge_tangent, vec3(0.0, 0.0, 1.0)));
+    float beta_s = beta_i;
+
+    vec4 h_in = vec4(cmul(vec2(-Z0,0), e_in.zw), cmul(vec2(Z0,0), e_in.xy));
+
+    vec2 ie = calc_equiv_ecurr(k, beta_i, beta_s, edge_tangent, e_in, h_in);
+    vec2 ih = calc_equiv_hcurr(k, beta_i, beta_s, edge_tangent, e_in, h_in);
+
+    vec3 scatter_dir = vec3(0,0,-1);
+    vec3 hdir = normalize(cross(scatter_dir, edge_tangent));
+    vec3 edir = normalize(cross(scatter_dir, hdir));
+    vec2 phdir = hdir.xy; // z component guaranteed to be zero
+    vec2 pedir = edir.xy;
+
+    // multiply ie by Z0 first
+    ie = cmul(ie, vec2(Z0,0));
+
+    vec4 equivfield = vec4(phdir.x * ih.x, phdir.x*ih.y, phdir.y*ih.x, phdir.y*ih.y)
+     + vec4(pedir.x*ie.x, pedir.x*ie.y, pedir.y*ie.x, pedir.y*ie.y);
+
+     return equivfield;
+}
+
 void main() {
 
     float cropfraction = ubo.cropfraction_.x;
@@ -108,7 +181,7 @@ void main() {
     float L = ubo.resolution_xy_L_lambda.z;
     float lambda = ubo.resolution_xy_L_lambda.w;
 
-    vec3 edgetangent = normalize(in_edge_tangent);
+    vec3 edge_tangent = normalize(in_edge_tangent);
     vec3 face_normal = normalize(in_face_normal);
 
     const float k = 2.0*pi / lambda;
@@ -128,38 +201,21 @@ void main() {
     infield_local.xy = cmul(infield_local.xy, forwardphase);
     infield_local.zw = cmul(infield_local.zw, forwardphase);
 
-    vec3 face_cotangent = cross(face_normal, edgetangent);
+    vec3 face_cotangent = cross(face_normal, edge_tangent);
 
     vec3 local_x = face_cotangent;
     vec3 local_y = face_normal;
-    vec3 local_z = edgetangent;
+    vec3 local_z = edge_tangent;
 
     vec3 indir = vec3(0.0,0.0,1.0);
 
-    vec2 indir_local = vec2(dot(indir, local_x), dot(indir, local_y));
-
-    float phi_i = atan(indir_local.y, indir_local.x);
-
-    vec2 ce_cm = calc_ce_cm(wedge_angle, phi_i);
-
-    float ce = ce_cm.x;
-    float cm = ce_cm.y;
-
-    vec3 phi_i_hat = normalize(cross(edgetangent, indir));
-    vec3 beta_s_hat = normalize(cross(phi_i_hat, indir));
-
-    vec2 einc = edgetangent.x * infield_local.xy + edgetangent.y * infield_local.zw;
-    vec4 inh = vec4(-infield_local.zw, infield_local.xy);
-    vec2 hinc = edgetangent.x * inh.xy + edgetangent.y * inh.zw;
-
-    float angle_factor = max(1.0 / sqrt(1.0 - edgetangent.z), 20);
+    float angle_factor = max(1.0 / sqrt(1.0 - edge_tangent.z), 20);
 
     float dl_da = angle_factor;// / (20.0/8192);
 
-    vec4 dE = dl_da * vec4(beta_s_hat.x * ce * einc + phi_i_hat.x * cm * hinc, beta_s_hat.y * ce * einc + phi_i_hat.y * cm * hinc);
+    vec4 dE = dl_da * calc_scatterfield(k, edge_tangent, infield_local);
 
-    dE /= k;
-    //dE *= (20/8192);
+    dE *= 0.0001;
 
     dE.xy = cmul(dE.xy, vec2(0,-1));
     dE.zw = cmul(dE.zw, vec2(0,-1));
@@ -172,7 +228,7 @@ void main() {
 
     
 
-    final = vec4(0,0,0,0);
+    //final = vec4(0,0,0,0);
 
     out_prefouriertransform = final;
 
