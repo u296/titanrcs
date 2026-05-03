@@ -63,37 +63,6 @@ float sgn(float x) {
     }
 }
 
-vec2 calc_ce_cm(float wedgeangle, float phi_i) {
-    float n = 1.0*wedgeangle/pi;
-
-    // need to fix something better
-
-    float epsilon = 0.01;
-
-    float denom1 = (cos(pi/n) - 1.0);
-    float denom2 = (cos(pi/n) - cos((2*phi_i)/n));
-
-    denom1 = sgn(denom1) * max(abs(denom1), epsilon);
-    denom2 = sgn(denom1) * max(abs(denom2), epsilon);
-
-    if (isnan(denom1) || isinf(denom1)) {
-        denom1 = 0.001;
-    }
-    if (isnan(denom2) || isinf(denom2)) {
-        denom2 = 0.001;
-    }
-    
-
-    float term1 = 1.0 / denom1;
-    float term2 = 1.0 / denom2;
-
-    float fac = sin(pi/n) / n;
-
-    vec2 ce_cm = fac * vec2(term1 - term2, term1 + term2);
-
-    return ce_cm;
-}
-
 vec2 complex_dir(vec4 x) {
     vec2 lens = vec2(length(x.xy), length(x.zw));
     return normalize(lens);
@@ -123,7 +92,7 @@ vec2 calc_equiv_ecurr(float k, float beta_i, float beta_s, vec3 edge_tangent, ve
 
     vec2 equiv_ecurr = withdparkzsin2betai + hwithdparkzsin2betai;
 
-    
+    //return vec2(1,1);
     return equiv_ecurr;
 }
 
@@ -148,7 +117,7 @@ vec4 calc_scatterfield(float k, vec3 edge_tangent, vec4 e_in) {
     float beta_i = acos(dot(edge_tangent, vec3(0.0, 0.0, 1.0)));
     float beta_s = beta_i;
 
-    vec4 h_in = vec4(cmul(vec2(-Z0,0), e_in.zw), cmul(vec2(Z0,0), e_in.xy));
+    vec4 h_in = vec4(cmul(vec2(-1.0/Z0,0), e_in.zw), cmul(vec2(1.0/Z0,0), e_in.xy));
 
     vec2 ie = calc_equiv_ecurr(k, beta_i, beta_s, edge_tangent, e_in, h_in);
     vec2 ih = calc_equiv_hcurr(k, beta_i, beta_s, edge_tangent, e_in, h_in);
@@ -165,8 +134,7 @@ vec4 calc_scatterfield(float k, vec3 edge_tangent, vec4 e_in) {
     vec4 equivfield = vec4(phdir.x * ih.x, phdir.x*ih.y, phdir.y*ih.x, phdir.y*ih.y)
      + vec4(pedir.x*ie.x, pedir.x*ie.y, pedir.y*ie.x, pedir.y*ie.y);
 
-
-    //return vec4(ie,0,0);
+    //return vec4(ih,0,0);
     return equivfield;
 }
 
@@ -197,9 +165,9 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));// phase factor to multiply before sending to fft
 
-    vec4 infield_local = vec4(0.0, 0.0, 1.0, 0.0); // need to propagate this forward to the correct Z
+    vec4 infield_local = vec4(0.0, 0.0, 0.0, 1.0); // need to propagate this forward to the correct Z
 
-    vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z));
+    vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z)); 
 
     infield_local.xy = cmul(infield_local.xy, forwardphase);
     infield_local.zw = cmul(infield_local.zw, forwardphase);
@@ -213,12 +181,15 @@ void main() {
     vec3 indir = vec3(0.0,0.0,1.0);
 
     float angle_factor = max(1.0 / sqrt(1.0 - edge_tangent.z), 2000);
+    if (isnan(angle_factor)) {
+        angle_factor = 2000;
+    }
 
-    float dl_da = angle_factor;// / (20.0/8192);
+    float dl_da = angle_factor * (20.0/256.0);
 
     vec4 dE = dl_da * calc_scatterfield(k, edge_tangent, infield_local);
 
-    dE *= 0.0001;
+    dE *= 1.0;
 
     dE.xy = cmul(dE.xy, vec2(0,-1));
     dE.zw = cmul(dE.zw, vec2(0,-1));
@@ -229,9 +200,9 @@ void main() {
 
     vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,dE.xy)),cmul(phasefactor,cmul(shiftfactor,dE.zw)));
 
-    
+    //final = dE / dl_da;
 
-    //final = vec4(0,0,0,0);
+    //final = vec4(edge_tangent,0);
 
     out_prefouriertransform = final;
 
