@@ -1,0 +1,2 @@
+MESA_VK_TRACE=rgp MESA_VK_TRACE_TRIGGER=/tmp/now6 build/titanrcs
+or trigger auto on frame N with MESA_VK_TRACE_FRAME=N

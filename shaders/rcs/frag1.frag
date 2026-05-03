@@ -75,6 +75,8 @@ void main() {
     vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor);
     vec2 fakething = cmul(cmul(reflfield, phasefactor), fakeshift);
 
+    realthing = vec2(0,0);
+
     out_prefouriertransform = vec4(realthing, 0,0);
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);

@@ -218,6 +218,10 @@ void build_verts(float* raw_verts, u32 n_verts, Vec3* normals,
                                  normals[i],
                                  edge_tangents[i],
                                  face_normals[i]};
+        f32 l = len_v3(new_buf[i].edge_tangent);
+        if (l > 0.1) {
+            printf("nonzero edge tangent len\n");
+        }
     }
 }
 
