@@ -7,3 +7,10 @@ Optimization:
 this will make the expensive copies obsolete
 
 especially important for running on M1
+
+
+RCS calc:
+
+standardize units to SI inside the shaders and calculation
+
+do real diffraction coefficient calculations
