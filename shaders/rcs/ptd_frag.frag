@@ -101,7 +101,7 @@ vec2 complex_dir(vec4 x) {
 
 vec2 calc_equiv_ecurr(float k, float beta_i, float beta_s, vec3 edge_tangent, vec4 e_in, vec4 h_in) {
     float d_par = 1.0;
-    float d_par_orth = 1.0;
+    float d_par_orth = 1.0; // these subs don't work
     float Z0 = 377;
 
     
@@ -123,6 +123,7 @@ vec2 calc_equiv_ecurr(float k, float beta_i, float beta_s, vec3 edge_tangent, ve
 
     vec2 equiv_ecurr = withdparkzsin2betai + hwithdparkzsin2betai;
 
+    
     return equiv_ecurr;
 }
 
@@ -164,7 +165,9 @@ vec4 calc_scatterfield(float k, vec3 edge_tangent, vec4 e_in) {
     vec4 equivfield = vec4(phdir.x * ih.x, phdir.x*ih.y, phdir.y*ih.x, phdir.y*ih.y)
      + vec4(pedir.x*ie.x, pedir.x*ie.y, pedir.y*ie.x, pedir.y*ie.y);
 
-     return equivfield;
+
+    //return vec4(ie,0,0);
+    return equivfield;
 }
 
 void main() {
@@ -194,7 +197,7 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));// phase factor to multiply before sending to fft
 
-    vec4 infield_local = vec4(1.0, 0.0, 0.0, 0.0); // need to propagate this forward to the correct Z
+    vec4 infield_local = vec4(0.0, 0.0, 1.0, 0.0); // need to propagate this forward to the correct Z
 
     vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z));
 
@@ -209,7 +212,7 @@ void main() {
 
     vec3 indir = vec3(0.0,0.0,1.0);
 
-    float angle_factor = max(1.0 / sqrt(1.0 - edge_tangent.z), 20);
+    float angle_factor = max(1.0 / sqrt(1.0 - edge_tangent.z), 2000);
 
     float dl_da = angle_factor;// / (20.0/8192);
 
