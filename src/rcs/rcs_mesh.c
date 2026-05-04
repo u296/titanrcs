@@ -168,7 +168,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 // out when adding, so use the convention of positive z
 
                 if (edgetan.z < 0.0f) {
-                    edgetan = muls_v3(-1.0f, edgetan);
+                //    edgetan = muls_v3(-1.0f, edgetan);
                 }
 
                 out_edge_tangents[edge_records[i].v1] =
