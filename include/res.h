@@ -6,7 +6,7 @@
 #ifdef __APPLE__
 constexpr u64 RCS_RESOLUTION = 4096ull;
 #else
-constexpr u64 RCS_RESOLUTION = 512ull;
+constexpr u64 RCS_RESOLUTION = 8192ull;
 #endif
 constexpr u64 RCS_CROPFRACTION =
     4; // if ~2 or less, output will be bugged near the edges

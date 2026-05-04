@@ -9,7 +9,7 @@ radtodeg = 180.0 / pi
 # returns a path object that will then be given as argument
 # to all other functions
 def path_init():
-    return (-180.0*degtorad,-0.0*degtorad, 1.0)
+    return (-0.0*degtorad,-0.0*degtorad, 1.0)
 
 # from a path state, give a dictionary of parameter values.
 # unmentioned parameters are set to default value.
@@ -20,7 +20,7 @@ def path_get_params(path):
 
     }
 
-spacing = 0.2*degtorad
+spacing = 0.0*degtorad
 # advances a path by returning the next step
 def path_advance(path):
     vert, pitch, direction = path

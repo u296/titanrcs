@@ -204,6 +204,8 @@ void main() {
 
     //final = vec4(edge_tangent,0);
 
+    final = vec4(0,0,0,0);
+
     out_prefouriertransform = final;
 
 

@@ -9,42 +9,48 @@
 #include "rcs/rcs_ubo.h"
 #include "render.h"
 #include "res.h"
+#include <Python.h>
 #include <assert.h>
 #include <stdio.h>
-#include <Python.h>
 #include <unistd.h>
 
 #define PI (3.1415926535f)
 #define RADIANS (3.1415926535f / 180.0f)
 
-
 f32 calc_rcs(f32 s_at_object, f32 s_at_observer, f32 dist) {
     return s_at_observer * 4.0f * PI * dist * dist / s_at_object;
 }
 
+f32 extract_rcs(void* extr_map, PathingResources* pres, Path* path) {
+    ExtractionSsbo* extr_buf = (ExtractionSsbo*)extr_map;
 
-void extract_and_write(FILE* output, void* extr_map, PathingResources* pres, Path* path) {
-    ExtractionSsbo* extr = extr_map;
+    f32 out_s =
+        extr_buf
+            ->out_intensity; // this is per square pixel, need to convert to si
 
-    path_write_statcols(pres,path, output);
-
-    f32 out_s = extr->out_intensity; // this is per square pixel, need to convert to si 
-
-    //const f32 lambda = 0.15f; // BAD: SET IN PYTHON
+    // const f32 lambda = 0.15f; // BAD: SET IN PYTHON
 
     f32 params[10];
     get_path_params(pres, path, params);
     const f32 lambda = params[9];
 
     f32 farfieldpixel = powf((lambda * RCS_RANGE) / RCS_BOXSIZE, 2.0f);
-    f32 nearfieldpixel = powf(RCS_BOXSIZE/RCS_RESOLUTION,2.0f);
+    f32 nearfieldpixel = powf(RCS_BOXSIZE / RCS_RESOLUTION, 2.0f);
 
     out_s /= farfieldpixel;
 
-    //out_s /= (RCS_RANGE*RCS_RANGE);
-    // this takes itself out
+    // out_s /= (RCS_RANGE*RCS_RANGE);
+    //  this takes itself out
 
-    f32 rcs = calc_rcs(1.0/nearfieldpixel, out_s, RCS_RANGE);
+    f32 rcs = calc_rcs(1.0 / nearfieldpixel, out_s, RCS_RANGE);
+
+    return rcs;
+}
+
+void write_rcs_to_file(FILE* output, f32 rcs, PathingResources* pres,
+                       Path* path) {
+
+    path_write_statcols(pres, path, output);
 
     fprintf(output, "%f\n", rcs);
 }
@@ -72,7 +78,7 @@ void run_computepass(RenderContext* ctx) {
 
     Path* mypath = malloc(sizeof(Path));
 
-    path_init(&ctx->rcs_resources.pathres,mypath);
+    path_init(&ctx->rcs_resources.pathres, mypath);
 
     struct timespec start;
     timespec_get(&start, TIME_UTC);
@@ -93,14 +99,20 @@ void run_computepass(RenderContext* ctx) {
         VkFence inflight_fen = ctx->resources.inflight_fncs[f];
         VkCommandBuffer cmdbuf = ctx->rcs_resources.sets[f].cmdbuf;
 
-        path_write_ubo(&ctx->rcs_resources.pathres, mypath, ctx->rcs_resources.sets[f].ubufmap);
+        path_write_ubo(&ctx->rcs_resources.pathres, mypath,
+                       ctx->rcs_resources.sets[f].ubufmap);
 
         r = vkWaitForFences(rb->dev, 1, &inflight_fen, VK_TRUE, UINT64_MAX);
         assert(r == VK_SUCCESS);
         if (!*first_render) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
                                     sizeof(ExtractionSsbo));
-            extract_and_write(outputfile, extraction_mapping, &ctx->rcs_resources.pathres, mypath);
+
+            f32 rcs = extract_rcs(extraction_mapping,
+                                  &ctx->rcs_resources.pathres, mypath);
+
+            write_rcs_to_file(outputfile, rcs, &ctx->rcs_resources.pathres,
+                              mypath);
         }
 
         path_write_ubo(&ctx->rcs_resources.pathres, mypath, ubo_mapping);
@@ -137,7 +149,8 @@ void run_computepass(RenderContext* ctx) {
     free(mypath);
 }
 
-void manualcontrol_set_from_path(ManualControlState* man, PathingResources* pres, Path* path) {
+void manualcontrol_set_from_path(ManualControlState* man,
+                                 PathingResources* pres, Path* path) {
     f32 pars[10] = {0};
     get_path_params(pres, path, pars);
 
@@ -159,14 +172,15 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
                                        void** extraction_maps,
                                        bool* rcsdata_dirty_stats) {
     VkResult r = VK_RESULT_MAX_ENUM;
-
-    for (; !path_is_complete(&ctx->rcs_resources.pathres, master_path); (*i)++) {
+    bool first = true;
+    for (; !path_is_complete(&ctx->rcs_resources.pathres, master_path);
+         (*i)++) {
         glfwPollEvents();
         if (glfwWindowShouldClose(ctx->backend.wnd)) {
             return COMP_WINDOW_CLOSED;
         }
 
-        //usleep(1000*300);
+        // usleep(1000*300);
 
         const u32 f = *i % N_MAX_INFLIGHT;
 
@@ -182,13 +196,25 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
 
         r = vkWaitForFences(rb->dev, 1, &inflight_fen, VK_TRUE, UINT64_MAX);
         assert(r == VK_SUCCESS);
+
         
-        if (!*rcsdata_dirty) {
+        f32 rcs = 0.0f;
+        if (!first) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
                                     sizeof(ExtractionSsbo));
-            
-            extract_and_write(outputfile, extraction_mapping,&ctx->rcs_resources.pathres, slave_path);
-            
+            rcs = extract_rcs(extraction_mapping, &ctx->rcs_resources.pathres,
+                              slave_path);
+        }
+        first = false;
+        if (*i % 30 == 29) {
+            printf("RCS: %5f m2\n", rcs);
+        }
+
+
+        if (!*rcsdata_dirty) {
+
+            write_rcs_to_file(outputfile, rcs, &ctx->rcs_resources.pathres,
+                              slave_path);
         }
 
         r = vkResetFences(rb->dev, 1, &inflight_fen);
@@ -215,17 +241,18 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
 
         write_interface_ubo(ctx->metadata.i_current_frame,
                             ctx->swapchain.swpch_ext,
-                            ctx->resources.ubuf_mappings[f],
-                        ctx->config.zoom);
+                            ctx->resources.ubuf_mappings[f], ctx->config.zoom);
 
         if (ctx->manual_control.active) {
             manualcontrol_write_rcsubo(ctx, ubo_mapping);
         } else {
-            path_write_ubo(&ctx->rcs_resources.pathres, master_path, ubo_mapping);
+            path_write_ubo(&ctx->rcs_resources.pathres, master_path,
+                           ubo_mapping);
 
             // update manual control
 
-            manualcontrol_set_from_path(&ctx->manual_control, &ctx->rcs_resources.pathres, master_path);
+            manualcontrol_set_from_path(
+                &ctx->manual_control, &ctx->rcs_resources.pathres, master_path);
         }
 
         //*slave_path = *master_path;
@@ -295,7 +322,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
             ctx->backend.fb_resized = false;
             return COMP_REMAKE_SWAPCHAIN;
         }
-        
+
         if (!ctx->manual_control.active) {
             path_advance(&ctx->rcs_resources.pathres, master_path);
         }
@@ -304,16 +331,12 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
 }
 
 void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
-    
-
 
     FILE* outputfile = NULL;
 
     outputfile = fopen("computepass.csv", "w");
 
-    //fprintf(outputfile, "hello\n");
-
-   
+    // fprintf(outputfile, "hello\n");
 
     VmaAllocation extraction_allocs[N_MAX_INFLIGHT];
     void* extraction_maps[N_MAX_INFLIGHT];
