@@ -17,16 +17,12 @@
 #define PI (3.1415926535f)
 #define RADIANS (3.1415926535f / 180.0f)
 
-f32 calc_rcs(f32 s_at_object, f32 s_at_observer, f32 dist) {
-    return s_at_observer * 4.0f * PI * dist * dist / s_at_object;
-}
-
 f32 extract_rcs(void* extr_map, PathingResources* pres, Path* path) {
     ExtractionSsbo* extr_buf = (ExtractionSsbo*)extr_map;
 
-    f32 out_s =
-        extr_buf
-            ->out_intensity; // this is per square pixel, need to convert to si
+    f32 out_E2_lambda2_L2 =
+        extr_buf->out_E2_lambda2_L2; // this is per square pixel, need to
+                                     // convert to si
 
     // const f32 lambda = 0.15f; // BAD: SET IN PYTHON
 
@@ -34,15 +30,14 @@ f32 extract_rcs(void* extr_map, PathingResources* pres, Path* path) {
     get_path_params(pres, path, params);
     const f32 lambda = params[9];
 
-    f32 farfieldpixel = powf((lambda * RCS_RANGE) / RCS_BOXSIZE, 2.0f);
-    f32 nearfieldpixel = powf(RCS_BOXSIZE / RCS_RESOLUTION, 2.0f);
+    f32 E2_obj = (1.0);
 
-    out_s /= farfieldpixel;
+    // printf("out_s: %f, s_obj: %f\n", out_E2_lambda2_L2, E2_obj);
 
-    // out_s /= (RCS_RANGE*RCS_RANGE);
-    //  this takes itself out
+    // rcs formula is 4*pi*R^2 * (S_out/S_in) where S is the power density.
+    // square of the electric field is equivalent, since S=E^2/Z0
 
-    f32 rcs = calc_rcs(1.0 / nearfieldpixel, out_s, RCS_RANGE);
+    f32 rcs = 4 * PI / (lambda * lambda) * (out_E2_lambda2_L2 / E2_obj);
 
     return rcs;
 }
@@ -197,7 +192,6 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         r = vkWaitForFences(rb->dev, 1, &inflight_fen, VK_TRUE, UINT64_MAX);
         assert(r == VK_SUCCESS);
 
-        
         f32 rcs = 0.0f;
         if (!first) {
             vmaInvalidateAllocation(rb->alloc, extraction_alloc, 0,
@@ -209,7 +203,6 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         if (*i % 30 == 29) {
             printf("RCS: %5f m2\n", rcs);
         }
-
 
         if (!*rcsdata_dirty) {
 

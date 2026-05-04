@@ -56,14 +56,20 @@ void main() {
     float fft_res = ubo.fzoom_fftres_.y;
 
     float zoom = ubo.fzoom_fftres_.x;
+    if (pc.texture_i == 0) {
+        // want to divide by dA
 
-    if (pc.texture_i == 3) {
+        float dA = pow(20.0 / 8192.0,2);
+
+        vec3 mycol = texture(mytex[pc.texture_i], uv).rgb / dA;
+        outColor = vec4(mycol, 1.0);
+    } else if (pc.texture_i == 3) {
 
         vec2 newuv = vec2(0.5,0.5) + (uv-vec2(0.5,0.5))*zoom;
 
         vec4 mycol = texture(mytex[pc.texture_i], newuv);
 
-        mycol *= (1.0/sqrt(fft_res*fft_res)); // normalize fft for power
+        //mycol *= (1.0/sqrt(fft_res*fft_res)); // normalize fft for power
 
         // let's do the modulus in case of complex value
         float phase = 0.0;//atan(mycol.a, mycol.b);

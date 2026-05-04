@@ -249,7 +249,7 @@ LoopStatus renderloop_visualonly(RenderContext* ctx) {
 
             ExtractionSsbo* out = info.pMappedData;
 
-            f32 rcs = out->out_intensity;
+            f32 rcs = out->out_E2_lambda2_L2;
 
             if (ctx->metadata.i_current_frame % 1 == 0) {
                 printf("RCS: %8.1f    ", rcs); // leave space for fps print

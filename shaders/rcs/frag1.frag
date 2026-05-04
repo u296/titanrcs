@@ -16,7 +16,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
-    vec4 cropfraction_;
+    vec4 cropfraction_boxsize_;
 } ubo;
 
 layout(binding = 1) uniform sampler2D radar_infield;
@@ -44,40 +44,41 @@ void main() {
     const vec2 resolution = ubo.resolution_xy_L_lambda.xy;
     const float L = ubo.resolution_xy_L_lambda.z;
     const float lambda = ubo.resolution_xy_L_lambda.w;
-    const float cropfraction = ubo.cropfraction_.x;
+    const float cropfraction = ubo.cropfraction_boxsize_.x;
+    const float boxsize = ubo.cropfraction_boxsize_.y;
 
-    vec2 infield = vec2(1.0,0.0);//texelFetch(radar_infield, ivec2(pos.xy), 0).xy;
+    vec2 infield = vec2(1.0,0.0);// [V/m]
 
     const float albedo = 1.0;
 
     const vec3 toscreen = vec3(0.0, 0.0, -1.0);
 
-    const vec2 reflfield = albedo * infield;// * refl_fac(dot(normalize(norm), toscreen));
+    const vec2 reflfield = infield;// [V/m]
     const float refl_intens = length(reflfield) * length(reflfield) * refl_fac(dot(normalize(norm),toscreen));
 
-    const float k = 2.0*pi / lambda;
+    const float k = 2.0*pi / lambda; // [1/m]
 
     vec2 sq = pos.xy * pos.xy;
 
-    const float moddist = 2.0*pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
+    const float moddist = 2.0*pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z))); // [m]
     
-    const float modphase = moddist * k;
+    const float modphase = moddist * k; // [1]
 
     const float showphase = 2*pos.z*k;
 
-    const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
+    const vec2 phasefactor = vec2(cos(modphase), sin(modphase)); // [1]
 
-    const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
+    const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction; // [1]
 
     const vec2 shiftfactor = vec2(cos(shiftingphase), sin(shiftingphase));
-    vec2 fakeshift = vec2(cos(shiftingphase*0.5+1.0), sin(shiftingphase*0.5));
 
-    vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor);
-    vec2 fakething = cmul(cmul(reflfield, phasefactor), fakeshift);
+    float dA = pow(boxsize/resolution.x,2);
+
+    vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor); // V/m
 
     //realthing = vec2(0,0);
 
-    out_prefouriertransform = vec4(realthing, 0,0);
+    out_prefouriertransform = vec4(realthing, 0,0) * dA;
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 

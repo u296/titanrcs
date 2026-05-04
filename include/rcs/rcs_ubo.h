@@ -10,11 +10,11 @@ typedef struct RcsUbo {
     Mat4 proj;
     Mat4 norm_trans;
     Vec4 resolution_xy_L_lambda;
-    Vec4 cropfraction_;
+    Vec4 cropfraction_boxsize_;
 } RcsUbo;
 
 typedef struct ExtractionSsbo {
-    f32 out_intensity; // square of the E field, NOT compensated with eta0
+    f32 out_E2_lambda2_L2; // square of the E field, NOT compensated with eta0
 } ExtractionSsbo;
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
