@@ -200,7 +200,8 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
                               slave_path);
         }
         first = false;
-        if (*i % 30 == 29) {
+        constexpr u32 n_printrcs = 1;
+        if (*i % n_printrcs == n_printrcs-1) {
             printf("RCS: %5f m2\n", rcs);
         }
 
