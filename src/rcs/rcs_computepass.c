@@ -26,9 +26,9 @@ f32 extract_rcs(void* extr_map, PathingResources* pres, Path* path) {
 
     // const f32 lambda = 0.15f; // BAD: SET IN PYTHON
 
-    f32 params[10];
-    get_path_params(pres, path, params);
-    const f32 lambda = params[9];
+    PathParameters params = {};
+    get_path_params(pres, path, &params);
+    const f32 lambda = params.lambda;
 
     f32 E2_obj = (1.0);
 
@@ -146,12 +146,12 @@ void run_computepass(RenderContext* ctx) {
 
 void manualcontrol_set_from_path(ManualControlState* man,
                                  PathingResources* pres, Path* path) {
-    f32 pars[10] = {0};
-    get_path_params(pres, path, pars);
+    PathParameters pars = {0};
+    get_path_params(pres, path, &pars);
 
-    man->pitch = pars[6];
-    man->yaw = pars[7];
-    man->lambda = pars[9];
+    man->pitch = pars.rot.x;
+    man->yaw = pars.rot.x;
+    man->lambda = pars.lambda;
 }
 
 typedef enum CompLoopStatus {

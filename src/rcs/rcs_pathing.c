@@ -2,6 +2,7 @@
 #include "cleanupstack.h"
 #include "common.h"
 #include "context.h"
+#include "linalg.h"
 #include "rcs/rcs_ubo.h"
 #include "res.h"
 #include <Python.h>
@@ -40,13 +41,12 @@ void make_rcs_pathingresources(PathingResources* out_pathing,
 
     constexpr u32 N_FUNCS = 6;
 
-    const char* loadfuncs[N_FUNCS] = {
-        "path_init",         "path_advance",     "path_is_complete",
-        "path_get_colnames", "path_get_colvals", "path_get_params"
-    };
+    const char* loadfuncs[N_FUNCS] = {"path_init",        "path_advance",
+                                      "path_is_complete", "path_get_colnames",
+                                      "path_get_colvals", "path_get_params"};
 
     PyObject** outputlocs[N_FUNCS] = {
-        &out_pathing->pypath_init, &out_pathing->pypath_advance,
+        &out_pathing->pypath_init,        &out_pathing->pypath_advance,
         &out_pathing->pypath_is_complete, &out_pathing->pypath_get_colnames,
         &out_pathing->pypath_get_colvals, &out_pathing->pypath_get_params};
 
@@ -66,8 +66,6 @@ void make_rcs_pathingresources(PathingResources* out_pathing,
     }
     Py_XDECREF(pmodule);
 }
-
-
 
 void path_init(PathingResources* res, Path* p) {
     PyObject* path = PyObject_CallObject(res->pypath_init, NULL);
@@ -105,9 +103,7 @@ void path_advance(PathingResources* res, Path* p) {
     Py_DECREF(args);
 }
 
-
-
-bool path_is_complete(PathingResources* pres, Path* p) { 
+bool path_is_complete(PathingResources* pres, Path* p) {
 
     PyObject* args = PyTuple_Pack(1, p->pypath);
 
@@ -117,7 +113,7 @@ bool path_is_complete(PathingResources* pres, Path* p) {
 
     i32 truth = PyObject_IsTrue(iscomplete);
 
-    if(truth == -1) {
+    if (truth == -1) {
         printf("path_iscomplete: couldn't determine if true or not\n");
     }
 
@@ -131,7 +127,7 @@ void path_write_statnames(PathingResources* pres, Path* p, FILE* fp) {
 
     Py_DECREF(args);
 
-    if(retlist && PyList_Check(retlist)) {
+    if (retlist && PyList_Check(retlist)) {
         const Py_ssize_t len = PyList_Size(retlist);
 
         for (u32 i = 0; i < len; i++) {
@@ -143,8 +139,9 @@ void path_write_statnames(PathingResources* pres, Path* p, FILE* fp) {
                 const char* c_str = PyUnicode_AsUTF8(str);
                 fprintf(fp, "%s, ", c_str);
             } else {
-                printf("path_get_colnames: value couldn't be turned into string!\n");
-                fprintf(fp, "unknown_col%u",i);
+                printf("path_get_colnames: value couldn't be turned into "
+                       "string!\n");
+                fprintf(fp, "unknown_col%u", i);
             }
             Py_XDECREF(str);
         }
@@ -163,7 +160,7 @@ void path_write_statcols(PathingResources* pres, Path* p, FILE* fp) {
 
     Py_DECREF(args);
 
-    if(retlist && PyList_Check(retlist)) {
+    if (retlist && PyList_Check(retlist)) {
         const Py_ssize_t len = PyList_Size(retlist);
 
         for (u32 i = 0; i < len; i++) {
@@ -175,7 +172,8 @@ void path_write_statcols(PathingResources* pres, Path* p, FILE* fp) {
                 const char* c_str = PyUnicode_AsUTF8(str);
                 fprintf(fp, "%s, ", c_str);
             } else {
-                printf("path_get_colvals: value couldn't be turned into string! writing 0\n");
+                printf("path_get_colvals: value couldn't be turned into "
+                       "string! writing 0\n");
                 fprintf(fp, "0.0, ");
             }
             Py_XDECREF(str);
@@ -204,29 +202,30 @@ translation xyz
 rotation xyz
 lambda
 */
-void raw_write_rcsubo(void* mapping, f32* params) {
 
-    f32 p_scalex = params[0];
-    f32 p_scaley = params[1];
-    f32 p_scalez = params[2];
-    f32 p_posx = params[3];
-    f32 p_posy = params[4];
-    f32 p_posz = params[5];
-    f32 p_rotx = params[6];
-    f32 p_roty = params[7];
-    f32 p_rotz = params[8];
-    f32 p_lambda = params[9];
+void raw_write_rcsubo(void* mapping, PathParameters params) {
+
+    f32 p_scalex = params.scale.x;
+    f32 p_scaley = params.scale.y;
+    f32 p_scalez = params.scale.z;
+    f32 p_posx = params.pos.x;
+    f32 p_posy = params.pos.y;
+    f32 p_posz = params.pos.z;
+    f32 p_rotx = params.rot.x;
+    f32 p_roty = params.rot.y;
+    f32 p_rotz = params.rot.z;
+    f32 p_lambda = params.lambda;
 
     RcsUbo ubo = {0};
     Mat4 ident4 = {{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                     0.0, 0.0, 0.0, 1.0}};
 
-
     ubo.model = ident4;
     ubo.view = ident4;
     ubo.proj = ident4;
     ubo.norm_trans = ident4;
-    ubo.resolution_xy_L_lambda = (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, p_lambda};
+    ubo.resolution_xy_L_lambda =
+        (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, p_lambda};
 
     Mat4 scale = ident4;
 
@@ -259,9 +258,7 @@ void raw_write_rcsubo(void* mapping, f32* params) {
     *pindex_m4(&rotz, 1, 0) = sinf(p_rotz);
     *pindex_m4(&rotz, 1, 1) = cosf(p_rotz);
 
-
-
-    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, mul_m4(rotz,scale))));
+    ubo.model = mul_m4(transl, mul_m4(rotx, mul_m4(roty, mul_m4(rotz, scale))));
 
     Mat3 norm = transpose_m3(invert_m3(subm4_m3(ubo.model)));
 
@@ -270,10 +267,9 @@ void raw_write_rcsubo(void* mapping, f32* params) {
 
     ubo.norm_trans = norm4;
 
-    
-
-    const f32 near = -RCS_BOXSIZE/2.0f, far = RCS_BOXSIZE/2.0f, left = -RCS_BOXSIZE/2.0f, right = RCS_BOXSIZE/2.0f,
-              top = -RCS_BOXSIZE/2.0f, bot = RCS_BOXSIZE/2.0f;
+    const f32 near = -RCS_BOXSIZE / 2.0f, far = RCS_BOXSIZE / 2.0f,
+              left = -RCS_BOXSIZE / 2.0f, right = RCS_BOXSIZE / 2.0f,
+              top = -RCS_BOXSIZE / 2.0f, bot = RCS_BOXSIZE / 2.0f;
 
     *pindex_m4(&ubo.proj, 0, 0) = 2.0f / (right - left);
     *pindex_m4(&ubo.proj, 1, 1) = 2.0f / (bot - top);
@@ -283,33 +279,28 @@ void raw_write_rcsubo(void* mapping, f32* params) {
     *pindex_m4(&ubo.proj, 1, 3) = -(bot + top) / (bot - top);
     *pindex_m4(&ubo.proj, 2, 3) = -(near) / (far - near);
 
-    ubo.cropfraction_boxsize_ = (Vec4){(f32)RCS_CROPFRACTION,RCS_BOXSIZE,0.0f,0.0f};
+    ubo.cropfraction_boxsize_ =
+        (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, 0.0f, 0.0f};
 
-    ubo.infield = (Vec4){1.0,0.0,0.0,0.0};
+    ubo.infield = (Vec4){1.0, 0.0, 0.0, 0.0};
 
     memcpy(mapping, &ubo, sizeof(ubo));
 }
 
 void manualcontrol_write_rcsubo(RenderContext* ctx, void* mapping) {
-    
-    f32 pars[10] = {
-        1.0,
-        1.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        ctx->manual_control.pitch,
-        ctx->manual_control.yaw,
-        0.0,
-        ctx->manual_control.lambda
-    };
+
+    PathParameters pars = {
+        {1.0, 1.0, 1.0},
+        {0.0, 0.0, 0.0},
+        {ctx->manual_control.pitch, ctx->manual_control.yaw, 0.0},
+        ctx->manual_control.lambda};
 
     raw_write_rcsubo(mapping, pars);
 }
 
 // writes into param buffer of 10 floats
-void get_path_params(PathingResources* pres, Path* p, f32* out_params) {
+void get_path_params(PathingResources* pres, Path* p,
+                     PathParameters* out_params) {
     f32 p_rotx = 0.0f;
     f32 p_roty = 0.0f;
     f32 p_rotz = 0.0f;
@@ -324,42 +315,53 @@ void get_path_params(PathingResources* pres, Path* p, f32* out_params) {
     {
         PyObject* args = PyTuple_Pack(1, p->pypath);
 
-        PyObject* vals_dict = PyObject_CallObject(pres->pypath_get_params, args);
+        PyObject* vals_dict =
+            PyObject_CallObject(pres->pypath_get_params, args);
 
         Py_DECREF(args);
 
         if (vals_dict && PyDict_Check(vals_dict)) {
 
-            PyObject*key, *val;
+            PyObject *key, *val;
             Py_ssize_t i = 0;
 
-            while (PyDict_Next(vals_dict, &i,&key, &val)) {
+            while (PyDict_Next(vals_dict, &i, &key, &val)) {
                 if (PyUnicode_Check(key)) {
                     // here it's guaranteed to be a string
 
                     if (PyUnicode_CompareWithASCIIString(key, "rot.x") == 0) {
                         try_assign_float(&p_rotx, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "rot.y") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(key, "rot.y") ==
+                               0) {
                         try_assign_float(&p_roty, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "rot.z") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(key, "rot.z") ==
+                               0) {
                         try_assign_float(&p_rotz, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "pos.x ") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "pos.x ") == 0) {
                         try_assign_float(&p_posx, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "pos.y") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(key, "pos.y") ==
+                               0) {
                         try_assign_float(&p_posy, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "pos.z") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(key, "pos.z") ==
+                               0) {
                         try_assign_float(&p_posz, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "scale.x") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "scale.x") == 0) {
                         try_assign_float(&p_scalex, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "scale.y") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "scale.y") == 0) {
                         try_assign_float(&p_scaley, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "scale.z") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "scale.z") == 0) {
                         try_assign_float(&p_scalez, val);
-                    } else if (PyUnicode_CompareWithASCIIString(key, "lambda") == 0) {
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "lambda") == 0) {
                         try_assign_float(&p_lambda, val);
                     }
                 } else {
-                    printf("non-string key in dict returned from path_get_params! ignoring\n");
+                    printf("non-string key in dict returned from "
+                           "path_get_params! ignoring\n");
                 }
             }
         } else {
@@ -368,35 +370,24 @@ void get_path_params(PathingResources* pres, Path* p, f32* out_params) {
         Py_XDECREF(vals_dict);
     }
 
-    f32 pars[10] = {
-        p_scalex,
-        p_scaley,
-        p_scalez,
-        p_posx,
-        p_posy,
-        p_posz,
-        p_rotx,
-        p_roty,
-        p_rotz,
-        p_lambda
-    };
+    PathParameters built = {{p_scalex, p_scaley, p_scalez},
+                            {p_posx, p_posy, p_posz},
+                            {p_rotx, p_roty, p_rotz},
+                            p_lambda};
 
-    memcpy(out_params, pars, sizeof(pars));
+    *out_params = built;
 }
 
 void path_write_ubo(PathingResources* pres, Path* p, void* mapping) {
 
-    f32 pars[10] = {0};
+    PathParameters pars = {0};
 
-    get_path_params(pres, p, pars);
-
+    get_path_params(pres, p, &pars);
 
     raw_write_rcsubo(mapping, pars);
 }
 
-void path_discard(Path* p) {
-    Py_XDECREF(p->pypath);
-}
+void path_discard(Path* p) { Py_XDECREF(p->pypath); }
 
 void path_copy(Path* dst, Path* src) {
     Py_XDECREF(dst->pypath);

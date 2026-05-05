@@ -4,6 +4,8 @@
 #include "cleanupstack.h"
 #include <stdio.h>
 #include <Python.h>
+
+#include "linalg.h";
 //typedef struct PyObject PyObject;
 
 typedef struct PathingResources {
@@ -20,6 +22,13 @@ typedef struct PathingResources {
 typedef struct Path {
     PyObject* pypath;
 } Path;
+
+typedef struct PathParameters {
+    Vec3 scale;
+    Vec3 pos;
+    Vec3 rot;
+    f32 lambda;
+} PathParameters;
 
 void make_rcs_pathingresources(PathingResources* out_pathing, CleanupStack* cs);
 
@@ -39,9 +48,9 @@ typedef struct RenderContext RenderContext;
 
 void manualcontrol_write_rcsubo(RenderContext* ctx, void* mapping);
 
-void get_path_params(PathingResources* pres, Path* p, f32* out_params);
+void get_path_params(PathingResources* pres, Path* p, PathParameters* out_params);
 
-void raw_write_rcsubo(void* mapping, f32* pars);
+void raw_write_rcsubo(void* mapping, PathParameters pars);
 
 void path_discard(Path* p);
 
