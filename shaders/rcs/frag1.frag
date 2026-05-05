@@ -47,13 +47,13 @@ void main() {
     const float cropfraction = ubo.cropfraction_boxsize_.x;
     const float boxsize = ubo.cropfraction_boxsize_.y;
 
-    vec2 infield = vec2(1.0,0.0);// [V/m]
+    vec4 infield = vec4(1.0,0.0, 0.0,0.0);// [V/m]
 
     const float albedo = 1.0;
 
     const vec3 toscreen = vec3(0.0, 0.0, -1.0);
 
-    const vec2 reflfield = infield;// [V/m]
+    const vec4 reflfield = infield;// [V/m]
     const float refl_intens = length(reflfield) * length(reflfield) * refl_fac(dot(normalize(norm),toscreen));
 
     const float k = 2.0*pi / lambda; // [1/m]
@@ -74,11 +74,12 @@ void main() {
 
     float dA = pow(boxsize/resolution.x,2);
 
-    vec2 realthing = cmul(cmul(reflfield, phasefactor), shiftfactor); // V/m
+    vec4 realthing = vec4(cmul(cmul(reflfield.xy, phasefactor), shiftfactor),
+      cmul(cmul(reflfield.zw, phasefactor), shiftfactor)); // V/m
 
     //realthing = vec2(0,0);
 
-    out_prefouriertransform = vec4(realthing, 0,0) * dA;
+    out_prefouriertransform = realthing * dA;
     out_phasecolor = make_color(modphase);
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 
