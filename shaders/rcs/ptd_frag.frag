@@ -308,6 +308,16 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     float psi = tmp0.x;
     float beta = tmp0.y;
 
+    bool allok = (psi>0.0 && psi<wedge_angle) && (0.0<beta && beta<pi);
+
+    if (abs(psi-pi/2)<0.05 || abs(psi-(wedge_angle-pi/2))<0.05) {
+        allok = false;
+    }
+
+    if (beta < 0.05 || beta > (pi - 0.05)) {
+        allok = false;
+    }
+
     vec3 indir = vec3(0,0,1);
     vec3 scatdir = vec3(0,0,-1);
 
@@ -316,6 +326,14 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     vec3 e_par_in = normalize(cross(indir, e_orth_in));
     vec3 e_orth_out = normalize(cross(edge_tangent, scatdir));
     vec3 e_par_out = normalize(cross(scatdir, e_orth_out));
+
+    bool oklengths = 
+        length(e_par_in) > 0.9 && length(e_par_in) < 1.1 &&
+        length(e_orth_in) > 0.9 && length(e_orth_in) < 1.1 &&
+        length(e_orth_out) > 0.9 && length(e_orth_out) < 1.1 &&
+        length(e_par_out) > 0.9 && length(e_par_out) < 1.1;
+
+    allok = allok && oklengths;
 
     // need to compute d dot E_in
 
@@ -330,9 +348,18 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     vec2 E_par = realv2_dot_complv2(e_par_in.xy, e_in);
     vec2 E_orth = realv2_dot_complv2(e_orth_in.xy, e_in);
 
-    //d_cross = 1.0;
+    //d_cross = 0.0;
     //d_orth = 0.0;
     //d_par = 0.0;
+    d_cross = sign(d_cross)*max(abs(d_cross),10);
+    d_orth = sign(d_orth)*max(abs(d_orth),2);
+    d_par = sign(d_par)*max(abs(d_par),2);
+
+    if (!allok) {
+        d_cross = 0.0;
+        d_orth = 0.0;
+        d_par = 0.0;
+    }
 
     vec2 out_par = E_par * d_par + E_orth * d_cross;
     vec2 out_orth = E_orth * d_orth;
@@ -428,7 +455,7 @@ void main() {
     vec4 col = vec4(1.0, 0.0, 0.0, 1.0);
 
     float d = dot(face_normal, vec3(0.0,0.0,-1.0));
-    if (wedge_angle > 1.0*pi) {
+    if (wedge_angle > pi && wedge_angle < 2*pi) {
         col.g = 1;
     } else if (wedge_angle > 0.5 * pi) {
         col.b = 1;
