@@ -9,15 +9,15 @@ radtodeg = 180.0 / pi
 # returns a path object that will then be given as argument
 # to all other functions
 def path_init():
-    return (-0.0*degtorad,-0.0*degtorad, 1.0)
+    return (-0.0*degtorad,0.0*degtorad, 1.0)
 
 # from a path state, give a dictionary of parameter values.
 # unmentioned parameters are set to default value.
 def path_get_params(path):
     return {
         "rot.y":path[0],
-        "rot.x":path[1]
-
+        "rot.x":path[1],
+        "pol_angle":0
     }
 
 spacing = 0.0*degtorad
@@ -27,13 +27,14 @@ def path_advance(path):
     vert += spacing*direction
 
     if vert >= 0.0*degtorad:
-        vert = -180.0*degtorad
-        pitch -= spacing*direction
+        pass
+    #    vert = -180.0*degtorad
+    #    pitch -= spacing*direction
 
     return (vert, pitch, direction)
 
 def path_is_complete(path):
-    return abs(path[1]) > 20.0*degtorad
+    return False #abs(path[1]) > 20.0*degtorad
 
 def path_get_colnames(path):
     return ["yaw", "pitch"]

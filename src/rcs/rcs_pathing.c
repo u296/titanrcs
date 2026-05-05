@@ -282,7 +282,9 @@ void raw_write_rcsubo(void* mapping, PathParameters params) {
     ubo.cropfraction_boxsize_ =
         (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, 0.0f, 0.0f};
 
-    ubo.infield = (Vec4){1.0, 0.0, 0.0, 0.0};
+    // THIS NEEDS TO HAVE LENGTH 1
+    ubo.infield =
+        (Vec4){cosf(params.pol_angle), 0.0, sinf(params.pol_angle), 0.0};
 
     memcpy(mapping, &ubo, sizeof(ubo));
 }
@@ -293,7 +295,8 @@ void manualcontrol_write_rcsubo(RenderContext* ctx, void* mapping) {
         {1.0, 1.0, 1.0},
         {0.0, 0.0, 0.0},
         {ctx->manual_control.pitch, ctx->manual_control.yaw, 0.0},
-        ctx->manual_control.lambda};
+        ctx->manual_control.lambda,
+        ctx->manual_control.pol_angle};
 
     raw_write_rcsubo(mapping, pars);
 }
@@ -311,6 +314,7 @@ void get_path_params(PathingResources* pres, Path* p,
     f32 p_scaley = 1.0f;
     f32 p_scalez = 1.0f;
     f32 p_lambda = 15e-2f;
+    f32 p_pol_angle = 0.0f;
 
     {
         PyObject* args = PyTuple_Pack(1, p->pypath);
@@ -358,6 +362,9 @@ void get_path_params(PathingResources* pres, Path* p,
                     } else if (PyUnicode_CompareWithASCIIString(
                                    key, "lambda") == 0) {
                         try_assign_float(&p_lambda, val);
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "pol_angle") == 0) {
+                        try_assign_float(&p_pol_angle, val);
                     }
                 } else {
                     printf("non-string key in dict returned from "
@@ -373,7 +380,8 @@ void get_path_params(PathingResources* pres, Path* p,
     PathParameters built = {{p_scalex, p_scaley, p_scalez},
                             {p_posx, p_posy, p_posz},
                             {p_rotx, p_roty, p_rotz},
-                            p_lambda};
+                            p_lambda,
+                            p_pol_angle};
 
     *out_params = built;
 }
