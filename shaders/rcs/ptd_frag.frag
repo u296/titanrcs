@@ -93,11 +93,18 @@ vec3 calc_mitzner(float wedge_angle, float psi, float beta_i) {
     float d_cross = 0.0;
 
     float limit = 5.0 * pi / 180.0; // five deg
-    if (!(psi < limit || psi > (wedge_angle - limit))) {
+
+    //wedge_angle = 2*wedge_angle;
+    
+
+    bool withinlims = !(psi<limit || psi>(wedge_angle-limit));
+
+    if (withinlims) {
         float term1 = cot(psi) / (1.0 - tan(0.5*pi/n)*cot((pi-psi)/n));
         float term2 = cot(psi - pi*n) / (1.0 + tan(0.5*pi/n)*cot(pi - (pi+psi)/n));
 
         d_cross = (2.0*cos(beta_i) / (n*sin(pi/n)))*(term1 + term2);
+        //d_cross = 1.0;
     } else {
         d_cross = 0.0;
     }
@@ -322,14 +329,21 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     vec2 E_par = realv2_dot_complv2(e_par_in.xy, e_in);
     vec2 E_orth = realv2_dot_complv2(e_orth_in.xy, e_in);
 
+    //d_cross = 1.0;
+    //d_orth = 0.0;
+    //d_par = 0.0;
+
     vec2 out_par = E_par * d_par + E_orth * d_cross;
     vec2 out_orth = E_orth * d_orth;
 
 
-    vec4 scatterfield = realv2_times_compl(e_par_out.xy, E_par)
-     + realv2_times_compl(e_orth_out.xy, E_orth);
+    vec4 scatterfield = realv2_times_compl(e_par_out.xy, out_par)
+     + realv2_times_compl(e_orth_out.xy, out_orth);
 
 
+    //e_orth_in.y = 0;
+    //edge_tangent.x=0;
+    //return vec4(abs(d_cross),0,0,0);
     return scatterfield;
 }
 
@@ -338,7 +352,7 @@ void main() {
     float cropfraction = ubo.cropfraction_boxsize_.x;
     float boxsize = ubo.cropfraction_boxsize_.y;
 
-    float wedge_angle = in_wedge_angle;
+    float wedge_angle = in_wedge_angle + pi; // need this for some reason
     
 
     //out_prefouriertransform = cmul(reflfield, phasefactor);
@@ -362,7 +376,7 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));// phase factor to multiply before sending to fft
 
-    vec4 infield_local = vec4(1.0, 0.0, 0.0, 0.0); // need to propagate this forward to the correct Z
+    vec4 infield_local = vec4(0.0, 0.0, 1.0, 0.0); // need to propagate this forward to the correct Z
 
     vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z)); 
 
