@@ -285,6 +285,8 @@ void raw_write_rcsubo(void* mapping, f32* params) {
 
     ubo.cropfraction_boxsize_ = (Vec4){(f32)RCS_CROPFRACTION,RCS_BOXSIZE,0.0f,0.0f};
 
+    ubo.infield = (Vec4){1.0,0.0,0.0,0.0};
+
     memcpy(mapping, &ubo, sizeof(ubo));
 }
 

@@ -11,6 +11,7 @@ typedef struct RcsUbo {
     Mat4 norm_trans;
     Vec4 resolution_xy_L_lambda;
     Vec4 cropfraction_boxsize_;
+    Vec4 infield;
 } RcsUbo;
 
 typedef struct ExtractionSsbo {

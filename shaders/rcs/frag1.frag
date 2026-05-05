@@ -17,6 +17,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
     vec4 cropfraction_boxsize_;
+    vec4 infield;
 } ubo;
 
 layout(binding = 1) uniform sampler2D radar_infield;
@@ -47,7 +48,8 @@ void main() {
     const float cropfraction = ubo.cropfraction_boxsize_.x;
     const float boxsize = ubo.cropfraction_boxsize_.y;
 
-    vec4 infield = vec4(1.0,0.0, 0.0,0.0);// [V/m]
+    vec4 infield = ubo.infield;
+    //vec4(1.0,0.0, 0.0,0.0);// [V/m]
 
     const float albedo = 1.0;
 
@@ -77,7 +79,7 @@ void main() {
     vec4 realthing = vec4(cmul(cmul(reflfield.xy, phasefactor), shiftfactor),
       cmul(cmul(reflfield.zw, phasefactor), shiftfactor)); // V/m
 
-    //realthing = vec2(0,0);
+    realthing = vec4(0,0,0,0);
 
     out_prefouriertransform = realthing * dA;
     out_phasecolor = make_color(modphase);

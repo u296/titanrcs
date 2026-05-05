@@ -17,6 +17,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
     vec4 cropfraction_boxsize_;
+    vec4 infield;
 } ubo;
 
 
@@ -376,7 +377,8 @@ void main() {
 
     const vec2 phasefactor = vec2(cos(modphase), sin(modphase));// phase factor to multiply before sending to fft
 
-    vec4 infield_local = vec4(0.0, 0.0, 1.0, 0.0); // need to propagate this forward to the correct Z
+    vec4 infield_local = ubo.infield;
+    //vec4(0.0, 0.0, 1.0, 0.0); // need to propagate this forward to the correct Z
 
     vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z)); 
 
