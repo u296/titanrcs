@@ -11,6 +11,28 @@ especially important for running on M1
 
 RCS calc:
 
-standardize units to SI inside the shaders and calculation
 
 do real diffraction coefficient calculations
+
+Mitzner:
+
+Look at equations 3-117 and forward
+
+eq 2-58 for definition of nu, guessing that it's like n
+
+alpha is half wedge angle
+
+psi =? phi??
+eq 3-47 seems to give that psi is the angle from the face while phi is from some sort of global symmetry
+line inside of the wedge, but not sure
+
+Findings:
+
+nu = 1/n
+
+phi is most probably the angle from the axis of symmetry,
+this leads to the formulas
+
+psi = phi - (pi - 0.5alpha) = phi - pi*(1 - n/2)
+
+phi = psi + pi*(1 - 0.5n)
