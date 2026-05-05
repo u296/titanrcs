@@ -29,6 +29,8 @@ typedef struct PathParameters {
     Vec3 rot;
     f32 lambda;
     f32 pol_angle;
+    bool PO_active;
+    bool ILDC_active;
 } PathParameters;
 
 void make_rcs_pathingresources(PathingResources* out_pathing, CleanupStack* cs);

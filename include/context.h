@@ -19,6 +19,8 @@ typedef struct ManualControlState {
     f32 yaw;
     f32 lambda;
     f32 pol_angle;
+    bool PO_active;
+    bool ILDC_active;
     bool active;
 } ManualControlState;
 

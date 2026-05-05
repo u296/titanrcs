@@ -153,6 +153,8 @@ void manualcontrol_set_from_path(ManualControlState* man,
     man->yaw = pars.rot.x;
     man->lambda = pars.lambda;
     man->pol_angle = pars.pol_angle;
+    man->PO_active = true;
+    man->ILDC_active = true;
 }
 
 typedef enum CompLoopStatus {
@@ -202,7 +204,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         }
         first = false;
         constexpr u32 n_printrcs = 1;
-        if (*i % n_printrcs == n_printrcs-1) {
+        if (*i % n_printrcs == n_printrcs - 1) {
             printf("RCS: %5f m2\n", rcs);
         }
 

@@ -279,8 +279,18 @@ void raw_write_rcsubo(void* mapping, PathParameters params) {
     *pindex_m4(&ubo.proj, 1, 3) = -(bot + top) / (bot - top);
     *pindex_m4(&ubo.proj, 2, 3) = -(near) / (far - near);
 
-    ubo.cropfraction_boxsize_ =
-        (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, 0.0f, 0.0f};
+    f32 disablestatus = 0.0f;
+    if (!params.ILDC_active) {
+        disablestatus = -1.0;
+        printf("ILDC OFF\n");
+    }
+    if (!params.PO_active) {
+        disablestatus = 1.0;
+        printf("PO OFF\n");
+    }
+
+    ubo.cropfraction_boxsize_disablestatus =
+        (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, disablestatus, 0.0f};
 
     // THIS NEEDS TO HAVE LENGTH 1
     ubo.infield =
@@ -296,7 +306,9 @@ void manualcontrol_write_rcsubo(RenderContext* ctx, void* mapping) {
         {0.0, 0.0, 0.0},
         {ctx->manual_control.pitch, ctx->manual_control.yaw, 0.0},
         ctx->manual_control.lambda,
-        ctx->manual_control.pol_angle};
+        ctx->manual_control.pol_angle,
+        ctx->manual_control.PO_active,
+        ctx->manual_control.ILDC_active};
 
     raw_write_rcsubo(mapping, pars);
 }
@@ -381,7 +393,9 @@ void get_path_params(PathingResources* pres, Path* p,
                             {p_posx, p_posy, p_posz},
                             {p_rotx, p_roty, p_rotz},
                             p_lambda,
-                            p_pol_angle};
+                            p_pol_angle,
+                            true,
+                            true};
 
     *out_params = built;
 }

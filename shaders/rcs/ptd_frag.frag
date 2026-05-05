@@ -16,7 +16,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
-    vec4 cropfraction_boxsize_;
+    vec4 cropfraction_boxsize_disablestatus_;
     vec4 infield;
 } ubo;
 
@@ -350,8 +350,9 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
 
 void main() {
 
-    float cropfraction = ubo.cropfraction_boxsize_.x;
-    float boxsize = ubo.cropfraction_boxsize_.y;
+    float cropfraction = ubo.cropfraction_boxsize_disablestatus_.x;
+    float boxsize = ubo.cropfraction_boxsize_disablestatus_.y;
+    const bool ILDC_disable = ubo.cropfraction_boxsize_disablestatus_.z < -0.5;
 
     float wedge_angle = in_wedge_angle + pi; // need this for some reason
     
@@ -418,8 +419,9 @@ void main() {
 
     vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,E.xy)),cmul(phasefactor,cmul(shiftfactor,E.zw))) * dl;
 
-    //final = tmp;
-    //final = vec4(0,0,0,0);
+    if (ILDC_disable) {
+       final = vec4(0,0,0,0);
+    }
 
     out_prefouriertransform = final;
 

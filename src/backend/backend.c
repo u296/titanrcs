@@ -62,14 +62,29 @@ void keypress_callback(GLFWwindow* wnd, int key, int scancode, int action,
         }
         if (key == GLFW_KEY_LEFT && (action & (GLFW_PRESS | GLFW_REPEAT))) {
             ctx->manual_control.yaw += manual_angle_step;
-        } else if (key == GLFW_KEY_RIGHT && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+        } else if (key == GLFW_KEY_RIGHT &&
+                   (action & (GLFW_PRESS | GLFW_REPEAT))) {
             ctx->manual_control.yaw -= manual_angle_step;
         }
         if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
             ctx->manual_control.pitch += manual_angle_step;
-        } else if (key == GLFW_KEY_DOWN && (action & (GLFW_PRESS | GLFW_REPEAT))) {
+        } else if (key == GLFW_KEY_DOWN &&
+                   (action & (GLFW_PRESS | GLFW_REPEAT))) {
             ctx->manual_control.pitch -= manual_angle_step;
         }
+        if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+            ctx->manual_control.PO_active = !ctx->manual_control.PO_active;
+            if (!ctx->manual_control.PO_active) {
+                ctx->manual_control.ILDC_active = true;
+            }
+        }
+        if (key == GLFW_KEY_I && action == GLFW_PRESS) {
+            ctx->manual_control.ILDC_active = !ctx->manual_control.ILDC_active;
+            if (!ctx->manual_control.ILDC_active) {
+                ctx->manual_control.PO_active = true;
+            }
+        }
+
     } else {
 
         if (key == GLFW_KEY_UP && (action & (GLFW_PRESS | GLFW_REPEAT))) {
