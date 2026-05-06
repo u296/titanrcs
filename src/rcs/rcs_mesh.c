@@ -95,6 +95,19 @@ i32 edge_order_compare(const void* a, const void* b) {
     }
 }
 
+Vec3 fetch_triangle_center(const u32* triangles, const f32* raw_verts,
+                           const u32 triindex) {
+    Vec3* tricorners[3] = {(Vec3*)&raw_verts[3 * triangles[3 * triindex]],
+                            (Vec3*)&raw_verts[3 * triangles[3 * triindex + 1]],
+                            (Vec3*)&raw_verts[3 * triangles[3 * triindex + 2]]};
+
+    Vec3 tricenter =
+        add_v3(add_v3(*tricorners[0], *tricorners[1]), *tricorners[2]);
+
+    tricenter = muls_v3(1.0/3, tricenter);
+    return tricenter;
+}
+
 u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                       const f32* raw_verts, const Vec3* triangle_normals,
                       u32** out_inds, Vec3* out_edge_tangents,
@@ -153,7 +166,29 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 n_weird_dotprods++;
             }
 
-            if (d < cosf(SHARP_ANGLE)) {
+            // construct vector between triangle centers
+
+            Vec3 tricenter1 = fetch_triangle_center(triangles, raw_verts, edge_records[i].tri_i);
+            Vec3 tricenter2 = fetch_triangle_center(triangles, raw_verts, edge_records[i+1].tri_i);
+
+            // from 1 to 2
+            Vec3 v = add_v3(tricenter2, muls_v3(-1.0, tricenter1));
+
+            f32 aligned = dot_v3(norm1, v);
+
+            f32 wedge_angle = 0.0;
+
+            if (aligned > 0.0) {
+                // this is an internal wedge
+                wedge_angle = PI - acosf(d);
+            } else {
+                // this is an external wedge, what we're looking for
+                wedge_angle = PI + acosf(d);
+            }
+
+            
+
+            if (wedge_angle > (PI + 30.0*DEG_TO_RAD)) {
                 if (i_inds_insert >= 2 * 3 * n_tris) {
                     printf("mesh load: out of space for output inds");
                     abort();
@@ -168,7 +203,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 // out when adding, so use the convention of positive z
 
                 if (edgetan.z < 0.0f) {
-                //    edgetan = muls_v3(-1.0f, edgetan);
+                    //    edgetan = muls_v3(-1.0f, edgetan);
                 }
 
                 out_edge_tangents[edge_records[i].v1] =
@@ -180,9 +215,9 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 // only set if zero. Also, set the length of this vector to
                 // the angle between the normals.
 
-                f32 ang = acosf(d);
-                out_face_normals[edge_records[i].v1] = muls_v3(ang, norm1);
-                out_face_normals[edge_records[i].v2] = muls_v3(ang, norm1);
+                
+                out_face_normals[edge_records[i].v1] = muls_v3(wedge_angle, norm1);
+                out_face_normals[edge_records[i].v2] = muls_v3(wedge_angle, norm1);
             }
         }
     }

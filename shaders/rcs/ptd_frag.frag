@@ -312,6 +312,7 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
 
     const float anglim = 1.0*pi/180.0;
 
+    // discard head-on to protect from singularity, face should outweigh contrib anyway
     if (abs(psi-pi/2)<anglim || abs(psi-(wedge_angle-pi/2))<anglim) {
         allok = false;
     }
@@ -383,7 +384,8 @@ void main() {
     float boxsize = ubo.cropfraction_boxsize_disablestatus_.y;
     const bool ILDC_disable = ubo.cropfraction_boxsize_disablestatus_.z < -0.5;
 
-    float wedge_angle = in_wedge_angle + pi; // need this for some reason
+    float wedge_angle = in_wedge_angle;
+    // + pi; // need this for some reason
     
 
     //out_prefouriertransform = cmul(reflfield, phasefactor);
