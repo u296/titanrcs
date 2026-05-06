@@ -353,9 +353,9 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     //d_cross = 0.0;
     //d_orth = 0.0;
     //d_par = 0.0;
-    d_cross = sign(d_cross)*max(abs(d_cross),10);
-    d_orth = sign(d_orth)*max(abs(d_orth),2);
-    d_par = sign(d_par)*max(abs(d_par),2);
+    d_cross = sign(d_cross)*min(abs(d_cross),10);
+    d_orth = sign(d_orth)*min(abs(d_orth),2);
+    d_par = sign(d_par)*min(abs(d_par),2);
 
     if (!allok) {
         d_cross = 0.0;
