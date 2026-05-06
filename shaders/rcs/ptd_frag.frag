@@ -310,11 +310,13 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
 
     bool allok = (psi>0.0 && psi<wedge_angle) && (0.0<beta && beta<pi);
 
-    if (abs(psi-pi/2)<0.05 || abs(psi-(wedge_angle-pi/2))<0.05) {
+    const float anglim = 1.0*pi/180.0;
+
+    if (abs(psi-pi/2)<anglim || abs(psi-(wedge_angle-pi/2))<anglim) {
         allok = false;
     }
 
-    if (beta < 0.05 || beta > (pi - 0.05)) {
+    if (beta < anglim || beta > (pi - anglim)) {
         allok = false;
     }
 
@@ -421,13 +423,20 @@ void main() {
 
     vec3 indir = vec3(0.0,0.0,1.0);
 
-    float mval = 2;
+    float x = atan(edge_tangent.y,edge_tangent.x);
+    x = mod(x,pi/2);
+    x -= pi/4;
+    float tfac = 1.0/cos(x); // this is meh
+
+
+    float mval = 1;
     float angle_factor = max(1.0 / sqrt(1.0 - edge_tangent.z*edge_tangent.z), mval);
     if (isnan(angle_factor)) {
         angle_factor = mval;
     }
+    angle_factor *= x;
 
-    float dl = (boxsize/resolution.x);
+    float dl = (boxsize/resolution.x);// * angle_factor;
 
     vec4 E = calc_mitzner_scatterfield(k,edge_tangent,face_normal,infield_local,wedge_angle);
     //calc_scatterfield(k, edge_tangent, face_normal, infield_local, wedge_angle);
