@@ -358,12 +358,6 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     d_orth = sign(d_orth)*min(abs(d_orth),2);
     d_par = sign(d_par)*min(abs(d_par),2);
 
-    if (!allok) {
-        d_cross = 0.0;
-        d_orth = 0.0;
-        d_par = 0.0;
-    }
-
     vec2 out_par = E_par * d_par + E_orth * d_cross;
     vec2 out_orth = E_orth * d_orth;
 
@@ -371,6 +365,10 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     vec4 scatterfield = realv2_times_compl(e_par_out.xy, out_par)
      + realv2_times_compl(e_orth_out.xy, out_orth);
 
+
+    if (!allok) {
+        scatterfield = vec4(0,0,0,0);
+    }
 
     //e_orth_in.y = 0;
     //edge_tangent.x=0;
