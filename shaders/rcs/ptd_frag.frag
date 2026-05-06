@@ -423,20 +423,14 @@ void main() {
 
     vec3 indir = vec3(0.0,0.0,1.0);
 
-    float x = atan(edge_tangent.y,edge_tangent.x);
-    x = mod(x,pi/2);
-    x -= pi/4;
-    float tfac = 1.0/cos(x); // this is meh
+    float mval = 10; // 1 pixel can bear at most 10 pixels weight.
+    // not too important to have this high, because if it's facing
+    // z too much then it's not giving too much to the near-field anyway
 
+    float angle_factor = 1.0 / max(abs(edge_tangent.x),abs(edge_tangent.y));
+    angle_factor = min(angle_factor,mval);
 
-    float mval = 1;
-    float angle_factor = max(1.0 / sqrt(1.0 - edge_tangent.z*edge_tangent.z), mval);
-    if (isnan(angle_factor)) {
-        angle_factor = mval;
-    }
-    angle_factor *= x;
-
-    float dl = (boxsize/resolution.x);// * angle_factor;
+    float dl = (boxsize/resolution.x) * angle_factor;
 
     vec4 E = calc_mitzner_scatterfield(k,edge_tangent,face_normal,infield_local,wedge_angle);
     //calc_scatterfield(k, edge_tangent, face_normal, infield_local, wedge_angle);
