@@ -17,7 +17,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_trans;
     vec4 resolution_xy_L_;
-    vec4 cropfraction_boxsize_disablestatus_;
+    vec4 cropfraction_boxsize_disablestatus_linewidth;
     vec4 infield;
 } ubo;
 
@@ -27,7 +27,15 @@ layout(push_constant) uniform PushBlock {
 
 void main() {
 
-    vec3 base_vert_pos = in_pos + (push.scale-1.0)*in_norm;
+    vec3 edgetan = cross(in_face_normal, in_norm);
+    vec3 projnorm = normalize(cross(edgetan, in_face_normal));
+
+
+    if (isnan(projnorm.x) || isnan(projnorm.y) || isnan(projnorm.z)) {
+        projnorm = vec3(0,0,0);
+    }
+
+    vec3 base_vert_pos = in_pos + (push.scale-1.0)*projnorm;
 
     vec4 proj_pos = ubo.proj * ubo.view * ubo.model * vec4(base_vert_pos,1.0);
 
