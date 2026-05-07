@@ -66,6 +66,12 @@ void main() {
     const float moddist = 2.0*pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z))); // [m]
     
     const float modphase = moddist * k; // [1]
+    // modphase should actually have a - sign tacked on, and the FFT
+    // should be an inverse FFT to strictly follow the math. But,
+    // this is how it was initially setup, using a forward FFT with
+    // a + sign here yields the exact same output values in theory, 
+    // except that they get conjugated relative to what they should be.
+    // this doesn't matter though since we're only looking at power
 
     const float showphase = 2*pos.z*k;
 

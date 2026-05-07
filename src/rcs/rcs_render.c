@@ -253,6 +253,15 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     // lp.outputBuffer = &ctx->rcs_resources.sets[f].fft_buf_output.buf;
 
     VkFFTAppend(ctx->backend.fft[f], -1, &lp);
+    /*
+    This should actually be an inverse FFT, and there should be a minus sign on
+    the accumulated phase in the fragmente shaders phase factor. However, I
+    discovered this quite recently and for some reason the inverse FFT doesn't
+    output anything and I don't want to waste time debugging it. This is
+    actually fine though, because the combination of conjugating both the kernel
+    and the integrand causes every output to be exactly where it should be, only
+    that it's conjugated which doesn't matter for this use case.
+    */
 
     /*
     This set of barriers ensures that
