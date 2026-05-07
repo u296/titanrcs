@@ -16,7 +16,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
-    vec4 cropfraction_boxsize_disablestatus_;
+    vec4 cropfraction_boxsize_disablestatus_linewidth;
     vec4 infield;
 } ubo;
 
@@ -45,9 +45,9 @@ void main() {
     const vec2 resolution = ubo.resolution_xy_L_lambda.xy;
     const float L = ubo.resolution_xy_L_lambda.z;
     const float lambda = ubo.resolution_xy_L_lambda.w;
-    const float cropfraction = ubo.cropfraction_boxsize_disablestatus_.x;
-    const float boxsize = ubo.cropfraction_boxsize_disablestatus_.y;
-    const bool PO_disable = ubo.cropfraction_boxsize_disablestatus_.z > 0.5;
+    const float cropfraction = ubo.cropfraction_boxsize_disablestatus_linewidth.x;
+    const float boxsize = ubo.cropfraction_boxsize_disablestatus_linewidth.y;
+    const bool PO_disable = ubo.cropfraction_boxsize_disablestatus_linewidth.z > 0.5;
 
     vec4 infield = ubo.infield;
     //vec4(1.0,0.0, 0.0,0.0);// [V/m]

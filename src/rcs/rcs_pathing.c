@@ -289,8 +289,8 @@ void raw_write_rcsubo(void* mapping, PathParameters params) {
         printf("PO OFF\n");
     }
 
-    ubo.cropfraction_boxsize_disablestatus =
-        (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, disablestatus, 0.0f};
+    ubo.cropfraction_boxsize_disablestatus_linewidth =
+        (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, disablestatus, RCS_LINEWIDTH};
 
     // THIS NEEDS TO HAVE LENGTH 1
     ubo.infield =

@@ -236,18 +236,23 @@ bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
     vpsci.scissorCount = 1;
     vpsci.pScissors = &scissor;
 
+    VkPipelineRasterizationLineStateCreateInfo lsci = {};
+    lsci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO;
+    lsci.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_RECTANGULAR;
+
     VkPipelineRasterizationStateCreateInfo rci = {};
     rci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rci.depthClampEnable = VK_FALSE;
     rci.rasterizerDiscardEnable = VK_FALSE;
     rci.polygonMode = VK_POLYGON_MODE_FILL;
-    rci.lineWidth = 1.0f;
+    rci.lineWidth = RCS_LINEWIDTH;
     rci.cullMode = VK_CULL_MODE_NONE;
     rci.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rci.depthBiasEnable = VK_FALSE;
     rci.depthBiasConstantFactor = 0.0f;
     rci.depthBiasClamp = 0.0f;
     rci.depthBiasSlopeFactor = 0.0f;
+    rci.pNext = &lsci;
 
     VkPipelineMultisampleStateCreateInfo msci = {};
     msci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;

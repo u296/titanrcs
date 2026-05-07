@@ -16,7 +16,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     mat4 norm_proj;
     vec4 resolution_xy_L_lambda;
-    vec4 cropfraction_boxsize_disablestatus_;
+    vec4 cropfraction_boxsize_disablestatus_linewidth;
     vec4 infield;
 } ubo;
 
@@ -378,9 +378,10 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
 
 void main() {
 
-    float cropfraction = ubo.cropfraction_boxsize_disablestatus_.x;
-    float boxsize = ubo.cropfraction_boxsize_disablestatus_.y;
-    const bool ILDC_disable = ubo.cropfraction_boxsize_disablestatus_.z < -0.5;
+    const float cropfraction = ubo.cropfraction_boxsize_disablestatus_linewidth.x;
+    const float boxsize = ubo.cropfraction_boxsize_disablestatus_linewidth.y;
+    const bool ILDC_disable = ubo.cropfraction_boxsize_disablestatus_linewidth.z < -0.5;
+    const float linewidth = ubo.cropfraction_boxsize_disablestatus_linewidth.w;
 
     float wedge_angle = in_wedge_angle;
     // + pi; // need this for some reason
@@ -430,7 +431,7 @@ void main() {
     float angle_factor = 1.0 / max(abs(edge_tangent.x),abs(edge_tangent.y));
     angle_factor = min(angle_factor,mval);
 
-    float dl = (boxsize/resolution.x) * angle_factor;
+    float dl = (boxsize/resolution.x) * angle_factor / linewidth;
 
     vec4 E = calc_mitzner_scatterfield(k,edge_tangent,face_normal,infield_local,wedge_angle);
     //calc_scatterfield(k, edge_tangent, face_normal, infield_local, wedge_angle);

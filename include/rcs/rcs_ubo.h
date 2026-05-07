@@ -10,7 +10,7 @@ typedef struct RcsUbo {
     Mat4 proj;
     Mat4 norm_trans;
     Vec4 resolution_xy_L_lambda;
-    Vec4 cropfraction_boxsize_disablestatus; // disable status: 0.0 all on, 1.0 po disable -1.0 ildc disable
+    Vec4 cropfraction_boxsize_disablestatus_linewidth; // disable status: 0.0 all on, 1.0 po disable -1.0 ildc disable
     Vec4 infield;
 } RcsUbo;
 

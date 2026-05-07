@@ -147,10 +147,15 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
         n_queue_infos = 2;
     }
 
+    VkPhysicalDeviceLineRasterizationFeatures lrf = {0};
+    lrf.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES;
+    lrf.rectangularLines = VK_TRUE;
+
     VkPhysicalDeviceVulkan13Features vk13features = {};
     vk13features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vk13features.synchronization2 = VK_TRUE;
     vk13features.dynamicRendering = VK_TRUE;
+    vk13features.pNext = &lrf;
     
 
     VkPhysicalDeviceFeatures2 df2 = {};
