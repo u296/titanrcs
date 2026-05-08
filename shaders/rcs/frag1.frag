@@ -47,12 +47,12 @@ float undersampling_compensation_factor(float lambda, float pixellen, vec3 surfn
 
 
     // 1.0 is limit, Nyquist-Shannon. Lower to be safer.
-    float maxhalfwavelens = 0.9;
+    float maxhalfwavelens = 1.0;
 
     float sineshallow = pixellen / (0.5*lambda*maxhalfwavelens);
 
     // undecided on this, think it can be higher for PO than ILDC
-    float transitionlen = 0.1;
+    float transitionlen = 0.05;
     float endrise = sineshallow + transitionlen;
 
     float weightfactor = smoothstep(sineshallow, endrise, costheta);

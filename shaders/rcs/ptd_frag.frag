@@ -198,7 +198,7 @@ float undersampling_compensation_factor(float lambda, float pixellen, vec3 edge_
 
 
     // 1.0 is limit, Nyquist-Shannon. Lower to be safer.
-    float maxhalfwavelens = 0.9;
+    float maxhalfwavelens = 1.0;
 
     float sineshallow = pixellen / (0.5*lambda*maxhalfwavelens);
 
@@ -298,6 +298,8 @@ void main() {
     vec4 col = vec4(1.0, 0.0, 0.0, 1.0);
 
     col.g = undersample;
+
+    //col = vec4(edge_tangent,1.0);
 
     //col.xyz = visualize_vec2(vec2(length(final.xy), length(final.zw)));
 

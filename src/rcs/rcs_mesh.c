@@ -98,14 +98,31 @@ i32 edge_order_compare(const void* a, const void* b) {
 Vec3 fetch_triangle_center(const u32* triangles, const f32* raw_verts,
                            const u32 triindex) {
     Vec3* tricorners[3] = {(Vec3*)&raw_verts[3 * triangles[3 * triindex]],
-                            (Vec3*)&raw_verts[3 * triangles[3 * triindex + 1]],
-                            (Vec3*)&raw_verts[3 * triangles[3 * triindex + 2]]};
+                           (Vec3*)&raw_verts[3 * triangles[3 * triindex + 1]],
+                           (Vec3*)&raw_verts[3 * triangles[3 * triindex + 2]]};
 
     Vec3 tricenter =
         add_v3(add_v3(*tricorners[0], *tricorners[1]), *tricorners[2]);
 
-    tricenter = muls_v3(1.0/3, tricenter);
+    tricenter = muls_v3(1.0 / 3, tricenter);
     return tricenter;
+}
+
+void add_v3_aligned(Vec3* target, Vec3 add) {
+
+    if (target->x == 0.0f && target->y == 0.0f && target->z == 0.0f) {
+        *target = add_v3(*target, add);
+    } else {
+        f32 d = dot_v3(normalize_v3(*target), normalize_v3(add));
+
+        if (d >= 0.0f) {
+            // they're already aligned or target is zero
+            *target = add_v3(*target, add);
+        } else {
+            // they're antialigned
+            *target = add_v3(*target, muls_v3(-1.0, add));
+        }
+    }
 }
 
 u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
@@ -168,8 +185,10 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
 
             // construct vector between triangle centers
 
-            Vec3 tricenter1 = fetch_triangle_center(triangles, raw_verts, edge_records[i].tri_i);
-            Vec3 tricenter2 = fetch_triangle_center(triangles, raw_verts, edge_records[i+1].tri_i);
+            Vec3 tricenter1 = fetch_triangle_center(triangles, raw_verts,
+                                                    edge_records[i].tri_i);
+            Vec3 tricenter2 = fetch_triangle_center(triangles, raw_verts,
+                                                    edge_records[i + 1].tri_i);
 
             // from 1 to 2
             Vec3 v = add_v3(tricenter2, muls_v3(-1.0, tricenter1));
@@ -186,7 +205,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 wedge_angle = PI + acosf(d);
             }
 
-            constexpr f32 sharpthresh = 30*DEG_TO_RAD;
+            constexpr f32 sharpthresh = 30 * DEG_TO_RAD;
 
             if (wedge_angle > (PI + sharpthresh)) {
                 if (i_inds_insert >= 2 * 3 * n_tris) {
@@ -203,21 +222,25 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 // out when adding, so use the convention of positive z
 
                 if (edgetan.z < 0.0f) {
-                    //    edgetan = muls_v3(-1.0f, edgetan);
+                    /*
+                    This is risky, and for geometry that does actually lie in
+                    the XY plane this causes more issues than it solves. But I'm
+                    out of ideas for how to solve this for the general case.
+                    Aligned adds might help a little, but only if the chain gets
+                    taken in order by the indices and that's random. So for now
+                    this will have to do, no perfect alignment with the
+                    XY-plane.
+                    */
+                    edgetan = muls_v3(-1.0f, edgetan);
                 }
 
-                out_edge_tangents[edge_records[i].v1] =
-                    add_v3(out_edge_tangents[edge_records[i].v1], edgetan);
-                out_edge_tangents[edge_records[i].v2] =
-                    add_v3(out_edge_tangents[edge_records[i].v2], edgetan);
+                add_v3_aligned(&out_edge_tangents[edge_records[i].v1], edgetan);
+                add_v3_aligned(&out_edge_tangents[edge_records[i].v2], edgetan);
 
-                // don't do this additively. Could add a check here aswell to
-                // only set if zero. Also, set the length of this vector to
-                // the angle between the normals.
-
-                
-                out_face_normals[edge_records[i].v1] = muls_v3(wedge_angle, norm1);
-                out_face_normals[edge_records[i].v2] = muls_v3(wedge_angle, norm1);
+                out_face_normals[edge_records[i].v1] =
+                    muls_v3(wedge_angle, norm1);
+                out_face_normals[edge_records[i].v2] =
+                    muls_v3(wedge_angle, norm1);
             }
         }
     }
@@ -255,14 +278,15 @@ void build_verts(float* raw_verts, u32 n_verts, Vec3* normals,
                                  face_normals[i]};
         f32 l = len_v3(new_buf[i].edge_tangent);
         if (l > 0.1) {
-            //printf("nonzero edge tangent len\n");
+            // printf("nonzero edge tangent len\n");
         }
     }
 }
 
-bool make_rcs_mesh(const char* fname, RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
-                   Buffer* ibuf, u32* n_indices, Buffer* sharp_ibuf,
-                   u32* out_n_sharp_inds, CleanupStack* cs) {
+bool make_rcs_mesh(const char* fname, RenderBackend* rb, VkCommandPool cpool,
+                   Buffer* vbuf, Buffer* ibuf, u32* n_indices,
+                   Buffer* sharp_ibuf, u32* out_n_sharp_inds,
+                   CleanupStack* cs) {
 
     // make_local_buffer_staged(rb, sizeof(rcs_verts), rcs_verts,
     // VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, cpool, vbuf, cs);
