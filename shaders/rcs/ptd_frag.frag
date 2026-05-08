@@ -93,7 +93,7 @@ vec3 calc_mitzner(float wedge_angle, float psi, float beta_i) {
 
     float d_cross = 0.0;
 
-    float limit = 5.0 * pi / 180.0; // five deg
+    float limit = 1.0 * pi / 180.0;
 
     //wedge_angle = 2*wedge_angle;
     
@@ -105,6 +105,18 @@ vec3 calc_mitzner(float wedge_angle, float psi, float beta_i) {
         float term2 = cot(psi - pi*n) / (1.0 + tan(0.5*pi/n)*cot(pi - (pi+psi)/n));
 
         d_cross = (2.0*cos(beta_i) / (n*sin(pi/n)))*(term1 + term2);
+
+        /*
+        Apply sin^2 fading here, this leaves the center untouched causes a bulb like
+        behavior and fades the ends to 0. Fading to 0 is physically correct since the
+        electric field near the surface must be 0. This approach causes the maximum
+        in d_parorth to become about half of the other constants, maximum 0.5 across all
+        domains, which lines up with the expectation of the fact that a straight edge
+        can't be expected to perfectly cross-polarize light.
+        */
+        d_cross *= pow(sin(psi/n),2);
+
+
         //d_cross = 1.0;
     } else {
         d_cross = 0.0;
@@ -354,7 +366,7 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     //d_cross = 0.0;
     //d_orth = 0.0;
     //d_par = 0.0;
-    d_cross = sign(d_cross)*min(abs(d_cross),10);
+    d_cross = sign(d_cross)*min(abs(d_cross),2);
     d_orth = sign(d_orth)*min(abs(d_orth),2);
     d_par = sign(d_par)*min(abs(d_par),2);
 
