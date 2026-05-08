@@ -1,37 +1,6 @@
 #version 450
 
-layout(location = 0) in vec3 in_pos;
-layout(location = 1) in vec3 in_norm;
-layout(location = 2) in vec3 in_edge_tangent;
-layout(location = 3) in vec3 in_face_normal;
-layout(location = 4) in float in_wedge_angle;
-
-layout(location = 0) out vec4 out_prefouriertransform;
-layout(location = 1) out vec4 out_phasecolor;
-layout(location = 2) out vec4 out_intenscolor;
-
-layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-    mat4 norm_proj;
-    vec4 resolution_xy_L_lambda;
-    vec4 cropfraction_boxsize_disablestatus_linewidth;
-    vec4 infield;
-} ubo;
-
-
-const float pi = 3.1415926535897932384626433832795;
-const float twopi = 6.283185;
-
-vec2 cmul(vec2 a, vec2 b) {
-    return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-}
-
-vec2 complex_dir(vec4 x) {
-    vec2 lens = vec2(length(x.xy), length(x.zw));
-    return normalize(lens);
-}
+#include "rcsfrag.glsl"
 
 float cot(float x) {
     return 1.0/tan(x);
@@ -193,26 +162,6 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     return scatterfield;
 }
 
-float undersampling_compensation_factor(float lambda, float pixellen, vec3 edge_tangent, vec3 toscreen) {
-    float costheta = abs(dot(normalize(edge_tangent), normalize(toscreen)));
-
-
-    // 1.0 is limit, Nyquist-Shannon. Lower to be safer.
-    float maxhalfwavelens = 1.0;
-
-    float sineshallow = pixellen / (0.5*lambda*maxhalfwavelens);
-
-    float cosshallow = sqrt(1.0 - pow(sineshallow,2));
-
-    // maybe want to have this higher, but ok for now
-    float transitionlen = 0.05;
-    float endrise = cosshallow + transitionlen;
-
-    float weightfactor = 1.0-smoothstep(cosshallow-transitionlen, cosshallow, costheta);
-
-    return weightfactor;
-}
-
 void main() {
 
     const float cropfraction = ubo.cropfraction_boxsize_disablestatus_linewidth.x;
@@ -270,7 +219,7 @@ void main() {
 
     vec4 E = calc_mitzner_scatterfield(k,edge_tangent,face_normal,infield_local,wedge_angle);
 
-    float undersample = undersampling_compensation_factor(lambda, pixellen, edge_tangent, toscreen);
+    float undersample = undersampling_compensation_factor_t(lambda, pixellen, edge_tangent, toscreen);
     E *= undersample;
 
     //calc_scatterfield(k, edge_tangent, face_normal, infield_local, wedge_angle);
