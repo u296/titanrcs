@@ -24,45 +24,8 @@ layout(binding = 0) uniform UniformBufferObject {
 const float pi = 3.1415926535897932384626433832795;
 const float twopi = 6.283185;
 
-vec3 visualize_vec2(vec2 data) {
-    // 1. Calculate overall intensity (magnitude)
-    float intensity = log(1.0+length(data))/1.5;
-    
-    // 2. Determine the ratio (0.0 = pure X, 1.0 = pure Y, 0.5 = equal)
-    // Using atan2/PI provides a smoother linear distribution than x/(x+y)
-    float ratio = atan(data.y, data.x) / (0.5 * pi);
-    ratio = clamp(ratio, 0.0, 1.0);
-
-    // 3. Define the Three-Channel Palette
-    vec3 colorX = vec3(0.9, 0.1, 0.5); // Pink/Purple (X dominant)
-    vec3 colorY = vec3(0.1, 0.8, 0.4); // Green (Y dominant)
-    vec3 colorMix = vec3(0.0, 0.0, 1.0); // White (Balanced)
-
-    // 4. Mix the colors based on ratio
-    // We use a smoothstep or tent function to highlight the center "Mix"
-    vec3 finalColor;
-    if (ratio < 0.5) {
-        // Blend from pure X to the Mix channel
-        finalColor = mix(colorX, colorMix, ratio * 2.0);
-    } else {
-        // Blend from the Mix channel to pure Y
-        finalColor = mix(colorMix, colorY, (ratio - 0.5) * 2.0);
-    }
-
-    // 5. Apply intensity to the final color
-    return finalColor * intensity;
-}
-
 vec2 cmul(vec2 a, vec2 b) {
     return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-}
-
-float sgn(float x) {
-    if (x == 0) {
-        return 1.0;
-    } else {
-        return sign(x);
-    }
 }
 
 vec2 complex_dir(vec4 x) {
@@ -126,128 +89,6 @@ vec3 calc_mitzner(float wedge_angle, float psi, float beta_i) {
     return vals;
 }
 
-vec3 calc_coeffs(float wedge_angle, float psi, float beta_i, float beta_s) {
-    float n = wedge_angle / pi;// n in the book
-
-    float phi = psi + pi*(1 - 0.5*n); // for some reason they switched variables
-
-    float alpha1 = phi;
-    float alpha2 = n*pi - phi;
-
-    const float eps = 0.0;
-    float denom = 0.0;
-
-    float D_e = 0.0;
-
-    D_e += sin(phi/n)/(n*(cos((pi - alpha1)/n) - cos(phi/n)));
-    D_e += sin(phi/n)/(n*(cos((pi - alpha2)/n) + cos(phi/n)));
-
-    float D_m = 0.0;
-
-    denom = sin(alpha1)*(cos((pi - alpha1)/n) - cos(phi/n));
-
-    D_m += sin(phi)*sin((pi - alpha1)/n) / (n*denom + (denom>=0.0?eps:-eps));
-
-    denom = sin(alpha2)*(cos((pi-alpha2)/n)+cos(phi/n));
-    D_m += sin(n*pi - phi) * sin((pi-alpha2)/n) / (n*denom + (denom>=0.0?eps:-eps));
-
-    float Q = 2 * cos(beta_i);
-
-    float D_em = 0.0;
-
-    denom = sin(alpha1)*(cos((pi - alpha1)/n) - cos(phi/n));
-    D_em += cos(phi)*sin((pi-alpha1)/n)/(n*denom + (denom>=0.0?eps:-eps));
-
-    denom = sin(alpha2)*(cos((pi-alpha2)/n) + cos(phi/n));
-    D_em += -cos(n*pi-phi)*sin((pi-alpha2)/n)/(n*denom + (denom>=0.0?eps:-eps));
-
-    D_em *= (Q / (sin(beta_i)+eps));
-
-    float plusvis = psi<pi? 1.0 : 0.0;
-    float minusvis = psi>(wedge_angle-pi)? 1.0 : 0.0;
-
-    float D_par_prime = 0.0;  
-
-    denom = cos(alpha1) + cos(phi);
-    D_par_prime += -plusvis * sin(phi)/(denom + (denom>=0.0?eps:-eps));
-
-    denom = cos(alpha2) + cos(n*pi - phi);
-    D_par_prime += -minusvis * sin(n*pi - phi) / (denom + (denom>=0.0?eps:-eps));
-
-    float D_orth_prime = 0.0;
-
-    denom = cos(alpha1) + cos(phi);
-    D_orth_prime += -plusvis * sin(phi)/(denom + (denom>=0.0?eps:-eps));
-
-    denom = cos(alpha2) + cos(n*pi - phi);
-    D_orth_prime += -minusvis * sin(n*pi - phi) / (denom + (denom>=0.0?eps:-eps));
-
-    float D_parorth_prime = 0.0;
-
-    denom= cos(alpha1)+cos(phi);
-    D_parorth_prime += -plusvis * (Q*cos(phi)/(denom + (denom>=0.0?eps:-eps)) - cos(beta_i));
-
-    denom = cos(alpha2)+cos(n*pi-phi);
-    D_parorth_prime += +minusvis* (Q*cos(n*pi-phi)/(denom + (denom>=0.0?eps:-eps)) - cos(beta_i));
-
-    float D_par = D_e - D_par_prime;
-    float D_orth = D_m - D_orth_prime;
-    float D_parorth = D_em*sin(beta_i) - D_parorth_prime;
-
-    return vec3(D_par, D_orth, D_parorth);
-
-}
-
-vec2 calc_equiv_ecurr(float k, float beta_i, float beta_s, vec3 edge_tangent, vec4 e_in, vec4 h_in, vec3 coeffs) {
-    float d_par = 1.0;
-    float d_par_orth = 1.0; // these subs don't work
-
-    d_par = coeffs.x;
-    d_par_orth = coeffs.z;
-
-    float Z0 = 377;
-
-    
-    vec2 dotterm = vec2(edge_tangent.x * e_in.x + edge_tangent.y * e_in.z, edge_tangent.x*e_in.y+edge_tangent.y*e_in.w);
-
-    vec2 withtwoi = vec2(cmul(dotterm, vec2(0,2)));
-
-    float factor = d_par / (k * Z0 * sin(beta_i)*sin(beta_i));
-
-    vec2 withdparkzsin2betai = cmul(withtwoi, vec2(factor,0));
-
-    vec2 hdotterm = vec2(edge_tangent.x * h_in.x + edge_tangent.y * h_in.z, edge_tangent.x*h_in.y+edge_tangent.y*h_in.w);
-
-    vec2 hwithtwoi = vec2(cmul(hdotterm, vec2(0,2)));
-
-    float hfactor = d_par_orth / (k * sin(beta_i));
-
-    vec2 hwithdparkzsin2betai = cmul(hwithtwoi, vec2(hfactor,0));
-
-    vec2 equiv_ecurr = withdparkzsin2betai + hwithdparkzsin2betai;
-
-    //return vec2(1,1);
-    return equiv_ecurr;
-}
-
-vec2 calc_equiv_hcurr(float k, float beta_i, float beta_s, vec3 edge_tangent, vec4 e_in, vec4 h_in, vec3 coeffs) {
-    float d_orth = 1.0;
-
-    d_orth = coeffs.y;
-
-    float Z0 = 377;
-
-    vec2 hdotterm = vec2(edge_tangent.x * h_in.x + edge_tangent.y * h_in.z, edge_tangent.x*h_in.y+edge_tangent.y*h_in.w);
-
-    vec2 hwithtwoi = vec2(cmul(hdotterm, vec2(0,2)));
-
-    float hfactor = d_orth * Z0 / (k * sin(beta_i)*sin(beta_s));
-
-    vec2 hwithdparkzsin2betai = cmul(hwithtwoi, vec2(hfactor,0));
-
-    return hwithdparkzsin2betai;
-}
-
 vec2 get_psi_beta(vec3 face_normal, vec3 edge_tangent) {
     vec3 in_dir = vec3(0.0,0.0,1.0);
 
@@ -263,42 +104,6 @@ vec2 get_psi_beta(vec3 face_normal, vec3 edge_tangent) {
     float psi_s = psi_i;
 
     return vec2(psi_i, beta_i);
-}
-
-vec4 calc_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec4 e_in, float wedge_angle) {
-    float Z0 = 377.0;
-
-    vec2 tmp = get_psi_beta(face_normal, edge_tangent);
-
-    float psi_i = tmp.x;
-    float psi_s = psi_i;
-    float beta_i = tmp.y;
-    float beta_s = pi - beta_i;    
-
-    vec3 coeffs = calc_coeffs(wedge_angle, psi_i, beta_i, beta_s);
-    /*coeffs.z = min(coeffs.z, 1.0);*/
-    
-
-    vec4 h_in = vec4(cmul(vec2(-1.0/Z0,0), e_in.zw), cmul(vec2(1.0/Z0,0), e_in.xy));
-
-    vec2 ie = calc_equiv_ecurr(k, beta_i, beta_s, edge_tangent, e_in, h_in, coeffs);
-    vec2 ih = calc_equiv_hcurr(k, beta_i, beta_s, edge_tangent, e_in, h_in, coeffs);
-
-    vec3 scatter_dir = vec3(0,0,-1);
-    vec3 hdir = normalize(cross(scatter_dir, edge_tangent));
-    vec3 edir = normalize(cross(scatter_dir, hdir));
-    vec2 phdir = hdir.xy; // z component guaranteed to be zero
-    vec2 pedir = edir.xy;
-
-    // multiply ie by Z0 first
-    ie = cmul(ie, vec2(Z0,0));
-
-    vec4 equivfield = vec4(phdir.x * ih.x, phdir.x*ih.y, phdir.y*ih.x, phdir.y*ih.y)
-     + vec4(pedir.x*ie.x, pedir.x*ie.y, pedir.y*ie.x, pedir.y*ie.y);
-
-    //return vec4(ih,0,0);
-    //return vec4(coeffs.z,0,0,0);
-    return equivfield;
 }
 
 vec2 realv2_dot_complv2(vec2 real, vec4 comp) {
