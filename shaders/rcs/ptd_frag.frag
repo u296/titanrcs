@@ -193,6 +193,26 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     return scatterfield;
 }
 
+float undersampling_compensation_factor(float lambda, float pixellen, vec3 edge_tangent, vec3 toscreen) {
+    float costheta = abs(dot(normalize(edge_tangent), normalize(toscreen)));
+
+
+    // 1.0 is limit, Nyquist-Shannon. Lower to be safer.
+    float maxhalfwavelens = 0.9;
+
+    float sineshallow = pixellen / (0.5*lambda*maxhalfwavelens);
+
+    float cosshallow = sqrt(1.0 - pow(sineshallow,2));
+
+    // maybe want to have this higher, but ok for now
+    float transitionlen = 0.05;
+    float endrise = cosshallow + transitionlen;
+
+    float weightfactor = 1.0-smoothstep(cosshallow-transitionlen, cosshallow, costheta);
+
+    return weightfactor;
+}
+
 void main() {
 
     const float cropfraction = ubo.cropfraction_boxsize_disablestatus_linewidth.x;
@@ -201,11 +221,6 @@ void main() {
     const float linewidth = ubo.cropfraction_boxsize_disablestatus_linewidth.w;
 
     float wedge_angle = in_wedge_angle;
-    // + pi; // need this for some reason
-    
-
-    //out_prefouriertransform = cmul(reflfield, phasefactor);
-    //out_phasecolor = make_color(modphase);
 
     vec3 pos = in_pos;
     vec2 resolution = ubo.resolution_xy_L_lambda.xy;
@@ -214,6 +229,8 @@ void main() {
 
     vec3 edge_tangent = normalize(in_edge_tangent);
     vec3 face_normal = normalize(in_face_normal);
+
+    const float pixellen = (boxsize / resolution.x);
 
     const float k = 2.0*pi / lambda;
 
@@ -240,6 +257,7 @@ void main() {
     vec3 local_z = edge_tangent;
 
     vec3 indir = vec3(0.0,0.0,1.0);
+    vec3 toscreen = vec3(0.0,0.0,-1.0);
 
     float mval = 10; // 1 pixel can bear at most 10 pixels weight.
     // not too important to have this high, because if it's facing
@@ -248,9 +266,13 @@ void main() {
     float angle_factor = 1.0 / max(abs(edge_tangent.x),abs(edge_tangent.y));
     angle_factor = min(angle_factor,mval);
 
-    float dl = (boxsize/resolution.x) * angle_factor / linewidth;
+    float dl = pixellen * angle_factor / linewidth;
 
     vec4 E = calc_mitzner_scatterfield(k,edge_tangent,face_normal,infield_local,wedge_angle);
+
+    float undersample = undersampling_compensation_factor(lambda, pixellen, edge_tangent, toscreen);
+    E *= undersample;
+
     //calc_scatterfield(k, edge_tangent, face_normal, infield_local, wedge_angle);
     vec4 tmp = E;
 
@@ -275,12 +297,7 @@ void main() {
 
     vec4 col = vec4(1.0, 0.0, 0.0, 1.0);
 
-    float d = dot(face_normal, vec3(0.0,0.0,-1.0));
-    if (wedge_angle > pi && wedge_angle < 2*pi) {
-        col.g = 1;
-    } else if (wedge_angle > 0.5 * pi) {
-        col.b = 1;
-    }
+    col.g = undersample;
 
     //col.xyz = visualize_vec2(vec2(length(final.xy), length(final.zw)));
 
