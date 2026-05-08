@@ -138,7 +138,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     }
     vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_indices, 1, 0, 0, 0);
 
-    if (ctx->rcs_resources.mesh.n_sharp_indices != 0) {
+    if (ctx->rcs_resources.sharp_edge_mesh.n_sharp_indices != 0) {
         vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           ctx->rcs_resources.ptd_pipeline);
         {
@@ -150,10 +150,14 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                                pushblock);
         }
 
-        vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.mesh.sharpindexbuf.buf,
+        VkBuffer sharp_vbufs[] = {ctx->rcs_resources.sharp_edge_mesh.vertexbuf.buf};
+        VkDeviceSize sharp_vbuf_offsets[] = {0};
+
+        vkCmdBindVertexBuffers(cmdbuf, 0, 1, sharp_vbufs, sharp_vbuf_offsets);
+        vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.sharp_edge_mesh.sharpindexbuf.buf,
                              0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.mesh.n_sharp_indices, 1, 0,
+        vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.sharp_edge_mesh.n_sharp_indices, 1, 0,
                          0, 0);
     }
 

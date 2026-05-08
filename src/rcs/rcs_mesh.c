@@ -186,9 +186,9 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 wedge_angle = PI + acosf(d);
             }
 
-            
+            constexpr f32 sharpthresh = 30*DEG_TO_RAD;
 
-            if (wedge_angle > (PI + 30.0*DEG_TO_RAD)) {
+            if (wedge_angle > (PI + sharpthresh)) {
                 if (i_inds_insert >= 2 * 3 * n_tris) {
                     printf("mesh load: out of space for output inds");
                     abort();
@@ -260,7 +260,7 @@ void build_verts(float* raw_verts, u32 n_verts, Vec3* normals,
     }
 }
 
-bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
+bool make_rcs_mesh(const char* fname, RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
                    Buffer* ibuf, u32* n_indices, Buffer* sharp_ibuf,
                    u32* out_n_sharp_inds, CleanupStack* cs) {
 
@@ -270,9 +270,11 @@ bool make_rcs_mesh(RenderBackend* rb, VkCommandPool cpool, Buffer* vbuf,
     // VK_BUFFER_USAGE_INDEX_BUFFER_BIT, cpool, ibuf, cs);
 
     // NEEDS TO BE BINARY STL FILE, CAN'T USE RAW EXPORT FROM OPENVSP
-    FILE* fp = fopen("models/rcsmesh.stl", "r");
+    FILE* fp = fopen(fname, "r");
 
-    assert(fp != NULL);
+    if (fp == NULL) {
+        return true;
+    }
 
     char comment[80];
     float* vertdata;

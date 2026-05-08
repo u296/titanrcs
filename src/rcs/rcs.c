@@ -37,6 +37,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 
     VkSampler rcs_sampler;
     RcsRenderMesh rcs_mesh;
+    RcsRenderMesh rcs_sharp_mesh;
     RcsPerInflight rcs_inflights[N_MAX_INFLIGHT];
 
     VkFormat col_formats[3] = {VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -118,9 +119,22 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                            rcs_imgbuftransfer_pipeline_layout,
                            &rcs_buftoimg_pipeline, cs);
 
-    make_rcs_mesh(rb, cpool, &rcs_mesh.vertexbuf, &rcs_mesh.indexbuf,
-                  &rcs_mesh.n_indices, &rcs_mesh.sharpindexbuf,
-                  &rcs_mesh.n_sharp_indices, cs);
+    const char* rcsmeshfilename = "models/rcsmesh.stl";
+    if (make_rcs_mesh(rcsmeshfilename, rb, cpool, &rcs_mesh.vertexbuf,
+                      &rcs_mesh.indexbuf, &rcs_mesh.n_indices,
+                      &rcs_mesh.sharpindexbuf, &rcs_mesh.n_sharp_indices, cs)) {
+        printf("missing models/rcsmesh.stl");
+        return true;
+    }
+
+    const char* sharpfilename = "models/rcssharp.stl";
+    if (make_rcs_mesh(sharpfilename, rb, cpool, &rcs_sharp_mesh.vertexbuf,
+                      &rcs_sharp_mesh.indexbuf, &rcs_sharp_mesh.n_indices,
+                      &rcs_sharp_mesh.sharpindexbuf, &rcs_sharp_mesh.n_sharp_indices, cs)) {
+        printf("missing %s, using main mesh for building edges\n", sharpfilename);
+        
+        rcs_sharp_mesh = rcs_mesh;
+    }
 
     RcsResources res = {
         ext,
@@ -136,6 +150,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
         rcs_buftoimg_pipeline,
         rcs_sampler,
         rcs_mesh,
+        rcs_sharp_mesh,
         pathres,
     };
 

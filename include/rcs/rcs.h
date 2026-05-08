@@ -34,6 +34,7 @@ typedef struct RcsResources {
     VkPipeline buftoimg_pipeline;
     VkSampler sampler;
     RcsRenderMesh mesh;
+    RcsRenderMesh sharp_edge_mesh;
     PathingResources pathres;
     RcsPerInflight sets[N_MAX_INFLIGHT];
 } RcsResources;
