@@ -162,7 +162,10 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
     df2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     df2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
     df2.features.independentBlend = VK_TRUE;
+    df2.features.wideLines = VK_TRUE;
     df2.pNext = &vk13features;
+
+    //VkPhysicalDeviceFeatures df = {};
 
     VkDeviceCreateInfo dci = {};
     dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
