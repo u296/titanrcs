@@ -33,20 +33,22 @@ vec2 cmul(vec2 a, vec2 b) {
 }
 
 // 1.0 is limit, Nyquist-Shannon. Lower to be safer. A "random" value might help
-const float max_half_wavelens_per_pixel = 0.765;
+const float max_half_wavelens_per_pixel = 0.9;
 
 // might want to play with this
-const float undersampling_transition_len = 0.1;
+const float undersampling_transition_angle = 5.0*pi/180.0;
 
 float undersampling_compensation_factor_f(float lambda, float pixellen, vec3 surfnorm, vec3 toscreen) {
-    float costheta = dot(surfnorm, toscreen);
+    float cosnu = dot(normalize(surfnorm), normalize(toscreen));
 
-    float sineshallow = pixellen / (0.5*lambda*max_half_wavelens_per_pixel);
+    float nu = acos(cosnu);
 
-    // undecided on this, think it can be higher for PO than ILDC
-    float endrise = sineshallow + undersampling_transition_len;
+    float critang = atan(pixellen / (0.5*lambda*max_half_wavelens_per_pixel));
 
-    float weightfactor = smoothstep(sineshallow, endrise, costheta);
+    float weightfactor;
+
+
+    weightfactor = smoothstep(critang, critang+undersampling_transition_angle, pi/2-nu);
 
     return weightfactor;
 }
@@ -54,11 +56,11 @@ float undersampling_compensation_factor_f(float lambda, float pixellen, vec3 sur
 float undersampling_compensation_factor_t(float lambda, float pixellen, vec3 edge_tangent, vec3 toscreen) {
     float costheta = abs(dot(normalize(edge_tangent), normalize(toscreen)));
 
-    float sineshallow = pixellen / (0.5*lambda*max_half_wavelens_per_pixel);
+    float theta = acos(costheta);
 
-    float cosshallow = sqrt(1.0 - pow(sineshallow,2));
+    float critang = atan(pixellen / (0.5*lambda*max_half_wavelens_per_pixel));
 
-    float weightfactor = 1.0-smoothstep(cosshallow-undersampling_transition_len, cosshallow, costheta);
+    float weightfactor = smoothstep(critang, critang+undersampling_transition_angle,theta);
 
     return weightfactor;
 }
