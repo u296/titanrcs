@@ -153,8 +153,8 @@ void manualcontrol_set_from_path(ManualControlState* man,
     man->yaw = pars.rot.x;
     man->lambda = pars.lambda;
     man->pol_angle = pars.pol_angle;
-    man->PO_active = true;
-    man->ILDC_active = true;
+    man->PO_active = pars.PO_active;
+    man->ILDC_active = pars.ILDC_active;
 }
 
 typedef enum CompLoopStatus {
