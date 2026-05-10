@@ -12,7 +12,10 @@ constexpr u64 RCS_CROPFRACTION =
     4; // if ~2 or less, output will be bugged near the edges
 constexpr f32 RCS_RANGE = 1000000.0f;
 constexpr f32 RCS_BOXSIZE = 20.0f;
-constexpr f32 RCS_LINEWIDTH = (f32)(RCS_RESOLUTION/256ull >= 4? RCS_RESOLUTION/256ull : 4); // this seems decent for high res
+constexpr f32 RCS_LINEWIDTH = 1;//(f32)(RCS_RESOLUTION/256ull >= 4? RCS_RESOLUTION/256ull : 4); // this seems decent for high res
+/*
+Setting the linewidth too high will cause part of the line to get hidden behind the geometry, this needs to be taken into consideration.
+*/
 constexpr bool WANT_VALIDATION = true;
 constexpr bool BUILD_SHARP_EDGES = true;
 constexpr u32 N_MAX_INFLIGHT = 1;

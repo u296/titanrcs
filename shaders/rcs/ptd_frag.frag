@@ -190,7 +190,7 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
         scatterfield = vec4(0,0,0,0);
     }
 
-    //return vec4(length(d_orth)>0.8,0,0,0.0);
+    //return vec4(length(d_par)>0.74,0,0,0.0);
     return scatterfield;
 }
 
@@ -264,6 +264,9 @@ void main() {
 
     E.zw = cmul(E.zw, vec2(0,-1));
     E.xy = cmul(E.xy, vec2(0,-1));
+
+    //experimental: WRONG
+    //E *= (sqrt(sqrt(4/pi)));
 
     const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
 

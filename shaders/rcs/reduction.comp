@@ -18,9 +18,10 @@ void main() {
     fft_res *= pc.crop_fraction;
 
     float total_intens = 0.0;
-    vec4 total_field = vec4(0,0,0,0);
+    float total_ampl = 0.0;
 
     int squaresize = 2;
+
 
     for (int i = 0; i < squaresize; i++) {
         for (int j = 0; j < squaresize; j++) {
@@ -29,18 +30,23 @@ void main() {
             // this has units of [V m], and it's not the electric field E but instead
             // E * lambda * L
 
+            float intens = dot(val,val);
+            
+
             total_intens += dot(val,val);
-            total_field += val;
+            total_ampl += sqrt(intens);
             
         }
     }
+
+    
 
     //total_field = (squaresize*squaresize)*texelFetch(fft_img, center + ivec2(1-squaresize/2,1-squaresize/2), 0);
 
     float avg_intens = total_intens / (squaresize*squaresize);
     
-    vec4 avg_field = total_field / (squaresize*squaresize);
-    float avg_field_intens = dot(avg_field,avg_field);
+    float avg_field = total_ampl / (squaresize*squaresize);
+    float avg_field_intens = avg_field*avg_field;
 
     res.avg_sq_mag = avg_intens;
 }
