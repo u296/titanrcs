@@ -174,6 +174,7 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
 
     u32 i_inds_insert = 0;
     u32 n_weird_dotprods = 0;
+    f32 sum_sharp_wedgeangles = 0.0f;
 
     for (u32 i = 0; i < i_edge_insert - 1; i++) {
         if (edge_records[i].v1 == edge_records[i + 1].v1 &&
@@ -261,6 +262,8 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                     addnorm = norm2;
                 }
 
+                sum_sharp_wedgeangles += wedge_angle;
+
                 out_face_normals[edge_records[i].v1] =
                     muls_v3(wedge_angle, addnorm);
                 out_face_normals[edge_records[i].v2] =
@@ -268,6 +271,10 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
             }
         }
     }
+
+    f32 avg_wedgeangle = sum_sharp_wedgeangles / ((f32)i_inds_insert/2.0f);
+
+    printf("average wedge angle: %f = %f deg\n", avg_wedgeangle, RAD_TO_DEG*avg_wedgeangle);
 
     for (u32 i = 0; i < n_verts; i++) {
         if (len_v3(out_edge_tangents[i]) < 1e-12f) {

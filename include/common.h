@@ -22,6 +22,7 @@ typedef uintptr_t usize;
 
 constexpr f32 PI = 3.1415926535f;
 constexpr f32 DEG_TO_RAD = 0.01745329251f;
+constexpr f32 RAD_TO_DEG = 180.0f / PI;
 
 #define CLAMP(a, min, max) (a < min ? min : (a > max ? max : a))
 
