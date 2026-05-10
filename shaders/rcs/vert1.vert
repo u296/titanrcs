@@ -50,7 +50,7 @@ void main() {
     vec3 norm = normalize(normtrans * in_norm);
     vec3 edge_tangent = normalize(normtrans * in_edge_tangent);
     float wedgeangle = length(in_face_normal);
-    vec3 face_normal = normalize(normtrans * in_face_normal);
+    vec3 face_normal = normalize(normtrans * normalize(in_face_normal));
 
     
     out_pos = mat3(ubo.model) * in_pos;

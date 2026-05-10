@@ -82,8 +82,7 @@ vec3 calc_mitzner(float wedge_angle, float psi, float beta_i) {
     if (isnan(d_cross)) {
         d_cross = 0.0;
     }
-    //d_orth = 0; // remove before use
-    //d_par = 0;
+    
     d_cross = sign(d_cross)*min(abs(d_cross),7.0); // idgaf
     d_orth = sign(d_orth)*min(abs(d_orth),1.0);
     d_par = sign(d_par)*min(abs(d_par),1.0);
@@ -97,8 +96,12 @@ vec2 get_psi_beta(vec3 face_normal, vec3 edge_tangent) {
 
     vec3 face_tangent = normalize(cross(face_normal, edge_tangent)); // this should be in along the face
 
+    vec3 minus_in_dir = -in_dir; // for some stupid reason this flips the order of d_orth and d_par, might have to do with face_tangent
+    // if we do the in dir then the ray ends up inside the wedge, not good
+
+
     // -in_dir because yeah polar coords
-    vec3 indir_locbasis = vec3(dot(-in_dir, face_tangent), dot(-in_dir, normalize(face_normal)), dot(-in_dir, normalize(edge_tangent)));
+    vec3 indir_locbasis = vec3(dot(minus_in_dir, face_tangent), dot(minus_in_dir, normalize(face_normal)), dot(minus_in_dir, normalize(edge_tangent)));
 
     float beta_i = mod(acos(indir_locbasis.z), twopi);
     float beta_s = pi - beta_i;
@@ -121,7 +124,6 @@ vec4 realv2_times_compl(vec2 realdir, vec2 compvalue) {
 }
 
 vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec4 e_in, float wedge_angle) {
-
 
     vec2 tmp0 = get_psi_beta(face_normal, edge_tangent);
 
@@ -188,9 +190,7 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
         scatterfield = vec4(0,0,0,0);
     }
 
-    //e_orth_in.y = 0;
-    //edge_tangent.x=0;
-    //return vec4(abs(d_cross),0,0,0);
+    //return vec4(length(d_orth)>0.8,0,0,0.0);
     return scatterfield;
 }
 
@@ -251,11 +251,12 @@ void main() {
 
     vec4 E = calc_mitzner_scatterfield(k,edge_tangent,face_normal,infield_local,wedge_angle);
 
+    vec4 tmp = E;
+
     float undersample = undersampling_compensation_factor_t(lambda, pixellen, edge_tangent, toscreen);
     E *= undersample;
 
     //calc_scatterfield(k, edge_tangent, face_normal, infield_local, wedge_angle);
-    vec4 tmp = E;
 
     // divide by jk
 
@@ -269,6 +270,8 @@ void main() {
     const vec2 shiftfactor = vec2(cos(shiftingphase), sin(shiftingphase));
 
     vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,E.xy)),cmul(phasefactor,cmul(shiftfactor,E.zw))) * dl;
+
+    //final = tmp;
 
     if (ILDC_disable) {
        final = vec4(0,0,0,0);

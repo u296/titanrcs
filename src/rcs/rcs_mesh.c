@@ -125,6 +125,11 @@ void add_v3_aligned(Vec3* target, Vec3 add) {
     }
 }
 
+Vec3 get_vertex(const f32* raw_verts, u32 i_vertex) {
+    return (Vec3){raw_verts[3 * i_vertex], raw_verts[3 * i_vertex + 1],
+                  raw_verts[3 * i_vertex + 2]};
+}
+
 u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                       const f32* raw_verts, const Vec3* triangle_normals,
                       u32** out_inds, Vec3* out_edge_tangents,
@@ -237,10 +242,29 @@ u32 build_sharp_edges(const u32 n_tris, const u32* triangles, u32 n_verts,
                 add_v3_aligned(&out_edge_tangents[edge_records[i].v1], edgetan);
                 add_v3_aligned(&out_edge_tangents[edge_records[i].v2], edgetan);
 
+                Vec3 addnorm; // Need to ensure that facenorm x edgetangent
+                              // points in towards the face
+
+                Vec3 edgecenter = muls_v3(
+                    0.5, add_v3(get_vertex(raw_verts, edge_records[i].v1),
+                                get_vertex(raw_verts, edge_records[i].v2)));
+
+                Vec3 along_tri1 = normalize_v3(add_v3(tricenter1, muls_v3(-1.0, edgecenter)));
+                
+                Vec3 face1tan = cross_v3(norm1, edgetan);
+
+                bool facetan_along_face1 = dot_v3(face1tan, along_tri1) > 0.0;
+
+                if (facetan_along_face1) {
+                    addnorm = norm1;
+                } else {
+                    addnorm = norm2;
+                }
+
                 out_face_normals[edge_records[i].v1] =
-                    muls_v3(wedge_angle, norm1);
+                    muls_v3(wedge_angle, addnorm);
                 out_face_normals[edge_records[i].v2] =
-                    muls_v3(wedge_angle, norm1);
+                    muls_v3(wedge_angle, addnorm);
             }
         }
     }
