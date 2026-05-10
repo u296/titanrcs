@@ -30,29 +30,63 @@ vec3 calc_mitzner(float wedge_angle, float psi, float beta_i) {
     //wedge_angle = 2*wedge_angle;
     
 
-    bool withinlims = !(psi<limit || psi>(wedge_angle-limit));
+    
 
-    if (withinlims) {
-        float term1 = cot(psi) / (1.0 - tan(0.5*pi/n)*cot((pi-psi)/n));
-        float term2 = cot(psi - pi*n) / (1.0 + tan(0.5*pi/n)*cot(pi - (pi+psi)/n));
+    
+    float term1 = cot(psi) / (1.0 - tan(0.5*pi/n)*cot((pi-psi)/n));
+    float term2 = cot(psi - pi*n) / (1.0 + tan(0.5*pi/n)*cot(pi - (pi+psi)/n));
 
-        d_cross = (2.0*cos(beta_i) / (n*sin(pi/n)))*(term1 + term2);
+    d_cross = (2.0*cos(beta_i) / (n*sin(pi/n)))*(term1 + term2);
 
-        /*
-        Apply sin^2 fading here, this leaves the center untouched causes a bulb like
-        behavior and fades the ends to 0. Fading to 0 is physically correct since the
-        electric field near the surface must be 0. This approach causes the maximum
-        in d_parorth to become about half of the other constants, maximum 0.5 across all
-        domains, which lines up with the expectation of the fact that a straight edge
-        can't be expected to perfectly cross-polarize light.
-        */
-        d_cross *= pow(sin(psi/n),2);
+    /*
+    Apply sin^2 fading here, this leaves the center untouched causes a bulb like
+    behavior and fades the ends to 0. Fading to 0 is physically correct since the
+    electric field near the surface must be 0. This approach causes the maximum
+    in d_parorth to become about half of the other constants, maximum 0.5 across all
+    domains, which lines up with the expectation of the fact that a straight edge
+    can't be expected to perfectly cross-polarize light.
+    */
+    float fade = pow(sin(psi/n),2);
+
+    fade = exp(-1.0/(100*fade));
+
+    /*
+    It's not reasonable to clamp this value too much fuuuuuck. It must go to
+    zero but it can certainly be somewhat large, energy conservation isn't a real
+    thing here because these formulas are only for the backscatter case and so
+    we can't really say anything about the power that goes in other directions, 
+    only the back cone. At least a saving grace is that we'll never see the main
+    lobe of this due to the cos beta term, but we might indeed see very powerful
+    side lobes. Also since it's so sharp we need to worry about undersampling.
+    */
+
+    float b = 0.227; // maximum ~10
+    fade = smoothstep(0,b,psi) * (1.0 - smoothstep(wedge_angle-b,wedge_angle,psi));
+
+    // adaptive smooth to limit second derivative and prevent undersampling issues.
+    // caps constant at 7
+
+    b = 1.5 * (0.048 + 0.186*sqrt(cos(beta_i)));
+    fade = smoothstep(0,b,psi) * (1.0 - smoothstep(wedge_angle-b,wedge_angle,psi));
+
+    d_cross *= fade;
 
 
-        //d_cross = 1.0;
-    } else {
+    
+    if (isnan(d_par)) {
+        d_par = 0.0;
+    }
+    if (isnan(d_orth)) {
+        d_orth = 0.0;
+    }
+    if (isnan(d_cross)) {
         d_cross = 0.0;
     }
+    //d_orth = 0; // remove before use
+    //d_par = 0;
+    d_cross = sign(d_cross)*min(abs(d_cross),7.0); // idgaf
+    d_orth = sign(d_orth)*min(abs(d_orth),1.0);
+    d_par = sign(d_par)*min(abs(d_par),1.0);
 
     vec3 vals = vec3(d_par, d_orth, d_cross);
     return vals;
@@ -140,9 +174,7 @@ vec4 calc_mitzner_scatterfield(float k, vec3 edge_tangent, vec3 face_normal, vec
     //d_cross = 0.0;
     //d_orth = 0.0;
     //d_par = 0.0;
-    d_cross = sign(d_cross)*min(abs(d_cross),2);
-    d_orth = sign(d_orth)*min(abs(d_orth),2);
-    d_par = sign(d_par)*min(abs(d_par),2);
+    
 
     vec2 out_par = E_par * d_par + E_orth * d_cross;
     vec2 out_orth = E_orth * d_orth;
