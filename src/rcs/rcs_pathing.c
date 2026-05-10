@@ -195,6 +195,16 @@ void try_assign_float(f32* dst, PyObject* val) {
     }
 }
 
+void try_assign_bool(bool* dst, PyObject* val) {
+    u32 res = PyObject_IsTrue(val);
+
+    if (res == -1) {
+        printf("value failed to be interpreted as bool! ignoring\n");
+    } else {
+        *dst = res;
+    }
+}
+
 // params is array of
 /*
 scale xyz
@@ -327,6 +337,8 @@ void get_path_params(PathingResources* pres, Path* p,
     f32 p_scalez = 1.0f;
     f32 p_lambda = 15e-2f;
     f32 p_pol_angle = 0.0f;
+    bool po_enable = true;
+    bool ildc_enable = true;
 
     {
         PyObject* args = PyTuple_Pack(1, p->pypath);
@@ -377,6 +389,12 @@ void get_path_params(PathingResources* pres, Path* p,
                     } else if (PyUnicode_CompareWithASCIIString(
                                    key, "pol_angle") == 0) {
                         try_assign_float(&p_pol_angle, val);
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "po_enable") == 0) {
+                        try_assign_bool(&po_enable, val);
+                    } else if (PyUnicode_CompareWithASCIIString(
+                                   key, "ildc_enable") == 0) {
+                        try_assign_bool(&ildc_enable, val);
                     }
                 } else {
                     printf("non-string key in dict returned from "
@@ -394,8 +412,8 @@ void get_path_params(PathingResources* pres, Path* p,
                             {p_rotx, p_roty, p_rotz},
                             p_lambda,
                             p_pol_angle,
-                            true,
-                            true};
+                            po_enable,
+                            ildc_enable};
 
     *out_params = built;
 }
