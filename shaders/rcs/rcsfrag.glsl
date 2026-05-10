@@ -33,7 +33,7 @@ vec2 cmul(vec2 a, vec2 b) {
 }
 
 // 1.0 is limit, Nyquist-Shannon. Lower to be safer. A "random" value might help
-const float max_half_wavelens_per_pixel = 0.9; // could maybe compensate for 45 degree lines too by introducing some sqrt2 shit
+const float max_half_wavelens_per_pixel = 0.711; // could maybe compensate for 45 degree lines too by introducing some sqrt2 shit
 
 // might want to play with this
 const float undersampling_transition_angle = 5.0*pi/180.0;
