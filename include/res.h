@@ -22,6 +22,9 @@ They gave the same RCS, although 1 had a lot of bullshit in the far field. 32
 started to lag behind a little on the big peaks, but other than that they're
 identical, even down to the noise they get. Just be sure to keep the ribbon
 smaller than the wavelength.
+
+Low linewidths looks really scary because shit flies across the screen all of the
+time but I checked again, it doesn't affect the output
 */
 constexpr bool WANT_VALIDATION = true;
 constexpr bool BUILD_SHARP_EDGES = true;
