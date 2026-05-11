@@ -11,6 +11,7 @@
 #include "res.h"
 #include <Python.h>
 #include <assert.h>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -327,11 +328,83 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
     return COMP_COMPLETE;
 }
 
+void try_assign_bool(bool* a, PyObject* val);
+
+bool openwritingfile(PathingResources* res, FILE** out_fp) {
+
+    bool overwrite = true;
+    constexpr u32 MAX_FNAME_SIZE =128;
+    char fname[MAX_FNAME_SIZE] = "computepass.csv"; // should be enough
+
+    PyObject* vals_dict =
+        PyObject_CallObject(res->pypath_datawritesettings, NULL);
+
+    if (vals_dict && PyDict_Check(vals_dict)) {
+
+        PyObject *key, *val;
+        Py_ssize_t i = 0;
+
+        while (PyDict_Next(vals_dict, &i, &key, &val)) {
+            if (PyUnicode_Check(key)) {
+                // here it's guaranteed to be a string
+
+                if (PyUnicode_CompareWithASCIIString(key, "filename") == 0) {
+                    PyObject* str = PyObject_Str(val);
+
+                    if (str != NULL) {
+                        const char* c_str = PyUnicode_AsUTF8(str);
+
+                        strncpy(fname, c_str, MAX_FNAME_SIZE);
+                        fname[MAX_FNAME_SIZE-1] = 0;
+                    } else {
+                        printf(
+                            "openwritingfile: filename key value couldn't be turned into "
+                            "string!\n");
+                    }
+                    Py_XDECREF(str);
+                } else if (PyUnicode_CompareWithASCIIString(key, "overwrite") ==
+                           0) {
+                    try_assign_bool(&overwrite, val);
+                }
+            } else {
+                printf("non-string key in dict returned from "
+                       "path_get_params! ignoring\n");
+            }
+        }
+    } else {
+        printf("path_get_params didn't return a dictionary! ignoring\n");
+    }
+    Py_XDECREF(vals_dict);
+
+    const char* openmode = NULL;
+
+    if (overwrite) {
+        openmode = "w";
+    } else {
+        openmode = "wx";
+    }
+
+    *out_fp = fopen(fname, openmode);
+
+    if (*out_fp == NULL) {
+        if (overwrite) {
+            printf("opening %s failed but overwrite is enabled!\n", fname);
+        } else {
+            printf("opening %s failed, probably due to overwrite being disabled\n",fname);
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void run_visual_computepass(RenderContext* ctx, CleanupStack* swp_cs) {
 
     FILE* outputfile = NULL;
 
-    outputfile = fopen("computepass.csv", "w");
+    if (openwritingfile(&ctx->rcs_resources.pathres, &outputfile)) {
+        return; // failed
+    }
 
     // fprintf(outputfile, "hello\n");
 

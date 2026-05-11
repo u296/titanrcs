@@ -39,16 +39,23 @@ void make_rcs_pathingresources(PathingResources* out_pathing,
     PyObject* pmodule = PyImport_Import(pname);
     Py_XDECREF(pname);
 
-    constexpr u32 N_FUNCS = 6;
+    constexpr u32 N_FUNCS = 7;
 
-    const char* loadfuncs[N_FUNCS] = {"path_init",        "path_advance",
-                                      "path_is_complete", "path_get_colnames",
-                                      "path_get_colvals", "path_get_params"};
+    const char* loadfuncs[N_FUNCS] = {"path_init",
+                                      "path_advance",
+                                      "path_is_complete",
+                                      "path_get_colnames",
+                                      "path_get_colvals",
+                                      "path_get_params",
+                                      "path_datawrite_settings"};
 
-    PyObject** outputlocs[N_FUNCS] = {
-        &out_pathing->pypath_init,        &out_pathing->pypath_advance,
-        &out_pathing->pypath_is_complete, &out_pathing->pypath_get_colnames,
-        &out_pathing->pypath_get_colvals, &out_pathing->pypath_get_params};
+    PyObject** outputlocs[N_FUNCS] = {&out_pathing->pypath_init,
+                                      &out_pathing->pypath_advance,
+                                      &out_pathing->pypath_is_complete,
+                                      &out_pathing->pypath_get_colnames,
+                                      &out_pathing->pypath_get_colvals,
+                                      &out_pathing->pypath_get_params,
+                                      &out_pathing->pypath_datawritesettings};
 
     if (pmodule != NULL) {
         for (u32 i = 0; i < N_FUNCS; i++) {
@@ -299,8 +306,8 @@ void raw_write_rcsubo(void* mapping, PathParameters params) {
         printf("PO OFF\n");
     }
 
-    ubo.cropfraction_boxsize_disablestatus_linewidth =
-        (Vec4){(f32)RCS_CROPFRACTION, RCS_BOXSIZE, disablestatus, RCS_LINEWIDTH};
+    ubo.cropfraction_boxsize_disablestatus_linewidth = (Vec4){
+        (f32)RCS_CROPFRACTION, RCS_BOXSIZE, disablestatus, RCS_LINEWIDTH};
 
     // THIS NEEDS TO HAVE LENGTH 1
     ubo.infield =

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <Python.h>
 
-#include "linalg.h";
+#include "linalg.h"
 //typedef struct PyObject PyObject;
 
 typedef struct PathingResources {
@@ -16,6 +16,7 @@ typedef struct PathingResources {
     PyObject* pypath_get_params;
     PyObject* pypath_get_colnames;
     PyObject* pypath_get_colvals;
+    PyObject* pypath_datawritesettings;
 
 } PathingResources;
 
