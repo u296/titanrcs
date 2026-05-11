@@ -215,21 +215,7 @@ void main() {
 
     const float k = 2.0*pi / lambda;
 
-    vec2 sq = pos.xy * pos.xy;
-
-    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
-    
-    const float modphase = moddist * k;
-
-    const vec2 phasefactor = vec2(cos(modphase), sin(modphase));// phase factor to multiply before sending to fft
-
-    vec4 infield_local = ubo.infield;
-    //vec4(0.0, 0.0, 1.0, 0.0); // need to propagate this forward to the correct Z
-
-    vec2 forwardphase = vec2(cos(k*pos.z), sin(k*pos.z)); 
-
-    infield_local.xy = cmul(infield_local.xy, forwardphase);
-    infield_local.zw = cmul(infield_local.zw, forwardphase);
+    vec4 infield_local = calc_local_infield(lambda,pos.z,ubo.infield);
 
     vec3 face_cotangent = cross(face_normal, edge_tangent);
 
@@ -265,14 +251,10 @@ void main() {
     E.zw = cmul(E.zw, vec2(0,-1));
     E.xy = cmul(E.xy, vec2(0,-1));
 
-    //experimental: WRONG
-    //E *= (sqrt(sqrt(4/pi)));
 
-    const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
+    vec4 final = fftshift_value(cropfraction, calc_prefft_value(lambda, L, pos, E)) * dl;
 
-    const vec2 shiftfactor = vec2(cos(shiftingphase), sin(shiftingphase));
-
-    vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,E.xy)),cmul(phasefactor,cmul(shiftfactor,E.zw))) * dl;
+    //vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,E.xy)),cmul(phasefactor,cmul(shiftfactor,E.zw))) * dl;
 
     //final = tmp;
 

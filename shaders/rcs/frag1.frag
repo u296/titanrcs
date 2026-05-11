@@ -40,45 +40,26 @@ void main() {
     it's better to clamp it to zero so it doesn't leak power to the front.
     */
 
+    vec4 loc_infield = calc_local_infield(lambda, pos.z, infield);
 
 
-    vec4 reflfield = infield*undersampling_compensation_factor_f(lambda,pixellen,norm,toscreen);// [V/m]
+    vec4 reflfield = loc_infield*undersampling_compensation_factor_f(lambda,pixellen,norm,toscreen);// [V/m]
 
     const float refl_intens = length(reflfield) * length(reflfield) * refl_fac(dot(normalize(norm),toscreen));
 
-    const float k = 2.0*pi / lambda; // [1/m]
-
-    vec2 sq = pos.xy * pos.xy;
-
-    const float moddist = 2.0*pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z))); // [m]
     
-    const float modphase = moddist * k; // [1]
-    // modphase should actually have a - sign tacked on, and the FFT
-    // should be an inverse FFT to strictly follow the math. But,
-    // this is how it was initially setup, using a forward FFT with
-    // a + sign here yields the exact same output values in theory, 
-    // except that they get conjugated relative to what they should be.
-    // this doesn't matter though since we're only looking at power
-
-    const float showphase = 2*pos.z*k;
-
-    const vec2 phasefactor = vec2(cos(modphase), sin(modphase)); // [1]
-
-    const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction; // [1]
-
-    const vec2 shiftfactor = vec2(cos(shiftingphase), sin(shiftingphase));
+    
 
     float dA = pow(boxsize/resolution.x,2);
 
-    vec4 realthing = vec4(cmul(cmul(reflfield.xy, phasefactor), shiftfactor),
-      cmul(cmul(reflfield.zw, phasefactor), shiftfactor)); // V/m
+    vec4 realthing = fftshift_value(cropfraction, calc_prefft_value(lambda, L, pos, reflfield)); // V/m
 
     if (PO_disable) {
         realthing = vec4(0,0,0,0);
     }
 
     out_prefouriertransform = realthing * dA;
-    out_phasecolor = make_color(modphase);
+    out_phasecolor = make_color(calc_modphase(lambda, L, pos));
     out_intenscolor = vec4(refl_intens, refl_intens, refl_intens, 1.0);
 
 

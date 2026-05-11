@@ -64,3 +64,58 @@ float undersampling_compensation_factor_t(float lambda, float pixellen, vec3 edg
 
     return weightfactor;
 }
+
+vec4 calc_local_infield(float lambda, float z, vec4 infield) {
+    float forwardphase = (twopi / lambda) * z;
+
+    vec2 phasefactor = vec2(cos(forwardphase), sin(forwardphase));
+
+    vec4 locfield = vec4(cmul(infield.xy, phasefactor), cmul(infield.zw, phasefactor));
+
+    return locfield;
+}
+
+float calc_modphase(float lambda, float L, vec3 pos) {
+    vec2 sq = pos.xy * pos.xy;
+
+    const float moddist = 2*pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
+    
+    const float modphase = moddist * (twopi/lambda);
+    // just need this for visualization
+
+    return modphase;
+}
+
+vec4 calc_prefft_value(float lambda, float L, vec3 pos, vec4 emitted_efield) {
+     vec2 sq = pos.xy * pos.xy;
+
+    const float moddist = pos.z + ((sq.x + sq.y) / (2.0*(L+pos.z)));
+    
+    const float modphase = moddist * (twopi/lambda);
+
+    /*
+    modphase should actually have a - sign tacked on, and the FFT
+    should be an inverse FFT to strictly follow the math. But,
+    this is how it was initially setup, using a forward FFT with
+    a + sign here yields the exact same output values in theory, 
+    except that they get conjugated relative to what they should be.
+    this doesn't matter though since we're only looking at power
+    */
+
+    const vec2 phasefactor = vec2(cos(modphase), sin(modphase));
+
+    vec4 modified = vec4(cmul(emitted_efield.xy, phasefactor), cmul(emitted_efield.zw, phasefactor));
+
+    return modified;
+}
+
+vec4 fftshift_value(float cropfraction, vec4 invalue) {
+
+    const float shiftingphase = pi * (gl_FragCoord.x + gl_FragCoord.y) / cropfraction;
+
+    const vec2 shiftfactor = vec2(cos(shiftingphase), sin(shiftingphase));
+
+    vec4 o = vec4(cmul(invalue.xy, shiftfactor), cmul(invalue.zw, shiftfactor));
+
+    return o;
+}
