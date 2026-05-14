@@ -38,3 +38,11 @@ psi = phi - (pi - 0.5alpha) = phi - pi*(1 - n/2)
 phi = psi + pi*(1 - 0.5n)
 
 Find way of excluding concave angles
+
+
+Formalize thick lines or look into Bresenham, verify against analytical
+
+Fix geometry and edge extension in vertex shader. Cleaner geometry could probably
+fix.
+
+
