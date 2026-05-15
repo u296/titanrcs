@@ -1,7 +1,8 @@
 #version 450
 
 layout(set=0, binding=0) uniform sampler2D fft_img;
-
+//layout(set=0, binding = 0, rgba32f) uniform readonly image2D fft_img;
+// want to do this to unify the descriptor set layout between sum and fft mode but needs work
 layout(set=0, binding=1) buffer Results {
     float avg_sq_mag;
 } res;

@@ -3,13 +3,21 @@
 
 #include "common.h"
 
+//#define TR_CALCMODE_FFT
+#define TR_CALCMODE_SUM
+
 #ifdef __APPLE__
 constexpr u64 RCS_RESOLUTION = 4096ull;
 #else
 constexpr u64 RCS_RESOLUTION = 8192ull;
 #endif
+#ifdef TR_CALCMODE_FFT
 constexpr u64 RCS_CROPFRACTION =
     4; // if ~2 or less, output will be bugged near the edges
+#endif
+#ifdef TR_CALCMODE_SUM
+constexpr u64 RCS_CROPFRACTION  = 1;
+#endif
 constexpr f32 RCS_RANGE = 1000000.0f;
 constexpr f32 RCS_BOXSIZE = 20.0f;
 constexpr f32 RCS_LINEWIDTH = 4;
@@ -31,5 +39,8 @@ constexpr bool BUILD_SHARP_EDGES = true;
 constexpr u32 N_MAX_INFLIGHT = 1;
 constexpr u32 FFT_IMG_TEXELSIZE =
     sizeof(float) * 4; // fft image is R32G32B32A32_SFLOAT
+
+
+
 
 #endif

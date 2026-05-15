@@ -1,6 +1,11 @@
-glslc frag1.frag -o frag.spv -O &&\
-glslc vert1.vert -o vert.spv -O &&\
-glslc reduction.comp -o reduction.spv -O &&\
-glslc ptd_frag.frag -o ptd_frag.spv -O &&\
-glslc imgtobuf.comp -o imgtobuf.spv -O &&\
-glslc buftoimg.comp -o buftoimg.spv -O
+
+glslc rcsvert.vert -o rcsvert.spv -O
+glslc po.frag -o po.spv -O
+glslc ildc.frag -o ildc.spv -O
+
+glslc fft/imgtobuf.comp -o fft/imgtobuf.spv -O
+glslc fft/buftoimg.comp -o fft/buftoimg.spv -O
+glslc fft/reduction.comp -o fft/reduction.spv -O 
+
+glslc sum/downscalesum.comp -o sum/downscalesum.spv --target-env=vulkan1.4
+glslc sum/reduction.comp -o sum/reduction.spv --target-env=vulkan1.4

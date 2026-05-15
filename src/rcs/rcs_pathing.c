@@ -241,8 +241,14 @@ void raw_write_rcsubo(void* mapping, PathParameters params) {
     ubo.view = ident4;
     ubo.proj = ident4;
     ubo.norm_trans = ident4;
-    ubo.resolution_xy_L_lambda =
-        (Vec4){RCS_RESOLUTION, RCS_RESOLUTION, RCS_RANGE, p_lambda};
+    ubo.resolution_x_fftshiftyesno_L_lambda = (Vec4){RCS_RESOLUTION,
+#ifdef TR_CALCMODE_FFT
+                                                     1.0,
+#endif
+#ifdef TR_CALCMODE_SUM
+                                                     0.0,
+#endif
+                                                     RCS_RANGE, p_lambda};
 
     Mat4 scale = ident4;
 

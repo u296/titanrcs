@@ -9,8 +9,10 @@ typedef struct RcsUbo {
     Mat4 view;
     Mat4 proj;
     Mat4 norm_trans;
-    Vec4 resolution_xy_L_lambda;
-    Vec4 cropfraction_boxsize_disablestatus_linewidth; // disable status: 0.0 all on, 1.0 po disable -1.0 ildc disable
+    Vec4 resolution_x_fftshiftyesno_L_lambda;
+    Vec4 cropfraction_boxsize_disablestatus_linewidth; // disable status: 0.0
+                                                       // all on, 1.0 po disable
+                                                       // -1.0 ildc disable
     Vec4 infield;
 } RcsUbo;
 
@@ -23,8 +25,15 @@ bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs);
 bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
                       CleanupStack* cs);
 
-bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
-                     CleanupStack* cs);
+bool make_rcs_finalimg_fft(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
+                           CleanupStack* cs);
+
+bool make_rcs_finalimg_sum(RenderBackend* rb, VkExtent2D ext,
+                           Image* out_finalimg, CleanupStack* cs);
+
+bool make_rcs_intermediate_sum_img(RenderBackend* rb, VkExtent2D ext,
+                                   Image* out_intermediate_sum_img,
+                                   CleanupStack* cs);
 
 bool make_rcs_extrbuf(RenderBackend* rb, Buffer* rcs_extrbuf, CleanupStack* cs);
 

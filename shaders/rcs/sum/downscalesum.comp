@@ -1,0 +1,41 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set=0, binding = 0, rgba32f) uniform readonly image2D in_img;
+
+layout(set=0, binding = 1, rgba32f) uniform writeonly image2D out_img;
+
+
+// This could fail on other hardware unless overridden by the host
+// but since the RX 5700XT has subgroup size 32 we get (16x16)/32=8 
+// subgroups per workgroup
+layout(constant_id = 0) const uint MAX_SUBGROUPS_PER_WORKGROUP = 8;
+
+shared vec4 subgroup_sums[MAX_SUBGROUPS_PER_WORKGROUP];
+
+void main() {
+    const ivec2 in_uv = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 out_uv = ivec2(gl_WorkGroupID.xy);
+
+    vec4 val = imageLoad(in_img, in_uv);
+
+    vec4 subgroup_sum = subgroupAdd(val);
+
+    if (subgroupElect()) {
+        subgroup_sums[gl_SubgroupID] = subgroup_sum;
+    }
+
+    barrier();
+
+    if (gl_LocalInvocationIndex == 0) {
+        vec4 totalsum = vec4(0,0,0,0);
+        for (int i = 0; i < int(gl_NumSubgroups); i++) {
+            totalsum += subgroup_sums[i];
+        }
+
+        imageStore(out_img, out_uv, totalsum);
+    }
+
+}

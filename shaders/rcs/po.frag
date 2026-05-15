@@ -17,9 +17,10 @@ float refl_fac(float cosx) {
 void main() {
     const vec3 norm = normalize(in_norm);
     const vec3 pos = in_pos;
-    const vec2 resolution = ubo.resolution_xy_L_lambda.xy;
-    const float L = ubo.resolution_xy_L_lambda.z;
-    const float lambda = ubo.resolution_xy_L_lambda.w;
+    const vec2 resolution = vec2(ubo.resolution_x_fftshiftyesno_L_lambda.x, ubo.resolution_x_fftshiftyesno_L_lambda.x);
+    const bool do_fftshift = ubo.resolution_x_fftshiftyesno_L_lambda.y > 0.5;
+    const float L = ubo.resolution_x_fftshiftyesno_L_lambda.z;
+    const float lambda = ubo.resolution_x_fftshiftyesno_L_lambda.w;
     const float cropfraction = ubo.cropfraction_boxsize_disablestatus_linewidth.x;
     const float boxsize = ubo.cropfraction_boxsize_disablestatus_linewidth.y;
     const bool PO_disable = ubo.cropfraction_boxsize_disablestatus_linewidth.z > 0.5;
@@ -52,11 +53,17 @@ void main() {
 
     float dA = pow(boxsize/resolution.x,2);
 
-    vec4 realthing = fftshift_value(cropfraction, calc_prefft_value(lambda, L, pos, reflfield)); // V/m
+    vec4 realthing = calc_prefft_value(lambda, L, pos, reflfield);
+
+    if (do_fftshift) {
+        realthing = fftshift_value(cropfraction, realthing);
+    }
 
     if (PO_disable) {
         realthing = vec4(0,0,0,0);
     }
+
+    //realthing = vec4(1,1,1,1);
 
     out_prefouriertransform = realthing * dA;
     out_phasecolor = make_color(calc_modphase(lambda, L, pos));

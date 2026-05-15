@@ -40,11 +40,11 @@ bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
                        VkFormat* depth_format, VkPipelineLayout pipeline_layout,
                        VkPipeline* pipeline, CleanupStack* cs);
 
-bool make_rcs_reduction_pipeline(RenderBackend* rb,
-                                 VkDescriptorSetLayout desc_layout,
-                                 VkPipelineLayout* out_red_pipeline_layout,
-                                 VkPipeline* out_red_pipeline,
-                                 CleanupStack* cs);
+bool make_rcs_reduction_pipeline_fft(RenderBackend* rb,
+                                     VkDescriptorSetLayout desc_layout,
+                                     VkPipelineLayout* out_red_pipeline_layout,
+                                     VkPipeline* out_red_pipeline,
+                                     CleanupStack* cs);
 
 bool make_imgtobuf_pipeline(RenderBackend* rb,
                             VkDescriptorSetLayout desc_layout,
@@ -57,5 +57,17 @@ bool make_buftoimg_pipeline(RenderBackend* rb,
                             VkPipelineLayout bufimg_transfer_pipeline_layout,
                             VkPipeline* out_buftoimg_pipeline,
                             CleanupStack* cs);
+
+bool make_downscale_pipeline(RenderBackend* rb,
+                             VkDescriptorSetLayout desc_layout,
+                             VkPipelineLayout* out_downscale_pipeline_layout,
+                             VkPipeline* out_downscale_pipeline,
+                             CleanupStack* cs);
+
+bool make_rcs_reduction_pipeline_sum(RenderBackend* rb,
+                                     VkDescriptorSetLayout desc_layout,
+                                     VkPipelineLayout* out_red_pipeline_layout,
+                                     VkPipeline* out_red_pipeline,
+                                     CleanupStack* cs);
 
 #endif

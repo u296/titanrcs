@@ -1,0 +1,66 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+
+//layout(constant_id = 0) const uint local_size_x = 32;
+//layout(constant_id = 1) const uint local_size_y = 32;
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+//layout(set=0, binding=0) uniform sampler2D in_img;
+layout(set=0, binding = 0, rgba32f) uniform readonly image2D in_img;
+
+layout(set=0, binding=1) buffer Results {
+    float avg_sq_mag;
+} res;
+
+// 32x32 / 32 = 32 or 32x32/64 = 16 on this hardware, worst case 32x32 / 8 = 128
+const uint MAX_SUBGROUPS_PER_WORKGROUP = 128;
+
+shared vec4 subgroup_sums[MAX_SUBGROUPS_PER_WORKGROUP];
+
+void main() {
+    
+    const ivec2 in_uv = ivec2(gl_GlobalInvocationID.xy);
+
+    vec4 val = imageLoad(in_img, in_uv);
+
+    vec4 subgroup_sum = subgroupAdd(val);
+
+    if (subgroupElect()) {
+        subgroup_sums[gl_SubgroupID] = subgroup_sum;
+    }
+
+    //memoryBarrierShared();
+    barrier();
+
+    if (gl_SubgroupID == 0) {
+        
+        /*vec4 stage2_val = gl_SubgroupInvocationID < 16?subgroup_sums[gl_SubgroupInvocationID]: vec4(0,0,0,0);
+
+        vec4 totsum = subgroupAdd(stage2_val);
+
+        if (subgroupElect()) {
+        
+            float intens = dot(totsum, totsum);
+
+            res.avg_sq_mag = intens;
+        }*/
+
+        vec4 accum = vec4(0,0,0,0);
+
+        /*
+        If the subgroup size is too small, this will loop multiple times. If big enough, we just add
+        once and then do everything with one subgroupadd
+        */
+        for (uint i = gl_SubgroupInvocationID; i < gl_NumSubgroups; i += gl_SubgroupSize) {
+            accum += subgroup_sums[i];
+        }  
+
+        vec4 totsum = subgroupAdd(accum);
+
+        if (subgroupElect()) {
+            float intens = dot(totsum,totsum);
+            res.avg_sq_mag = intens;
+        }
+    }
+}

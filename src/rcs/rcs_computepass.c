@@ -179,7 +179,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
             return COMP_WINDOW_CLOSED;
         }
 
-        // usleep(1000*300);
+        //usleep(1000*100);
 
         const u32 f = *i % N_MAX_INFLIGHT;
 

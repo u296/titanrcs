@@ -19,10 +19,11 @@ bool make_rcs_red_descset_layout(VkDevice dev,
                                  VkDescriptorSetLayout* desc_layout,
                                  CleanupStack* cs);
 
-bool make_rcs_red_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image fftimg, VkSampler sampler, Buffer extr_ssbo,
-                          VkDescriptorSetLayout descset_layout,
-                          VkDescriptorSet* desc_set);
+bool make_rcs_reduction_descset(RenderBackend* rb, VkDescriptorPool dpool,
+                                Image fftimg, VkSampler sampler,
+                                Buffer extr_ssbo,
+                                VkDescriptorSetLayout descset_layout,
+                                VkDescriptorSet* desc_set);
 
 bool make_rcs_imgtobuf_descset_layout(VkDevice dev,
                                       VkDescriptorSetLayout* desc_layout,
@@ -38,5 +39,9 @@ bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
                                Image postfftimg, Buffer fftbuf,
                                VkDescriptorSetLayout descset_layout,
                                VkDescriptorSet* desc_set);
+
+bool make_rcs_downscale_descset_layout(VkDevice dev,
+                                       VkDescriptorSetLayout* desc_layout,
+                                       CleanupStack* cs);
 
 #endif

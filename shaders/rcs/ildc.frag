@@ -204,9 +204,10 @@ void main() {
     float wedge_angle = in_wedge_angle;
 
     vec3 pos = in_pos;
-    vec2 resolution = ubo.resolution_xy_L_lambda.xy;
-    float L = ubo.resolution_xy_L_lambda.z;
-    float lambda = ubo.resolution_xy_L_lambda.w;
+    vec2 resolution = vec2(ubo.resolution_x_fftshiftyesno_L_lambda.x, ubo.resolution_x_fftshiftyesno_L_lambda.x);
+    bool do_fftshift = ubo.resolution_x_fftshiftyesno_L_lambda.y > 0.5;
+    float L = ubo.resolution_x_fftshiftyesno_L_lambda.z;
+    float lambda = ubo.resolution_x_fftshiftyesno_L_lambda.w;
 
     vec3 edge_tangent = normalize(in_edge_tangent);
     vec3 face_normal = normalize(in_face_normal);
@@ -252,7 +253,11 @@ void main() {
     E.xy = cmul(E.xy, vec2(0,-1));
 
 
-    vec4 final = fftshift_value(cropfraction, calc_prefft_value(lambda, L, pos, E)) * dl;
+    vec4 final =  calc_prefft_value(lambda, L, pos, E) * dl;
+
+    if (do_fftshift) {
+        final = fftshift_value(cropfraction, final);
+    }
 
     //vec4 final = vec4(cmul(phasefactor,cmul(shiftfactor,E.xy)),cmul(phasefactor,cmul(shiftfactor,E.zw))) * dl;
 

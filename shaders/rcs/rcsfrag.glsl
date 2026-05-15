@@ -19,7 +19,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     mat4 norm_proj;
-    vec4 resolution_xy_L_lambda;
+    vec4 resolution_x_fftshiftyesno_L_lambda;
     vec4 cropfraction_boxsize_disablestatus_linewidth;
     vec4 infield;
 } ubo;

@@ -6,6 +6,7 @@
 #include "rcs/rcs_ubo.h"
 #include "res.h"
 #include <assert.h>
+#include <vulkan/vulkan_core.h>
 
 // f is the inflight index
 void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
@@ -150,20 +151,231 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                                pushblock);
         }
 
-        VkBuffer sharp_vbufs[] = {ctx->rcs_resources.sharp_edge_mesh.vertexbuf.buf};
+        VkBuffer sharp_vbufs[] = {
+            ctx->rcs_resources.sharp_edge_mesh.vertexbuf.buf};
         VkDeviceSize sharp_vbuf_offsets[] = {0};
 
         vkCmdBindVertexBuffers(cmdbuf, 0, 1, sharp_vbufs, sharp_vbuf_offsets);
-        vkCmdBindIndexBuffer(cmdbuf, ctx->rcs_resources.sharp_edge_mesh.sharpindexbuf.buf,
-                             0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(
+            cmdbuf, ctx->rcs_resources.sharp_edge_mesh.sharpindexbuf.buf, 0,
+            VK_INDEX_TYPE_UINT32);
 
-        vkCmdDrawIndexed(cmdbuf, ctx->rcs_resources.sharp_edge_mesh.n_sharp_indices, 1, 0,
-                         0, 0);
+        vkCmdDrawIndexed(cmdbuf,
+                         ctx->rcs_resources.sharp_edge_mesh.n_sharp_indices, 1,
+                         0, 0, 0);
     }
 
     vkCmdEndRendering(cmdbuf);
 
-    VkBuffer fft_buf = ctx->rcs_resources.sets[f].fft_work_buf.buf;
+    u32 pushconsts_cropfraction = RCS_CROPFRACTION;
+
+#ifdef TR_CALCMODE_SUM
+
+    /* memory barrier image to be read by first downscale
+     */
+
+    const VkImageLayout downscaling_imagelayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    VkImageMemoryBarrier2 finalize_rendering = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        downscaling_imagelayout, // could maybe improve this
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].rendtargets[0].img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    VkImageMemoryBarrier2 prepare_intermediate = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_NONE,
+        VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        downscaling_imagelayout, // could maybe improve this
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].intermediate_downscale_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    VkImageMemoryBarrier2 predownscale1_imgdeps[2] = {finalize_rendering,
+                                                      prepare_intermediate};
+    VkDependencyInfo rend_to_downscale1_dep = {
+        VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+        NULL,
+        0,
+        0,
+        NULL,
+        0,
+        NULL,
+        2,
+        predownscale1_imgdeps};
+
+    vkCmdPipelineBarrier2(cmdbuf, &rend_to_downscale1_dep);
+
+    const u32 init_res = RCS_RESOLUTION;
+    const u32 downscale_factor = 16;
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      ctx->rcs_resources.downscale_pipeline);
+
+    /*vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            ctx->rcs_resources.downscale_pipeline_layout, 0, 1,
+                            &ctx->rcs_resources.sets[f].downscale1_descset, 0,
+                            NULL);*/
+
+    VkDescriptorImageInfo prefft_img_info = {};
+    prefft_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    prefft_img_info.imageView = ctx->rcs_resources.sets[f].rendtargets[0].view;
+    prefft_img_info.sampler = VK_NULL_HANDLE;
+
+    VkDescriptorImageInfo intermed_img_info = {};
+    intermed_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    intermed_img_info.imageView =
+        ctx->rcs_resources.sets[f].intermediate_downscale_img.view;
+    intermed_img_info.sampler = VK_NULL_HANDLE;
+
+    VkDescriptorImageInfo postfft_img_info = {};
+    postfft_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    postfft_img_info.imageView = ctx->rcs_resources.sets[f].fft_img.view;
+    postfft_img_info.sampler = VK_NULL_HANDLE;
+
+    VkWriteDescriptorSet prefft_in_descwrite = {};
+    prefft_in_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    prefft_in_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    prefft_in_descwrite.descriptorCount = 1;
+    prefft_in_descwrite.dstBinding = 0;
+    prefft_in_descwrite.pImageInfo = &prefft_img_info;
+
+    VkWriteDescriptorSet intermed_out_descwrite = {};
+    intermed_out_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    intermed_out_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    intermed_out_descwrite.descriptorCount = 1;
+    intermed_out_descwrite.dstBinding = 1;
+    intermed_out_descwrite.pImageInfo = &intermed_img_info;
+
+    VkWriteDescriptorSet intermed_in_descwrite = {};
+    intermed_in_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    intermed_in_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    intermed_in_descwrite.descriptorCount = 1;
+    intermed_in_descwrite.dstBinding = 0;
+    intermed_in_descwrite.pImageInfo = &intermed_img_info;
+
+    VkWriteDescriptorSet postfft_out_descwrite = {};
+    postfft_out_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    postfft_out_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    postfft_out_descwrite.descriptorCount = 1;
+    postfft_out_descwrite.dstBinding = 1;
+    postfft_out_descwrite.pImageInfo = &postfft_img_info;
+
+    VkWriteDescriptorSet downscale1_descwrites[2] = {prefft_in_descwrite,
+                                                     intermed_out_descwrite};
+
+    vkCmdPushDescriptorSet(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                           ctx->rcs_resources.downscale_pipeline_layout, 0, 2,
+                           downscale1_descwrites);
+
+    vkCmdDispatch(cmdbuf, init_res / downscale_factor,
+                  init_res / downscale_factor, 1);
+
+    VkImageMemoryBarrier2 finalize_intermediate = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
+        downscaling_imagelayout,
+        downscaling_imagelayout,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].intermediate_downscale_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    VkImageMemoryBarrier2 prepare_final = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_NONE,
+        VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        downscaling_imagelayout, // could maybe improve this
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    VkImageMemoryBarrier2 predownscale2_imgdeps[2] = {finalize_intermediate,
+                                                      prepare_final};
+
+    VkDependencyInfo downscale1_dep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+                                       NULL,
+                                       0,
+                                       0,
+                                       NULL,
+                                       0,
+                                       NULL,
+                                       2,
+                                       predownscale2_imgdeps};
+
+    vkCmdPipelineBarrier2(cmdbuf, &downscale1_dep);
+
+    const u32 postdownscale1_res = init_res / downscale_factor;
+
+    VkWriteDescriptorSet downscale2_descwrites[2] = {intermed_in_descwrite,
+                                                     postfft_out_descwrite};
+
+    vkCmdPushDescriptorSet(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                           ctx->rcs_resources.downscale_pipeline_layout, 0, 2,
+                           downscale2_descwrites);
+
+    vkCmdDispatch(cmdbuf, postdownscale1_res / downscale_factor,
+                  postdownscale1_res / downscale_factor, 1);
+
+    VkImageMemoryBarrier2 downscale2 = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        NULL,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_SHADER_READ_BIT,
+        downscaling_imagelayout,
+        downscaling_imagelayout,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        ctx->rcs_resources.sets[f].fft_img.img,
+        (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    VkDependencyInfo downscale2_dep = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+                                       NULL,
+                                       0,
+                                       0,
+                                       NULL,
+                                       0,
+                                       NULL,
+                                       1,
+                                       &downscale2};
+
+    vkCmdPipelineBarrier2(cmdbuf, &downscale2_dep);
+
+    vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            ctx->rcs_resources.reduction_pipeline_layout, 0, 1,
+                            &ctx->rcs_resources.sets[f].red_descset, 0, NULL);
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                      ctx->rcs_resources.reduction_pipeline);
+
+    vkCmdDispatch(cmdbuf, 1, 1, 1);
+
+#endif
+#ifdef TR_CALCMODE_FFT
 
     /*
     This set of barriers ensures that rendertarget 0 is ready to be read from so
@@ -194,8 +406,6 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         1,
         &rend_to_comp_cp};
 
-    u32 transfer_pushconsts = RCS_CROPFRACTION;
-
     vkCmdPipelineBarrier2(cmdbuf, &rend_to_comp_cp_dep);
 
     vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -206,7 +416,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                       ctx->rcs_resources.imgtobuf_pipeline);
     vkCmdPushConstants(
         cmdbuf, ctx->rcs_resources.imgbuftransfer_pipeline_layout,
-        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &transfer_pushconsts);
+        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &pushconsts_cropfraction);
     vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16, RCS_RESOLUTION / 16, 1);
 
     /*
@@ -324,7 +534,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPushConstants(
         cmdbuf, ctx->rcs_resources.imgbuftransfer_pipeline_layout,
-        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &transfer_pushconsts);
+        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32), &pushconsts_cropfraction);
 
     vkCmdDispatch(cmdbuf, RCS_RESOLUTION / 16 / RCS_CROPFRACTION,
                   RCS_RESOLUTION / 16 / RCS_CROPFRACTION, 1);
@@ -370,10 +580,11 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     vkCmdPushConstants(
         cmdbuf, ctx->rcs_resources.reduction_pipeline_layout,
         VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(u32),
-        &transfer_pushconsts); // should maybe get its own name, this isn't a
-                               // transfer kernel but it needs the same data
+        &pushconsts_cropfraction); // should maybe get its own name, this isn't
+                                   // a transfer kernel but it needs the same
+                                   // data
     vkCmdDispatch(cmdbuf, 1, 1, 1);
-
+#endif
     /*
     This set of barriers ensures two things:
     1) the reduction compute shader result can be read by the host

@@ -6,6 +6,7 @@
 #include "cleanupstack.h"
 #include "common.h"
 #include "res.h"
+#include <vk_video/vulkan_video_codec_h264std_decode.h>
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
 
@@ -30,7 +31,7 @@ bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
     return false;
 }
 
-bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
+bool make_rcs_finalimg_fft(RenderBackend* rb, VkExtent2D ext, Image* out_finalimg,
                      CleanupStack* cs) {
 
     // there's no need to store the uncropped parts of the fft image, we'll just
@@ -57,11 +58,11 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
 
-    VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &rcs_fftimg->img,
-                                &rcs_fftimg->alloc, NULL);
+    VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &out_finalimg->img,
+                                &out_finalimg->alloc, NULL);
 
     VkImageViewCreateInfo ivci = {};
-    ivci.image = rcs_fftimg->img;
+    ivci.image = out_finalimg->img;
     ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
     ivci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -71,9 +72,57 @@ bool make_rcs_fftimg(RenderBackend* rb, VkExtent2D ext, Image* rcs_fftimg,
     ivci.subresourceRange.baseArrayLayer = 0;
     ivci.subresourceRange.layerCount = 1;
 
-    r = vkCreateImageView(rb->dev, &ivci, NULL, &rcs_fftimg->view);
+    r = vkCreateImageView(rb->dev, &ivci, NULL, &out_finalimg->view);
 
-    CLEANUP_START(ImageCleanup){*rcs_fftimg, rb->dev,
+    CLEANUP_START(ImageCleanup){*out_finalimg, rb->dev,
+                                rb->alloc} CLEANUP_END(image)
+
+        return false;
+}
+
+bool make_rcs_finalimg_sum(RenderBackend* rb, VkExtent2D ext, Image* out_finalimg,
+                     CleanupStack* cs) {
+
+    const u32 size = (RCS_RESOLUTION / 16) / 16;
+
+    VkImageCreateInfo ici = {};
+    ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ici.imageType = VK_IMAGE_TYPE_2D;
+    ici.extent = (VkExtent3D){size,
+                              size, 1};
+    ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    ici.arrayLayers = 1;
+    ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    ici.samples = VK_SAMPLE_COUNT_1_BIT;
+    ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ici.mipLevels = 1;
+    ici.queueFamilyIndexCount = 1;
+    ici.pQueueFamilyIndices = &rb->queues.i_graphics_queue_fam;
+    ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                VK_IMAGE_USAGE_STORAGE_BIT;
+
+    VmaAllocationCreateInfo aci = {};
+    aci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VkResult r = vmaCreateImage(rb->alloc, &ici, &aci, &out_finalimg->img,
+                                &out_finalimg->alloc, NULL);
+
+    VkImageViewCreateInfo ivci = {};
+    ivci.image = out_finalimg->img;
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.layerCount = 1;
+
+    r = vkCreateImageView(rb->dev, &ivci, NULL, &out_finalimg->view);
+
+    CLEANUP_START(ImageCleanup){*out_finalimg, rb->dev,
                                 rb->alloc} CLEANUP_END(image)
 
         return false;
@@ -86,6 +135,57 @@ bool make_rcs_extrbuf(RenderBackend* rb, Buffer* rcs_extrbuf,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 TR_MAPPABLE_READ, rcs_extrbuf, cs);
+
+    return false;
+}
+
+bool make_rcs_intermediate_sum_img(RenderBackend* rb, VkExtent2D ext,
+                                   Image* out_intermediate_sum_img,
+                                   CleanupStack* cs) {
+
+    // there's no need to store the uncropped parts of the fft image, we'll just
+    // make it smaller here
+
+    const u32 size = RCS_RESOLUTION / 16;
+
+    VkImageCreateInfo ici = {};
+    ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ici.imageType = VK_IMAGE_TYPE_2D;
+    ici.extent = (VkExtent3D){size, size, 1};
+    ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    ici.arrayLayers = 1;
+    ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    ici.samples = VK_SAMPLE_COUNT_1_BIT;
+    ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ici.mipLevels = 1;
+    ici.queueFamilyIndexCount = 1;
+    ici.pQueueFamilyIndices = &rb->queues.i_graphics_queue_fam;
+    ici.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+
+    VmaAllocationCreateInfo aci = {};
+    aci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VkResult r =
+        vmaCreateImage(rb->alloc, &ici, &aci, &out_intermediate_sum_img->img,
+                       &out_intermediate_sum_img->alloc, NULL);
+
+    VkImageViewCreateInfo ivci = {};
+    ivci.image = out_intermediate_sum_img->img;
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.layerCount = 1;
+
+    r = vkCreateImageView(rb->dev, &ivci, NULL,
+                          &out_intermediate_sum_img->view);
+
+    CLEANUP_START(ImageCleanup){*out_intermediate_sum_img, rb->dev,
+                                rb->alloc} CLEANUP_END(image);
 
     return false;
 }

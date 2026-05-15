@@ -6,6 +6,7 @@
 #include "rcs/rcs_ubo.h"
 #include "res.h"
 #include <assert.h>
+#include <vulkan/vulkan_core.h>
 
 bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
 
@@ -19,13 +20,14 @@ bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
 
     VkDescriptorPoolSize ssbo_ps = {};
     ssbo_ps.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ssbo_ps.descriptorCount = N_MAX_INFLIGHT * (1 + 2*2);
+    ssbo_ps.descriptorCount = N_MAX_INFLIGHT * (1 + 2 * 2);
 
     VkDescriptorPoolSize str_img_ps = {};
     str_img_ps.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     str_img_ps.descriptorCount = N_MAX_INFLIGHT * (2);
 
-    VkDescriptorPoolSize pool_sizes[] = {ubo_ps, sampler_ps, ssbo_ps, str_img_ps};
+    VkDescriptorPoolSize pool_sizes[] = {ubo_ps, sampler_ps, ssbo_ps,
+                                         str_img_ps};
 
     VkDescriptorPoolCreateInfo dpci = {};
     dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -39,8 +41,9 @@ bool make_rcs_dpool(VkDevice dev, VkDescriptorPool* dpool, CleanupStack* cs) {
         return false;
 }
 
-bool make_rcs_po_descset_layout(VkDevice dev, VkDescriptorSetLayout* desc_layout,
-                             CleanupStack* cs) {
+bool make_rcs_po_descset_layout(VkDevice dev,
+                                VkDescriptorSetLayout* desc_layout,
+                                CleanupStack* cs) {
     VkDescriptorSetLayoutBinding vert_dslb = {};
     vert_dslb.binding = 0;
     vert_dslb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -107,7 +110,12 @@ bool make_rcs_red_descset_layout(VkDevice dev,
                                  CleanupStack* cs) {
     VkDescriptorSetLayoutBinding infftimg = {};
     infftimg.binding = 0;
+#ifdef TR_CALCMODE_FFT
     infftimg.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+#endif
+#ifdef TR_CALCMODE_SUM
+    infftimg.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+#endif
     infftimg.descriptorCount = 1;
     infftimg.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     infftimg.pImmutableSamplers = NULL;
@@ -131,10 +139,11 @@ bool make_rcs_red_descset_layout(VkDevice dev,
         return false;
 }
 
-bool make_rcs_red_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image fftimg, VkSampler sampler, Buffer extr_ssbo,
-                          VkDescriptorSetLayout descset_layout,
-                          VkDescriptorSet* desc_set) {
+bool make_rcs_reduction_descset(RenderBackend* rb, VkDescriptorPool dpool,
+                                Image fftimg, VkSampler sampler,
+                                Buffer extr_ssbo,
+                                VkDescriptorSetLayout descset_layout,
+                                VkDescriptorSet* desc_set) {
 
     VkDescriptorSetAllocateInfo dsai = {};
     dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -159,7 +168,13 @@ bool make_rcs_red_descset(RenderBackend* rb, VkDescriptorPool dpool,
     img_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     img_wds.dstSet = *desc_set;
     img_wds.dstBinding = 0;
+
+#ifdef TR_CALCMODE_FFT
     img_wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+#endif
+#ifdef TR_CALCMODE_SUM
+    img_wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+#endif
     img_wds.descriptorCount = 1;
     img_wds.pImageInfo = &imi;
 
@@ -181,10 +196,9 @@ bool make_rcs_red_descset(RenderBackend* rb, VkDescriptorPool dpool,
     return false;
 }
 
-
 bool make_rcs_imgtobuf_descset_layout(VkDevice dev,
-                                 VkDescriptorSetLayout* desc_layout,
-                                 CleanupStack* cs) {
+                                      VkDescriptorSetLayout* desc_layout,
+                                      CleanupStack* cs) {
     VkDescriptorSetLayoutBinding image = {};
     image.binding = 0;
     image.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -212,9 +226,10 @@ bool make_rcs_imgtobuf_descset_layout(VkDevice dev,
 }
 
 bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image prefftimg, Buffer fftbuf_input, Buffer fftbuf_output,
-                          VkDescriptorSetLayout descset_layout,
-                          VkDescriptorSet* desc_set) {
+                               Image prefftimg, Buffer fftbuf_input,
+                               Buffer fftbuf_output,
+                               VkDescriptorSetLayout descset_layout,
+                               VkDescriptorSet* desc_set) {
 
     VkDescriptorSetAllocateInfo dsai = {};
     dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -233,7 +248,6 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
     dbi_x.buffer = fftbuf_input.buf;
     dbi_x.offset = 0;
     dbi_x.range = VK_WHOLE_SIZE;
-
 
     VkWriteDescriptorSet img_wds = {};
     img_wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -262,9 +276,9 @@ bool make_rcs_imgtobuf_descset(RenderBackend* rb, VkDescriptorPool dpool,
 }
 
 bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
-                          Image postfftimg, Buffer fftbuf_input,
-                          VkDescriptorSetLayout descset_layout,
-                          VkDescriptorSet* desc_set) {
+                               Image postfftimg, Buffer fftbuf_input,
+                               VkDescriptorSetLayout descset_layout,
+                               VkDescriptorSet* desc_set) {
 
     VkDescriptorSetAllocateInfo dsai = {};
     dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -303,10 +317,39 @@ bool make_rcs_buftoimg_descset(RenderBackend* rb, VkDescriptorPool dpool,
     xbuf_wds.pImageInfo = NULL;
     xbuf_wds.pTexelBufferView = NULL;
 
-
     VkWriteDescriptorSet writes[2] = {img_wds, xbuf_wds};
 
     vkUpdateDescriptorSets(rb->dev, 2, writes, 0, NULL);
 
     return false;
+}
+
+bool make_rcs_downscale_descset_layout(VkDevice dev,
+                                       VkDescriptorSetLayout* desc_layout,
+                                       CleanupStack* cs) {
+    VkDescriptorSetLayoutBinding in_img = {};
+    in_img.binding = 0;
+    in_img.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    in_img.descriptorCount = 1;
+    in_img.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    in_img.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutBinding out_img = {};
+    out_img.binding = 1;
+    out_img.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    out_img.descriptorCount = 1;
+    out_img.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    out_img.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo dsli = {};
+    dsli.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    dsli.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT;
+    dsli.bindingCount = 2;
+    dsli.pBindings = (VkDescriptorSetLayoutBinding[]){in_img, out_img};
+
+    VkResult r = vkCreateDescriptorSetLayout(dev, &dsli, NULL, desc_layout);
+    CLEANUP_START(DescriptorSetLayoutCleanup){dev, *desc_layout} CLEANUP_END(
+        descriptor_set_layout)
+
+        return false;
 }
