@@ -296,7 +296,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                            downscale1_descwrites);
 
     vkCmdDispatch(cmdbuf, RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE,
-                  RCS_CROPFRACTION / TR_FIRST_DOWNSCALESIZE, 1);
+                  RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE, 1);
 
     VkImageMemoryBarrier2 finalize_intermediate = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
