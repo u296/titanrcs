@@ -45,10 +45,12 @@ float undersampling_compensation_factor_f(float lambda, float pixellen, vec3 sur
 
     float critang = atan(pixellen / (0.5*lambda*max_half_wavelens_per_pixel));
 
-    float weightfactor;
+    float endtrans = critang+undersampling_transition_angle;
 
+    // make sure that we at least for some angles set to 1
+    endtrans = min(endtrans, 0.5*(critang + 0.5*pi));
 
-    weightfactor = smoothstep(critang, critang+undersampling_transition_angle, pi/2-nu);
+    float weightfactor = smoothstep(critang, endtrans, pi/2-nu);
 
     return weightfactor;
 }
@@ -60,7 +62,11 @@ float undersampling_compensation_factor_t(float lambda, float pixellen, vec3 edg
 
     float critang = atan(pixellen / (0.5*lambda*max_half_wavelens_per_pixel));
 
-    float weightfactor = smoothstep(critang, critang+undersampling_transition_angle,theta);
+    float endtrans = critang + undersampling_transition_angle;
+
+    endtrans = min(endtrans, 0.5*(critang + 0.5*pi));
+
+    float weightfactor = smoothstep(critang, endtrans, theta);
 
     return weightfactor;
 }
