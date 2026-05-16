@@ -542,11 +542,14 @@ typedef struct DownscaleSpecConstants {
     u32 wg_size_x;
     u32 wg_size_y;
     u32 use_loop;
-    u32 perthread_pixels;
+    u32 perthread_pixels_x;
+    u32 perthread_pixels_y;
 } DownscaleSpecConstants;
 
 void verify_specconst(u32 target_scaling, DownscaleSpecConstants s) {
-    bool scalingcorrect = s.wg_size_x * s.perthread_pixels == target_scaling && s.wg_size_y * s.perthread_pixels == target_scaling;
+    bool scalingcorrect =
+        s.wg_size_x * s.perthread_pixels_x == target_scaling &&
+        s.wg_size_y * s.perthread_pixels_y == target_scaling;
     bool workgrouplimits = s.wg_size_x * s.wg_size_y <= 1024;
 
     if (!scalingcorrect) {
@@ -554,7 +557,8 @@ void verify_specconst(u32 target_scaling, DownscaleSpecConstants s) {
         abort();
     }
     if (!workgrouplimits) {
-        printf("MAX WORKGROUP SIZE OF 1024 EXCEEDED FOR SCALING %u\n", target_scaling);
+        printf("MAX WORKGROUP SIZE OF 1024 EXCEEDED FOR SCALING %u\n",
+               target_scaling);
         abort();
     }
 }
@@ -566,7 +570,7 @@ bool make_downscale_pipelines(RenderBackend* rb,
 
     VkResult r;
 
-    VkPipelineLayout pl =  VK_NULL_HANDLE;
+    VkPipelineLayout pl = VK_NULL_HANDLE;
 
     DownscaleResources dres = {};
 
@@ -585,10 +589,9 @@ bool make_downscale_pipelines(RenderBackend* rb,
     plci.pushConstantRangeCount = 1;
     plci.pPushConstantRanges = &pcr;
 
-    r = vkCreatePipelineLayout(rb->dev, &plci, NULL,
-                               &pl);
-    CLEANUP_START(PipelineLayoutCleanup){
-        rb->dev, pl} CLEANUP_END(pipelinelayout);
+    r = vkCreatePipelineLayout(rb->dev, &plci, NULL, &pl);
+    CLEANUP_START(PipelineLayoutCleanup){rb->dev,
+                                         pl} CLEANUP_END(pipelinelayout);
 
     VkShaderModule downscale_module = VK_NULL_HANDLE;
     make_shadermodule(rb->dev, "shaders/rcs/sum/downscalesum.spv",
@@ -609,48 +612,56 @@ bool make_downscale_pipelines(RenderBackend* rb,
     spec_useloop.offset = offsetof(DownscaleSpecConstants, use_loop);
     spec_useloop.size = sizeof(((DownscaleSpecConstants*)0)->use_loop);
 
-    VkSpecializationMapEntry spec_perthread_pixels = {};
-    spec_useloop.constantID = 3;
-    spec_useloop.offset = offsetof(DownscaleSpecConstants, perthread_pixels);
-    spec_useloop.size = sizeof(((DownscaleSpecConstants*)0)->perthread_pixels);
+    VkSpecializationMapEntry spec_perthread_pixels_x = {};
+    spec_perthread_pixels_x.constantID = 3;
+    spec_perthread_pixels_x.offset = offsetof(DownscaleSpecConstants, perthread_pixels_x);
+    spec_perthread_pixels_x.size =
+        sizeof(((DownscaleSpecConstants*)0)->perthread_pixels_x);
 
-#define N_SPEC_ENTRIES 4
+    VkSpecializationMapEntry spec_perthread_pixels_y = {};
+    spec_perthread_pixels_y.constantID = 4;
+    spec_perthread_pixels_y.offset = offsetof(DownscaleSpecConstants, perthread_pixels_y);
+    spec_perthread_pixels_y.size =
+        sizeof(((DownscaleSpecConstants*)0)->perthread_pixels_y);
+
+#define N_SPEC_ENTRIES 5
 
     VkSpecializationMapEntry spec_entries[N_SPEC_ENTRIES] = {
-        spec_wgx, spec_wgy, spec_useloop, spec_perthread_pixels};
+        spec_wgx, spec_wgy, spec_useloop, spec_perthread_pixels_x,
+        spec_perthread_pixels_y};
 
     DownscaleSpecConstants spec8_consts = {
-        .wg_size_x = 8/1,
-        .wg_size_y = 8/1,
+        .wg_size_x = 8 / 1,
+        .wg_size_y = 8 / 1,
         .use_loop = 0,
-        .perthread_pixels = 1
+        .perthread_pixels_x = 1,
+        .perthread_pixels_y = 1,
     };
     dres.downscale8.scaling = 8;
 
-    DownscaleSpecConstants spec16_consts = {
-        .wg_size_x = 16 / 2,
-        .wg_size_y = 16 / 2,
-        .use_loop = 0,
-        .perthread_pixels = 2};
+    DownscaleSpecConstants spec16_consts = {.wg_size_x = 16 / 4,
+                                            .wg_size_y = 16 / 1,
+                                            .use_loop = 0,
+                                            .perthread_pixels_x = 4,
+                                            .perthread_pixels_y = 1};
 
     dres.downscale16.scaling = 16;
 
-    DownscaleSpecConstants spec32_consts = {
-        .wg_size_x = 32 / 2,
-        .wg_size_y = 32 / 2,
-        .use_loop = 0,
-        .perthread_pixels = 2};
+    DownscaleSpecConstants spec32_consts = {.wg_size_x = 32 / 8,
+                                            .wg_size_y = 32 / 1,
+                                            .use_loop = 0,
+                                            .perthread_pixels_x = 8,
+                                            .perthread_pixels_y = 1};
 
     dres.downscale32.scaling = 32;
 
-    DownscaleSpecConstants spec64_consts = {
-        .wg_size_x = 64 / 2,
-        .wg_size_y = 64 / 2,
-        .use_loop = 0,
-        .perthread_pixels = 2};
+    DownscaleSpecConstants spec64_consts = {.wg_size_x = 64 / 2,
+                                            .wg_size_y = 64 / 2,
+                                            .use_loop = 0,
+                                            .perthread_pixels_x = 2,
+                                            .perthread_pixels_y = 2};
 
     dres.downscale64.scaling = 64;
-
 
     verify_specconst(8, spec8_consts);
     verify_specconst(16, spec16_consts);
@@ -658,9 +669,9 @@ bool make_downscale_pipelines(RenderBackend* rb,
     verify_specconst(64, spec64_consts);
 
     VkSpecializationInfo spec8 = {.mapEntryCount = N_SPEC_ENTRIES,
-                                   .pMapEntries = spec_entries,
-                                   .dataSize = sizeof(DownscaleSpecConstants),
-                                   .pData = &spec8_consts};
+                                  .pMapEntries = spec_entries,
+                                  .dataSize = sizeof(DownscaleSpecConstants),
+                                  .pData = &spec8_consts};
 
     VkSpecializationInfo spec16 = {.mapEntryCount = N_SPEC_ENTRIES,
                                    .pMapEntries = spec_entries,
@@ -677,7 +688,6 @@ bool make_downscale_pipelines(RenderBackend* rb,
                                    .dataSize = sizeof(DownscaleSpecConstants),
                                    .pData = &spec64_consts};
 
-       
     VkPipelineShaderStageCreateInfo sci8 = {};
     sci8.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     sci8.stage = VK_SHADER_STAGE_COMPUTE_BIT;

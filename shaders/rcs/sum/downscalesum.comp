@@ -5,7 +5,8 @@
 layout(constant_id = 0) const uint WORKGROUP_SIZE_X = 16;
 layout(constant_id = 1) const uint WORKGROUP_SIZE_Y = 16;
 layout(constant_id = 2) const uint USE_LOOP = 0;
-layout(constant_id = 3) const uint READ_SQUARESIZE = 1;
+layout(constant_id = 3) const uint READPIXELS_X = 1;
+layout(constant_id = 4) const uint READPIXELS_Y = 1;
 
 layout(local_size_x_id = 0, local_size_y_id = 1) in;
 
@@ -28,22 +29,15 @@ void main() {
 
     vec4 val = vec4(0,0,0,0);
 
-    for (uint i = 0; i < READ_SQUARESIZE; i++) {
-        for (uint j = 0; j < READ_SQUARESIZE; j++) {
+    for (uint i = 0; i < READPIXELS_X; i++) {
+        for (uint j = 0; j < READPIXELS_Y; j++) {
+            //ivec2 read_uv = ivec2(in_uv.x*int(READPIXELS_X) + i, in_uv.y);
 
-            ivec2 read_uv = int(READ_SQUARESIZE)*in_uv + ivec2(i,j);
+            ivec2 read_uv = in_uv * ivec2(READPIXELS_X, READPIXELS_Y) + ivec2(i,j);
 
             val += texelFetch(in_img, read_uv, 0);
         }
     }
-
-    /*vec4 p0 = texelFetch(in_img, 2*in_uv + ivec2(0,0), 0);
-    vec4 p1 = texelFetch(in_img, 2*in_uv + ivec2(0,1), 0);
-    vec4 p2 = texelFetch(in_img, 2*in_uv + ivec2(1,0), 0);
-    vec4 p3 = texelFetch(in_img, 2*in_uv + ivec2(1,1), 0);
-
-    val = p0 + p1 + p2 + p3;*/
-
 
     vec4 subgroup_sum = subgroupAdd(val);
 
