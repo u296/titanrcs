@@ -4,13 +4,13 @@
 #include "common.h"
 
 //#define TR_CALCMODE_FFT
-#define TR_CALCMODE_FFT
+#define TR_CALCMODE_SUM
 
 #ifdef __APPLE__
 #define RCS_RESOLUTION (4096ull)
 #else
 //constexpr u64 RCS_RESOLUTION = 8192ull;
-#define RCS_RESOLUTION (8192ull)
+#define RCS_RESOLUTION (16384)
 #endif
 #ifdef TR_CALCMODE_FFT
 constexpr u64 RCS_CROPFRACTION =
