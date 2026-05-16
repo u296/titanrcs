@@ -28,8 +28,8 @@ static VkDevice persist_dev;
 static VkPhysicalDevice persist_physdev;
 static VkQueue persist_queue;
 static u32 persist_queue_i;
-u64 fftbuf_size =
-    4ull * sizeof(float) * RCS_RESOLUTION * RCS_RESOLUTION; // x2 for complex x2 for x and y channel
+u64 fftbuf_size = 4ull * sizeof(float) * RCS_RESOLUTION *
+                  RCS_RESOLUTION; // x2 for complex x2 for x and y channel
 
 void fft_populate_persistents(VkDevice dev, VkPhysicalDevice physdev,
                               Queues queues) {
@@ -41,6 +41,10 @@ void fft_populate_persistents(VkDevice dev, VkPhysicalDevice physdev,
 
 bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp,
                  CleanupStack* cs) {
+
+#ifdef TR_CALCMODE_SUM
+    return false;
+#endif
 
     VkFFTConfiguration cfg = {0};
 
@@ -88,9 +92,9 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp,
     cfg.inputBufferSize = &fftbuf_size;
     cfg.outputBufferSize = &fftbuf_size;
 
-    //cfg.maxTempLength = fftbuf_size;
-    // cfg.userTempBuffer = 1;
-    // cfg.tempBufferSize = &fftbuf_size;
+    // cfg.maxTempLength = fftbuf_size;
+    //  cfg.userTempBuffer = 1;
+    //  cfg.tempBufferSize = &fftbuf_size;
 
     /*
     I believe that setting these all to 0 with input and output formatting is
@@ -137,7 +141,7 @@ bool make_fftapp(VkInstance inst, VkFFTApplication** out_fftapp,
     cfg.fft_zeropad_left[1] = l;
     cfg.fft_zeropad_right[1] = RCS_RESOLUTION;
 
-    //cfg.disableReorderFourStep = 1;
+    // cfg.disableReorderFourStep = 1;
 
 #endif
 
