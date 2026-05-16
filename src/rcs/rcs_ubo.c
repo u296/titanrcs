@@ -143,6 +143,7 @@ bool make_rcs_extrbuf(RenderBackend* rb, Buffer* rcs_extrbuf,
     return false;
 }
 
+#ifdef TR_CALCMODE_SUM
 bool make_rcs_intermediate_sum_img(RenderBackend* rb, VkExtent2D ext,
                                    Image* out_intermediate_sum_img,
                                    CleanupStack* cs) {
@@ -193,3 +194,4 @@ bool make_rcs_intermediate_sum_img(RenderBackend* rb, VkExtent2D ext,
 
     return false;
 }
+#endif
