@@ -237,7 +237,8 @@ bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
     vpsci.pScissors = &scissor;
 
     VkPipelineRasterizationLineStateCreateInfo lsci = {};
-    lsci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO;
+    lsci.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO;
     lsci.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_RECTANGULAR;
 
     VkPipelineRasterizationStateCreateInfo rci = {};
@@ -278,8 +279,6 @@ bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
     bas[0].alphaBlendOp = VK_BLEND_OP_ADD;
     bas[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     bas[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-
-
 
     VkPipelineColorBlendStateCreateInfo bci = {};
     bci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -341,10 +340,10 @@ bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
 }
 
 bool make_rcs_reduction_pipeline_fft(RenderBackend* rb,
-                                 VkDescriptorSetLayout desc_layout,
-                                 VkPipelineLayout* out_red_pipeline_layout,
-                                 VkPipeline* out_red_pipeline,
-                                 CleanupStack* cs) {
+                                     VkDescriptorSetLayout desc_layout,
+                                     VkPipelineLayout* out_red_pipeline_layout,
+                                     VkPipeline* out_red_pipeline,
+                                     CleanupStack* cs) {
 
     VkResult r;
 
@@ -365,7 +364,8 @@ bool make_rcs_reduction_pipeline_fft(RenderBackend* rb,
         rb->dev, *out_red_pipeline_layout} CLEANUP_END(pipelinelayout);
 
     VkShaderModule reduction_module = VK_NULL_HANDLE;
-    make_shadermodule(rb->dev, "shaders/rcs/fft/reduction.spv", &reduction_module);
+    make_shadermodule(rb->dev, "shaders/rcs/fft/reduction.spv",
+                      &reduction_module);
 
     VkPipelineShaderStageCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -392,10 +392,10 @@ bool make_rcs_reduction_pipeline_fft(RenderBackend* rb,
 }
 
 bool make_rcs_reduction_pipeline_sum(RenderBackend* rb,
-                                 VkDescriptorSetLayout desc_layout,
-                                 VkPipelineLayout* out_red_pipeline_layout,
-                                 VkPipeline* out_red_pipeline,
-                                 CleanupStack* cs) {
+                                     VkDescriptorSetLayout desc_layout,
+                                     VkPipelineLayout* out_red_pipeline_layout,
+                                     VkPipeline* out_red_pipeline,
+                                     CleanupStack* cs) {
 
     VkResult r;
 
@@ -416,7 +416,8 @@ bool make_rcs_reduction_pipeline_sum(RenderBackend* rb,
         rb->dev, *out_red_pipeline_layout} CLEANUP_END(pipelinelayout);
 
     VkShaderModule reduction_module = VK_NULL_HANDLE;
-    make_shadermodule(rb->dev, "shaders/rcs/sum/reduction.spv", &reduction_module);
+    make_shadermodule(rb->dev, "shaders/rcs/sum/reduction.spv",
+                      &reduction_module);
 
     VkPipelineShaderStageCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -471,7 +472,8 @@ bool make_imgtobuf_pipeline(RenderBackend* rb,
         rb->dev, *out_imgtobuf_pipeline_layout} CLEANUP_END(pipelinelayout);
 
     VkShaderModule imgtobuf_module = VK_NULL_HANDLE;
-    make_shadermodule(rb->dev, "shaders/rcs/fft/imgtobuf.spv", &imgtobuf_module);
+    make_shadermodule(rb->dev, "shaders/rcs/fft/imgtobuf.spv",
+                      &imgtobuf_module);
 
     VkPipelineShaderStageCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -506,7 +508,8 @@ bool make_buftoimg_pipeline(RenderBackend* rb,
     VkResult r;
 
     VkShaderModule buftoimg_module = VK_NULL_HANDLE;
-    make_shadermodule(rb->dev, "shaders/rcs/fft/buftoimg.spv", &buftoimg_module);
+    make_shadermodule(rb->dev, "shaders/rcs/fft/buftoimg.spv",
+                      &buftoimg_module);
 
     VkPipelineShaderStageCreateInfo sci = {};
     sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -532,11 +535,18 @@ bool make_buftoimg_pipeline(RenderBackend* rb,
     return false;
 }
 
-bool make_downscale_pipeline(RenderBackend* rb,
-                            VkDescriptorSetLayout desc_layout,
-                            VkPipelineLayout* out_downscale_pipeline_layout,
-                            VkPipeline* out_downscale_pipeline,
-                            CleanupStack* cs) {
+typedef struct DownscaleSpecConstants {
+    u32 wg_size_x;
+    u32 wg_size_y;
+    u32 use_loop;
+} DownscaleSpecConstants;
+
+bool make_downscale_pipelines(RenderBackend* rb,
+                              VkDescriptorSetLayout desc_layout,
+                              VkPipelineLayout* out_downscale_pipeline_layout,
+                              VkPipeline* out_downscale16_pipeline,
+                              VkPipeline* out_downscale32_pipeline,
+                              CleanupStack* cs) {
 
     VkResult r;
 
@@ -561,25 +571,81 @@ bool make_downscale_pipeline(RenderBackend* rb,
         rb->dev, *out_downscale_pipeline_layout} CLEANUP_END(pipelinelayout);
 
     VkShaderModule downscale_module = VK_NULL_HANDLE;
-    make_shadermodule(rb->dev, "shaders/rcs/sum/downscalesum.spv", &downscale_module);
+    make_shadermodule(rb->dev, "shaders/rcs/sum/downscalesum.spv",
+                      &downscale_module);
 
-    VkPipelineShaderStageCreateInfo sci = {};
-    sci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    sci.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    sci.module = downscale_module;
-    sci.pName = "main";
+    VkSpecializationMapEntry spec_wgx;
+    spec_wgx.constantID = 0;
+    spec_wgx.offset = offsetof(DownscaleSpecConstants, wg_size_x);
+    spec_wgx.size = sizeof(((DownscaleSpecConstants*)0)->wg_size_x);
 
-    VkComputePipelineCreateInfo cpci = {};
-    cpci.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    cpci.stage = sci;
-    cpci.basePipelineHandle = VK_NULL_HANDLE;
-    cpci.basePipelineIndex = -1;
-    cpci.layout = *out_downscale_pipeline_layout;
+    VkSpecializationMapEntry spec_wgy;
+    spec_wgy.constantID = 1;
+    spec_wgy.offset = offsetof(DownscaleSpecConstants, wg_size_y);
+    spec_wgy.size = sizeof(((DownscaleSpecConstants*)0)->wg_size_y);
 
-    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci, NULL,
-                                 out_downscale_pipeline);
+    VkSpecializationMapEntry spec_useloop;
+    spec_useloop.constantID = 2;
+    spec_useloop.offset = offsetof(DownscaleSpecConstants, use_loop);
+    spec_useloop.size = sizeof(((DownscaleSpecConstants*)0)->use_loop);
 
-    CLEANUP_START(PipelineCleanup){rb->dev, *out_downscale_pipeline};
+    VkSpecializationMapEntry spec_entries[3] = {spec_wgx, spec_wgy,
+                                                spec_useloop};
+
+    DownscaleSpecConstants spec16_consts = {
+        .wg_size_x = 16, .wg_size_y = 16, .use_loop = 1};
+
+    DownscaleSpecConstants spec32_consts = {
+        .wg_size_x = 32, .wg_size_y = 32, .use_loop = 0};
+
+    VkSpecializationInfo spec16 = {.mapEntryCount = 3,
+                                   .pMapEntries = spec_entries,
+                                   .dataSize = sizeof(DownscaleSpecConstants),
+                                   .pData = &spec16_consts};
+
+    VkSpecializationInfo spec32 = {.mapEntryCount = 3,
+                                   .pMapEntries = spec_entries,
+                                   .dataSize = sizeof(DownscaleSpecConstants),
+                                   .pData = &spec32_consts};
+
+    VkPipelineShaderStageCreateInfo sci16 = {};
+    sci16.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci16.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci16.module = downscale_module;
+    sci16.pName = "main";
+    sci16.pSpecializationInfo = &spec16;
+
+    VkComputePipelineCreateInfo cpci16 = {};
+    cpci16.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci16.stage = sci16;
+    cpci16.basePipelineHandle = VK_NULL_HANDLE;
+    cpci16.basePipelineIndex = -1;
+    cpci16.layout = *out_downscale_pipeline_layout;
+
+    VkPipelineShaderStageCreateInfo sci32 = {};
+    sci32.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci32.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci32.module = downscale_module;
+    sci32.pName = "main";
+    sci32.pSpecializationInfo = &spec32;
+
+    VkComputePipelineCreateInfo cpci32 = {};
+    cpci32.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci32.stage = sci32;
+    cpci32.basePipelineHandle = VK_NULL_HANDLE;
+    cpci32.basePipelineIndex = -1;
+    cpci32.layout = *out_downscale_pipeline_layout;
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci16, NULL,
+                                 out_downscale16_pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, *out_downscale16_pipeline};
+    CLEANUP_END(pipeline);
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci32, NULL,
+                                 out_downscale32_pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, *out_downscale32_pipeline};
     CLEANUP_END(pipeline);
 
     vkDestroyShaderModule(rb->dev, downscale_module, NULL);

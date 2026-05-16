@@ -46,7 +46,8 @@ typedef struct RcsResources {
 #endif
 #ifdef TR_CALCMODE_SUM
     VkPipelineLayout downscale_pipeline_layout;
-    VkPipeline downscale_pipeline;
+    VkPipeline downscale16_pipeline;
+    VkPipeline downscale32_pipeline;
 #endif
     RcsPerInflight sets[N_MAX_INFLIGHT];
 } RcsResources;

@@ -219,11 +219,25 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPipelineBarrier2(cmdbuf, &rend_to_downscale1_dep);
 
-    const u32 init_res = RCS_RESOLUTION;
-    const u32 downscale_factor = 16;
+    const VkPipeline firstdownscalepipeline =
+
+#if TR_FIRST_DOWNSCALESIZE == 16
+        ctx->rcs_resources.downscale16_pipeline;
+#elif TR_FIRST_DOWNSCALESIZE == 32
+        ctx->rcs_resources.downscale32_pipeline;
+#endif
+
+    const VkPipeline seconddownscalepipeline =
+
+#if TR_SECOND_DOWNSCALESIZE == 16
+        ctx->rcs_resources.downscale16_pipeline;
+#elif TR_SECOND_DOWNSCALESIZE == 32
+        ctx->rcs_resources.downscale32_pipeline;
+#endif
+
 
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                      ctx->rcs_resources.downscale_pipeline);
+                      firstdownscalepipeline);
 
     /*vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
                             ctx->rcs_resources.downscale_pipeline_layout, 0, 1,
@@ -281,8 +295,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                            ctx->rcs_resources.downscale_pipeline_layout, 0, 2,
                            downscale1_descwrites);
 
-    vkCmdDispatch(cmdbuf, init_res / downscale_factor,
-                  init_res / downscale_factor, 1);
+    vkCmdDispatch(cmdbuf, RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE,
+                  RCS_CROPFRACTION / TR_FIRST_DOWNSCALESIZE, 1);
 
     VkImageMemoryBarrier2 finalize_intermediate = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -327,7 +341,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPipelineBarrier2(cmdbuf, &downscale1_dep);
 
-    const u32 postdownscale1_res = init_res / downscale_factor;
+    const u32 postdownscale1_res = RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE;
 
     VkWriteDescriptorSet downscale2_descwrites[2] = {intermed_in_descwrite,
                                                      postfft_out_descwrite};
@@ -336,8 +350,12 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
                            ctx->rcs_resources.downscale_pipeline_layout, 0, 2,
                            downscale2_descwrites);
 
-    vkCmdDispatch(cmdbuf, postdownscale1_res / downscale_factor,
-                  postdownscale1_res / downscale_factor, 1);
+#if TR_FIRST_DOWNSCALESIZE != TR_SECOND_DOWNSCALESIZE
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, seconddownscalepipeline);
+#endif
+
+    vkCmdDispatch(cmdbuf, postdownscale1_res / TR_SECOND_DOWNSCALESIZE,
+                  postdownscale1_res / TR_SECOND_DOWNSCALESIZE, 1);
 
     VkImageMemoryBarrier2 downscale2 = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,

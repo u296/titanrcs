@@ -3,7 +3,6 @@
 #include "backend/backend.h"
 #include "cleanupstack.h"
 #include "common.h"
-#include <vulkan/vulkan_core.h>
 
 typedef struct ImageCleanup {
     Image img;

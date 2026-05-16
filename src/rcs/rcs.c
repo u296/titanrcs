@@ -39,7 +39,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 #ifdef TR_CALCMODE_SUM
     VkDescriptorSetLayout rcs_downscale_descset_layout;
     VkPipelineLayout rcs_downscale_pipeline_layout;
-    VkPipeline rcs_downscale_pipeline;
+    VkPipeline rcs_downscale16_pipeline;
+    VkPipeline rcs_downscale32_pipeline;
 #endif
 
     VkSampler rcs_sampler;
@@ -130,11 +131,10 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     make_ptd_pipeline(rb, ext, rcs_descset_layout, col_formats, &depth_format,
                       rcs_pipeline_layout, &ptd_pipeline, cs);
 
-    
 #ifdef TR_CALCMODE_FFT
     make_rcs_reduction_pipeline_fft(rb, rcs_red_descset_layout,
-                                &rcs_red_pipeline_layout, &rcs_red_pipeline,
-                                cs);
+                                    &rcs_red_pipeline_layout, &rcs_red_pipeline,
+                                    cs);
 
     make_imgtobuf_pipeline(rb, rcs_imgbuftransfer_descset_layout,
                            &rcs_imgbuftransfer_pipeline_layout,
@@ -146,12 +146,12 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 #endif
 #ifdef TR_CALCMODE_SUM
     make_rcs_reduction_pipeline_sum(rb, rcs_red_descset_layout,
-                                &rcs_red_pipeline_layout, &rcs_red_pipeline,
-                                cs);
+                                    &rcs_red_pipeline_layout, &rcs_red_pipeline,
+                                    cs);
 
-    make_downscale_pipeline(rb, rcs_downscale_descset_layout,
-                            &rcs_downscale_pipeline_layout,
-                            &rcs_downscale_pipeline, cs);
+    make_downscale_pipelines(
+        rb, rcs_downscale_descset_layout, &rcs_downscale_pipeline_layout,
+        &rcs_downscale16_pipeline, &rcs_downscale32_pipeline, cs);
 #endif
 
     const char* rcsmeshfilename = "models/rcsmesh.stl";
@@ -176,25 +176,26 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
     RcsResources res = {
         .ext = ext,
         .dpool = rcs_dpool,
-        .descset_layout=rcs_descset_layout,
-        .rcs_pipline_layout=rcs_pipeline_layout,
-        .po_pipeline=po_pipeline,
-        .ptd_pipeline=ptd_pipeline,
-        .reduction_pipeline_layout=rcs_red_pipeline_layout,
-        .reduction_pipeline=rcs_red_pipeline,
-        .sampler=rcs_sampler,
-        .mesh=rcs_mesh,
-        .sharp_edge_mesh=rcs_sharp_mesh,
-        .pathres=pathres,
+        .descset_layout = rcs_descset_layout,
+        .rcs_pipline_layout = rcs_pipeline_layout,
+        .po_pipeline = po_pipeline,
+        .ptd_pipeline = ptd_pipeline,
+        .reduction_pipeline_layout = rcs_red_pipeline_layout,
+        .reduction_pipeline = rcs_red_pipeline,
+        .sampler = rcs_sampler,
+        .mesh = rcs_mesh,
+        .sharp_edge_mesh = rcs_sharp_mesh,
+        .pathres = pathres,
 
 #ifdef TR_CALCMODE_FFT
-        .imgbuftransfer_pipeline_layout=rcs_imgbuftransfer_pipeline_layout,
-        .imgtobuf_pipeline=rcs_imgtobuf_pipeline,
-        .buftoimg_pipeline=rcs_buftoimg_pipeline,
+        .imgbuftransfer_pipeline_layout = rcs_imgbuftransfer_pipeline_layout,
+        .imgtobuf_pipeline = rcs_imgtobuf_pipeline,
+        .buftoimg_pipeline = rcs_buftoimg_pipeline,
 #endif
 #ifdef TR_CALCMODE_SUM
-        .downscale_pipeline_layout=rcs_downscale_pipeline_layout,
-        .downscale_pipeline=rcs_downscale_pipeline
+        .downscale_pipeline_layout = rcs_downscale_pipeline_layout,
+        .downscale16_pipeline = rcs_downscale16_pipeline,
+        .downscale32_pipeline = rcs_downscale32_pipeline
 #endif
     };
 

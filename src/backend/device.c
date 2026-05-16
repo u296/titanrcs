@@ -161,6 +161,7 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
     vk13features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vk13features.synchronization2 = VK_TRUE;
     vk13features.dynamicRendering = VK_TRUE;
+    vk13features.maintenance4 = VK_TRUE;
     vk13features.pNext = &vk14features;
     
 

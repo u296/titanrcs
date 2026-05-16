@@ -7,9 +7,10 @@
 #define TR_CALCMODE_SUM
 
 #ifdef __APPLE__
-constexpr u64 RCS_RESOLUTION = 4096ull;
+#define RCS_RESOLUTION (4096ull)
 #else
-constexpr u64 RCS_RESOLUTION = 8192ull;
+//constexpr u64 RCS_RESOLUTION = 8192ull;
+#define RCS_RESOLUTION (8192ull)
 #endif
 #ifdef TR_CALCMODE_FFT
 constexpr u64 RCS_CROPFRACTION =
@@ -41,6 +42,20 @@ constexpr u32 FFT_IMG_TEXELSIZE =
     sizeof(float) * 4; // fft image is R32G32B32A32_SFLOAT
 
 
+#ifdef TR_CALCMODE_SUM
 
+#if RCS_RESOLUTION == 16384
+#define TR_FIRST_DOWNSCALESIZE (16)
+#define TR_SECOND_DOWNSCALESIZE (32)
+#endif
+#if RCS_RESOLUTION == 8192
+#define TR_FIRST_DOWNSCALESIZE (16)
+#define TR_SECOND_DOWNSCALESIZE (16)
+#endif
+#if RCS_RESOLUTION == 4096
+#error 4K RES NOT READY YET
+#endif
+
+#endif
 
 #endif

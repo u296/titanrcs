@@ -31,8 +31,8 @@ bool make_rcs_fftbufs(RenderBackend* rb, Buffer* out_inputbuf,
     return false;
 }
 
-bool make_rcs_finalimg_fft(RenderBackend* rb, VkExtent2D ext, Image* out_finalimg,
-                     CleanupStack* cs) {
+bool make_rcs_finalimg_fft(RenderBackend* rb, VkExtent2D ext,
+                           Image* out_finalimg, CleanupStack* cs) {
 
     // there's no need to store the uncropped parts of the fft image, we'll just
     // make it smaller here
@@ -80,16 +80,20 @@ bool make_rcs_finalimg_fft(RenderBackend* rb, VkExtent2D ext, Image* out_finalim
         return false;
 }
 
-bool make_rcs_finalimg_sum(RenderBackend* rb, VkExtent2D ext, Image* out_finalimg,
-                     CleanupStack* cs) {
+bool make_rcs_finalimg_sum(RenderBackend* rb, VkExtent2D ext,
+                           Image* out_finalimg, CleanupStack* cs) {
 
-    const u32 size = (RCS_RESOLUTION / 16) / 16;
+    /*
+    adapt the rest of the code to this. 32x32 is 1024 which is the typical limit
+    for local workgroup size, so we make the final reduction a 32x32 reduction
+    which we then fit the rest of the setup to downscale to.
+    */
+    const u32 size = 32;
 
     VkImageCreateInfo ici = {};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = VK_IMAGE_TYPE_2D;
-    ici.extent = (VkExtent3D){size,
-                              size, 1};
+    ici.extent = (VkExtent3D){size, size, 1};
     ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     ici.arrayLayers = 1;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -146,7 +150,7 @@ bool make_rcs_intermediate_sum_img(RenderBackend* rb, VkExtent2D ext,
     // there's no need to store the uncropped parts of the fft image, we'll just
     // make it smaller here
 
-    const u32 size = RCS_RESOLUTION / 16;
+    const u32 size = RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE;
 
     VkImageCreateInfo ici = {};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
