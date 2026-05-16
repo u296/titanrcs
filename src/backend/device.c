@@ -147,14 +147,14 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
         n_queue_infos = 2;
     }
 
-    /*VkPhysicalDeviceLineRasterizationFeatures lrf = {0};
-    lrf.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES;
-    lrf.rectangularLines = VK_TRUE;*/
+    
 
     VkPhysicalDeviceVulkan14Features vk14features = {};
     vk14features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
     vk14features.pushDescriptor = VK_TRUE;
+#ifdef TR_USE_ADVANCED_LINES
     vk14features.rectangularLines = VK_TRUE;
+#endif
     vk14features.pNext = NULL;
 
     VkPhysicalDeviceVulkan13Features vk13features = {};
@@ -169,7 +169,9 @@ bool make_device(VkInstance instance, VkSurfaceKHR surf, VkPhysicalDevice* physd
     df2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     df2.features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
     df2.features.independentBlend = VK_TRUE;
+#ifdef TR_USE_ADVANCED_LINES
     df2.features.wideLines = VK_TRUE;
+#endif
     df2.pNext = &vk13features;
 
     //VkPhysicalDeviceFeatures df = {};

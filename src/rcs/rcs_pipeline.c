@@ -240,9 +240,12 @@ bool make_ptd_pipeline(RenderBackend* rb, VkExtent2D ext,
     vpsci.pScissors = &scissor;
 
     VkPipelineRasterizationLineStateCreateInfo lsci = {};
-    lsci.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO;
+    lsci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO;
+#ifdef TR_USE_ADVANCED_LINES
     lsci.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_RECTANGULAR;
+#else
+    lsci.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_DEFAULT;
+#endif
 
     VkPipelineRasterizationStateCreateInfo rci = {};
     rci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;

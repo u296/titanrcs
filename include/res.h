@@ -7,10 +7,18 @@
 #define TR_CALCMODE_SUM
 
 #ifdef __APPLE__
+<<<<<<< HEAD
 #define RCS_RESOLUTION (4096ull)
 #else
-//constexpr u64 RCS_RESOLUTION = 8192ull;
 #define RCS_RESOLUTION (16384)
+=======
+constexpr u64 RCS_RESOLUTION = 4096ull;
+#define RCS_LINEWIDTH (1)
+#else
+constexpr u64 RCS_RESOLUTION = 8192ull;
+#define TR_USE_ADVANCED_LINES 1
+#define RCS_LINEWIDTH (4)
+>>>>>>> 69d7bba (support non-widelines)
 #endif
 #ifdef TR_CALCMODE_FFT
 constexpr u64 RCS_CROPFRACTION =
@@ -21,7 +29,7 @@ constexpr u64 RCS_CROPFRACTION  = 1;
 #endif
 constexpr f32 RCS_RANGE = 1000000.0f;
 constexpr f32 RCS_BOXSIZE = 20.0f;
-constexpr f32 RCS_LINEWIDTH = 4;
+
 /*
 Setting the linewidth too high will cause part of the line to get hidden behind
 the geometry, this needs to be taken into consideration.
