@@ -655,11 +655,11 @@ bool make_downscale_pipelines(RenderBackend* rb,
 
     dres.downscale32.scaling = 32;
 
-    DownscaleSpecConstants spec64_consts = {.wg_size_x = 64 / 2,
-                                            .wg_size_y = 64 / 2,
+    DownscaleSpecConstants spec64_consts = {.wg_size_x = 64 / 4,
+                                            .wg_size_y = 64 / 1,
                                             .use_loop = 0,
-                                            .perthread_pixels_x = 2,
-                                            .perthread_pixels_y = 2};
+                                            .perthread_pixels_x = 4,
+                                            .perthread_pixels_y = 1};
 
     dres.downscale64.scaling = 64;
 
