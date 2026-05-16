@@ -206,7 +206,7 @@ CompLoopStatus visual_compute_mainloop(RenderContext* ctx, FILE* outputfile,
         first = false;
         constexpr u32 n_printrcs = 1;
         if (*i % n_printrcs == n_printrcs - 1) {
-            printf("RCS: %5f m2\n", rcs);
+            //printf("RCS: %5f m2\n", rcs);
         }
 
         if (!*rcsdata_dirty) {

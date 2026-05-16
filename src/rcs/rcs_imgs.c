@@ -94,6 +94,7 @@ bool make_rcs_rendertargets(RenderBackend* rb, VkExtent2D ext,
 
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;
+    aci.flags = VMA_DEDICATED_ALLOCATION;
 
     for (u32 i = 0; i < n_targets; i++) {
         if (i == 0) {

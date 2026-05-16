@@ -38,9 +38,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
 #endif
 #ifdef TR_CALCMODE_SUM
     VkDescriptorSetLayout rcs_downscale_descset_layout;
-    VkPipelineLayout rcs_downscale_pipeline_layout;
-    VkPipeline rcs_downscale16_pipeline;
-    VkPipeline rcs_downscale32_pipeline;
+    DownscaleResources rcs_downscaleres;
 #endif
 
     VkSampler rcs_sampler;
@@ -149,9 +147,8 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
                                     &rcs_red_pipeline_layout, &rcs_red_pipeline,
                                     cs);
 
-    make_downscale_pipelines(
-        rb, rcs_downscale_descset_layout, &rcs_downscale_pipeline_layout,
-        &rcs_downscale16_pipeline, &rcs_downscale32_pipeline, cs);
+    make_downscale_pipelines(rb, rcs_downscale_descset_layout,
+                             &rcs_downscaleres, cs);
 #endif
 
     const char* rcsmeshfilename = "models/rcsmesh.stl";
@@ -193,9 +190,7 @@ bool make_rcs_setup(RenderBackend* rb, VkCommandPool cpool,
         .buftoimg_pipeline = rcs_buftoimg_pipeline,
 #endif
 #ifdef TR_CALCMODE_SUM
-        .downscale_pipeline_layout = rcs_downscale_pipeline_layout,
-        .downscale16_pipeline = rcs_downscale16_pipeline,
-        .downscale32_pipeline = rcs_downscale32_pipeline
+        .downscale = rcs_downscaleres
 #endif
     };
 

@@ -2,9 +2,8 @@
 #define RCS_H
 
 #include "backend/backend.h"
-#include "res.h"
 #include "rcs/rcs_pathing.h"
-#include <vulkan/vulkan_core.h>
+#include "res.h"
 
 typedef struct RcsPerInflight {
     VkDescriptorSet descset;
@@ -26,6 +25,22 @@ typedef struct RcsPerInflight {
     VkCommandBuffer cmdbuf;
 } RcsPerInflight;
 
+#ifdef TR_CALCMODE_SUM
+typedef struct DownscalingPlan {
+    VkPipeline pipeline;
+    u32 scaling; // how many pixels this will read for every one it writes
+
+} DownscalingPlan;
+
+typedef struct DownscaleResources {
+    VkPipelineLayout downscale_pipeline_layout;
+    DownscalingPlan downscale8;
+    DownscalingPlan downscale16;
+    DownscalingPlan downscale32;
+    DownscalingPlan downscale64;
+} DownscaleResources;
+#endif
+
 typedef struct RcsResources {
     VkExtent2D ext;
     VkDescriptorPool dpool;
@@ -45,9 +60,7 @@ typedef struct RcsResources {
     VkPipeline buftoimg_pipeline;
 #endif
 #ifdef TR_CALCMODE_SUM
-    VkPipelineLayout downscale_pipeline_layout;
-    VkPipeline downscale16_pipeline;
-    VkPipeline downscale32_pipeline;
+    DownscaleResources downscale;
 #endif
     RcsPerInflight sets[N_MAX_INFLIGHT];
 } RcsResources;

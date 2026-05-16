@@ -3,6 +3,9 @@
 #include "cleanupdb.h"
 #include "cleanupstack.h"
 #include "common.h"
+#include "rcs/rcs.h"
+#include "res.h"
+#include <assert.h>
 
 VkResult make_shadermodule(VkDevice dev, const char* path, VkShaderModule* sm);
 
@@ -539,16 +542,33 @@ typedef struct DownscaleSpecConstants {
     u32 wg_size_x;
     u32 wg_size_y;
     u32 use_loop;
+    u32 perthread_pixels;
 } DownscaleSpecConstants;
+
+void verify_specconst(u32 target_scaling, DownscaleSpecConstants s) {
+    bool scalingcorrect = s.wg_size_x * s.perthread_pixels == target_scaling && s.wg_size_y * s.perthread_pixels == target_scaling;
+    bool workgrouplimits = s.wg_size_x * s.wg_size_y <= 1024;
+
+    if (!scalingcorrect) {
+        printf("INCORRECT SCALING: CHECK SCALING FOR %u\n", target_scaling);
+        abort();
+    }
+    if (!workgrouplimits) {
+        printf("MAX WORKGROUP SIZE OF 1024 EXCEEDED FOR SCALING %u\n", target_scaling);
+        abort();
+    }
+}
 
 bool make_downscale_pipelines(RenderBackend* rb,
                               VkDescriptorSetLayout desc_layout,
-                              VkPipelineLayout* out_downscale_pipeline_layout,
-                              VkPipeline* out_downscale16_pipeline,
-                              VkPipeline* out_downscale32_pipeline,
+                              DownscaleResources* out_downscaleraes,
                               CleanupStack* cs) {
 
     VkResult r;
+
+    VkPipelineLayout pl =  VK_NULL_HANDLE;
+
+    DownscaleResources dres = {};
 
     /*
     this only contains the cropping factor
@@ -566,47 +586,104 @@ bool make_downscale_pipelines(RenderBackend* rb,
     plci.pPushConstantRanges = &pcr;
 
     r = vkCreatePipelineLayout(rb->dev, &plci, NULL,
-                               out_downscale_pipeline_layout);
+                               &pl);
     CLEANUP_START(PipelineLayoutCleanup){
-        rb->dev, *out_downscale_pipeline_layout} CLEANUP_END(pipelinelayout);
+        rb->dev, pl} CLEANUP_END(pipelinelayout);
 
     VkShaderModule downscale_module = VK_NULL_HANDLE;
     make_shadermodule(rb->dev, "shaders/rcs/sum/downscalesum.spv",
                       &downscale_module);
 
-    VkSpecializationMapEntry spec_wgx;
+    VkSpecializationMapEntry spec_wgx = {};
     spec_wgx.constantID = 0;
     spec_wgx.offset = offsetof(DownscaleSpecConstants, wg_size_x);
     spec_wgx.size = sizeof(((DownscaleSpecConstants*)0)->wg_size_x);
 
-    VkSpecializationMapEntry spec_wgy;
+    VkSpecializationMapEntry spec_wgy = {};
     spec_wgy.constantID = 1;
     spec_wgy.offset = offsetof(DownscaleSpecConstants, wg_size_y);
     spec_wgy.size = sizeof(((DownscaleSpecConstants*)0)->wg_size_y);
 
-    VkSpecializationMapEntry spec_useloop;
+    VkSpecializationMapEntry spec_useloop = {};
     spec_useloop.constantID = 2;
     spec_useloop.offset = offsetof(DownscaleSpecConstants, use_loop);
     spec_useloop.size = sizeof(((DownscaleSpecConstants*)0)->use_loop);
 
-    VkSpecializationMapEntry spec_entries[3] = {spec_wgx, spec_wgy,
-                                                spec_useloop};
+    VkSpecializationMapEntry spec_perthread_pixels = {};
+    spec_useloop.constantID = 3;
+    spec_useloop.offset = offsetof(DownscaleSpecConstants, perthread_pixels);
+    spec_useloop.size = sizeof(((DownscaleSpecConstants*)0)->perthread_pixels);
+
+#define N_SPEC_ENTRIES 4
+
+    VkSpecializationMapEntry spec_entries[N_SPEC_ENTRIES] = {
+        spec_wgx, spec_wgy, spec_useloop, spec_perthread_pixels};
+
+    DownscaleSpecConstants spec8_consts = {
+        .wg_size_x = 8/1,
+        .wg_size_y = 8/1,
+        .use_loop = 0,
+        .perthread_pixels = 1
+    };
+    dres.downscale8.scaling = 8;
 
     DownscaleSpecConstants spec16_consts = {
-        .wg_size_x = 16, .wg_size_y = 16, .use_loop = 1};
+        .wg_size_x = 16 / 2,
+        .wg_size_y = 16 / 2,
+        .use_loop = 0,
+        .perthread_pixels = 2};
+
+    dres.downscale16.scaling = 16;
 
     DownscaleSpecConstants spec32_consts = {
-        .wg_size_x = 32, .wg_size_y = 32, .use_loop = 0};
+        .wg_size_x = 32 / 2,
+        .wg_size_y = 32 / 2,
+        .use_loop = 0,
+        .perthread_pixels = 2};
 
-    VkSpecializationInfo spec16 = {.mapEntryCount = 3,
+    dres.downscale32.scaling = 32;
+
+    DownscaleSpecConstants spec64_consts = {
+        .wg_size_x = 64 / 2,
+        .wg_size_y = 64 / 2,
+        .use_loop = 0,
+        .perthread_pixels = 2};
+
+    dres.downscale64.scaling = 64;
+
+
+    verify_specconst(8, spec8_consts);
+    verify_specconst(16, spec16_consts);
+    verify_specconst(32, spec32_consts);
+    verify_specconst(64, spec64_consts);
+
+    VkSpecializationInfo spec8 = {.mapEntryCount = N_SPEC_ENTRIES,
+                                   .pMapEntries = spec_entries,
+                                   .dataSize = sizeof(DownscaleSpecConstants),
+                                   .pData = &spec8_consts};
+
+    VkSpecializationInfo spec16 = {.mapEntryCount = N_SPEC_ENTRIES,
                                    .pMapEntries = spec_entries,
                                    .dataSize = sizeof(DownscaleSpecConstants),
                                    .pData = &spec16_consts};
 
-    VkSpecializationInfo spec32 = {.mapEntryCount = 3,
+    VkSpecializationInfo spec32 = {.mapEntryCount = N_SPEC_ENTRIES,
                                    .pMapEntries = spec_entries,
                                    .dataSize = sizeof(DownscaleSpecConstants),
                                    .pData = &spec32_consts};
+
+    VkSpecializationInfo spec64 = {.mapEntryCount = N_SPEC_ENTRIES,
+                                   .pMapEntries = spec_entries,
+                                   .dataSize = sizeof(DownscaleSpecConstants),
+                                   .pData = &spec64_consts};
+
+       
+    VkPipelineShaderStageCreateInfo sci8 = {};
+    sci8.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci8.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci8.module = downscale_module;
+    sci8.pName = "main";
+    sci8.pSpecializationInfo = &spec8;
 
     VkPipelineShaderStageCreateInfo sci16 = {};
     sci16.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -615,13 +692,6 @@ bool make_downscale_pipelines(RenderBackend* rb,
     sci16.pName = "main";
     sci16.pSpecializationInfo = &spec16;
 
-    VkComputePipelineCreateInfo cpci16 = {};
-    cpci16.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    cpci16.stage = sci16;
-    cpci16.basePipelineHandle = VK_NULL_HANDLE;
-    cpci16.basePipelineIndex = -1;
-    cpci16.layout = *out_downscale_pipeline_layout;
-
     VkPipelineShaderStageCreateInfo sci32 = {};
     sci32.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     sci32.stage = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -629,24 +699,68 @@ bool make_downscale_pipelines(RenderBackend* rb,
     sci32.pName = "main";
     sci32.pSpecializationInfo = &spec32;
 
+    VkPipelineShaderStageCreateInfo sci64 = {};
+    sci64.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sci64.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    sci64.module = downscale_module;
+    sci64.pName = "main";
+    sci64.pSpecializationInfo = &spec64;
+
+    VkComputePipelineCreateInfo cpci8 = {};
+    cpci8.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci8.stage = sci8;
+    cpci8.basePipelineHandle = VK_NULL_HANDLE;
+    cpci8.basePipelineIndex = -1;
+    cpci8.layout = pl;
+
+    VkComputePipelineCreateInfo cpci16 = {};
+    cpci16.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci16.stage = sci16;
+    cpci16.basePipelineHandle = VK_NULL_HANDLE;
+    cpci16.basePipelineIndex = -1;
+    cpci16.layout = pl;
+
     VkComputePipelineCreateInfo cpci32 = {};
     cpci32.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     cpci32.stage = sci32;
     cpci32.basePipelineHandle = VK_NULL_HANDLE;
     cpci32.basePipelineIndex = -1;
-    cpci32.layout = *out_downscale_pipeline_layout;
+    cpci32.layout = pl;
+
+    VkComputePipelineCreateInfo cpci64 = {};
+    cpci64.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci64.stage = sci64;
+    cpci64.basePipelineHandle = VK_NULL_HANDLE;
+    cpci64.basePipelineIndex = -1;
+    cpci64.layout = pl;
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci8, NULL,
+                                 &dres.downscale8.pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, dres.downscale8.pipeline};
+    CLEANUP_END(pipeline);
 
     r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci16, NULL,
-                                 out_downscale16_pipeline);
+                                 &dres.downscale16.pipeline);
 
-    CLEANUP_START(PipelineCleanup){rb->dev, *out_downscale16_pipeline};
+    CLEANUP_START(PipelineCleanup){rb->dev, dres.downscale16.pipeline};
     CLEANUP_END(pipeline);
 
     r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci32, NULL,
-                                 out_downscale32_pipeline);
+                                 &dres.downscale32.pipeline);
 
-    CLEANUP_START(PipelineCleanup){rb->dev, *out_downscale32_pipeline};
+    CLEANUP_START(PipelineCleanup){rb->dev, dres.downscale32.pipeline};
     CLEANUP_END(pipeline);
+
+    r = vkCreateComputePipelines(rb->dev, VK_NULL_HANDLE, 1, &cpci64, NULL,
+                                 &dres.downscale64.pipeline);
+
+    CLEANUP_START(PipelineCleanup){rb->dev, dres.downscale64.pipeline};
+    CLEANUP_END(pipeline);
+
+    dres.downscale_pipeline_layout = pl;
+
+    *out_downscaleraes = dres;
 
     vkDestroyShaderModule(rb->dev, downscale_module, NULL);
 

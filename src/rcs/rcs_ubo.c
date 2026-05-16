@@ -6,7 +6,6 @@
 #include "cleanupstack.h"
 #include "common.h"
 #include "res.h"
-#include <vk_video/vulkan_video_codec_h264std_decode.h>
 
 bool make_rcs_ubo(RenderBackend* rb, Buffer* ubo, CleanupStack* cs) {
 
@@ -166,7 +165,7 @@ bool make_rcs_intermediate_sum_img(RenderBackend* rb, VkExtent2D ext,
     ici.mipLevels = 1;
     ici.queueFamilyIndexCount = 1;
     ici.pQueueFamilyIndices = &rb->queues.i_graphics_queue_fam;
-    ici.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+    ici.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
     VmaAllocationCreateInfo aci = {};
     aci.usage = VMA_MEMORY_USAGE_AUTO;

@@ -3,6 +3,7 @@
 #include "common.h"
 #include "context.h"
 #include "linalg.h"
+#include "rcs/rcs.h"
 #include "rcs/rcs_ubo.h"
 #include "res.h"
 #include <assert.h>
@@ -184,7 +185,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_READ_BIT,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        downscaling_imagelayout, // could maybe improve this
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, // could maybe improve this
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].rendtargets[0].img,
@@ -198,7 +199,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_IMAGE_LAYOUT_UNDEFINED,
-        downscaling_imagelayout, // could maybe improve this
+        VK_IMAGE_LAYOUT_GENERAL, // could maybe improve this
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].intermediate_downscale_img.img,
@@ -219,84 +220,103 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPipelineBarrier2(cmdbuf, &rend_to_downscale1_dep);
 
-    const VkPipeline firstdownscalepipeline =
-
-#if TR_FIRST_DOWNSCALESIZE == 16
-        ctx->rcs_resources.downscale16_pipeline;
+    const DownscalingPlan downscale1_plan =
+#if TR_FIRST_DOWNSCALESIZE == 8
+        ctx->rcs_resources.downscale.downscale8;
+#elif TR_FIRST_DOWNSCALESIZE == 16
+        ctx->rcs_resources.downscale.downscale16;
 #elif TR_FIRST_DOWNSCALESIZE == 32
-        ctx->rcs_resources.downscale32_pipeline;
+        ctx->rcs_resources.downscale.downscale32;
+#elif TR_FIRST_DOWNSCALESIZE == 64
+        ctx->rcs_resources.downscale.downscale64;
+#else 
+#error NO DOWNSCALE SELECTED
 #endif
 
-    const VkPipeline seconddownscalepipeline =
-
-#if TR_SECOND_DOWNSCALESIZE == 16
-        ctx->rcs_resources.downscale16_pipeline;
+    const DownscalingPlan downscale2_plan =
+#if TR_SECOND_DOWNSCALESIZE == 8
+        ctx->rcs_resources.downscale.downscale8;
+#elif TR_SECOND_DOWNSCALESIZE == 16
+        ctx->rcs_resources.downscale.downscale16;
 #elif TR_SECOND_DOWNSCALESIZE == 32
-        ctx->rcs_resources.downscale32_pipeline;
+        ctx->rcs_resources.downscale.downscale32;
+#elif TR_SECOND_DOWNSCALESIZE == 64
+        ctx->rcs_resources.downscale.downscale64;
+#else 
+#error NO DOWNSCALE SELECTED
 #endif
 
 
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                      firstdownscalepipeline);
+                      downscale1_plan.pipeline);
 
     /*vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
                             ctx->rcs_resources.downscale_pipeline_layout, 0, 1,
                             &ctx->rcs_resources.sets[f].downscale1_descset, 0,
                             NULL);*/
 
-    VkDescriptorImageInfo prefft_img_info = {};
-    prefft_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    prefft_img_info.imageView = ctx->rcs_resources.sets[f].rendtargets[0].view;
-    prefft_img_info.sampler = VK_NULL_HANDLE;
+    VkDescriptorImageInfo prefft_img_info_in = {};
+    prefft_img_info_in.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    prefft_img_info_in.imageView = ctx->rcs_resources.sets[f].rendtargets[0].view;
+    prefft_img_info_in.sampler = VK_NULL_HANDLE;
 
-    VkDescriptorImageInfo intermed_img_info = {};
-    intermed_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    intermed_img_info.imageView =
+    VkDescriptorImageInfo intermed_img_info_out = {};
+    intermed_img_info_out.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    intermed_img_info_out.imageView =
         ctx->rcs_resources.sets[f].intermediate_downscale_img.view;
-    intermed_img_info.sampler = VK_NULL_HANDLE;
+    intermed_img_info_out.sampler = VK_NULL_HANDLE;
 
-    VkDescriptorImageInfo postfft_img_info = {};
-    postfft_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    postfft_img_info.imageView = ctx->rcs_resources.sets[f].fft_img.view;
-    postfft_img_info.sampler = VK_NULL_HANDLE;
+    VkDescriptorImageInfo intermed_img_info_in = {};
+    intermed_img_info_in.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    intermed_img_info_in.imageView =
+        ctx->rcs_resources.sets[f].intermediate_downscale_img.view;
+    intermed_img_info_in.sampler = VK_NULL_HANDLE;
+
+    VkDescriptorImageInfo postfft_img_info_out = {};
+    postfft_img_info_out.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    postfft_img_info_out.imageView = ctx->rcs_resources.sets[f].fft_img.view;
+    postfft_img_info_out.sampler = VK_NULL_HANDLE;
 
     VkWriteDescriptorSet prefft_in_descwrite = {};
     prefft_in_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    prefft_in_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    prefft_in_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     prefft_in_descwrite.descriptorCount = 1;
     prefft_in_descwrite.dstBinding = 0;
-    prefft_in_descwrite.pImageInfo = &prefft_img_info;
+    prefft_in_descwrite.pImageInfo = &prefft_img_info_in;
 
     VkWriteDescriptorSet intermed_out_descwrite = {};
     intermed_out_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     intermed_out_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     intermed_out_descwrite.descriptorCount = 1;
     intermed_out_descwrite.dstBinding = 1;
-    intermed_out_descwrite.pImageInfo = &intermed_img_info;
+    intermed_out_descwrite.pImageInfo = &intermed_img_info_out;
 
     VkWriteDescriptorSet intermed_in_descwrite = {};
     intermed_in_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    intermed_in_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    intermed_in_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     intermed_in_descwrite.descriptorCount = 1;
     intermed_in_descwrite.dstBinding = 0;
-    intermed_in_descwrite.pImageInfo = &intermed_img_info;
+    intermed_in_descwrite.pImageInfo = &intermed_img_info_in;
 
     VkWriteDescriptorSet postfft_out_descwrite = {};
     postfft_out_descwrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     postfft_out_descwrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     postfft_out_descwrite.descriptorCount = 1;
     postfft_out_descwrite.dstBinding = 1;
-    postfft_out_descwrite.pImageInfo = &postfft_img_info;
+    postfft_out_descwrite.pImageInfo = &postfft_img_info_out;
 
     VkWriteDescriptorSet downscale1_descwrites[2] = {prefft_in_descwrite,
                                                      intermed_out_descwrite};
 
     vkCmdPushDescriptorSet(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                           ctx->rcs_resources.downscale_pipeline_layout, 0, 2,
+                           ctx->rcs_resources.downscale.downscale_pipeline_layout, 0, 2,
                            downscale1_descwrites);
 
-    vkCmdDispatch(cmdbuf, RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE,
-                  RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE, 1);
+    const u32 downscale1_num_wg = RCS_RESOLUTION / downscale1_plan.scaling; 
+    // // should be 512
+
+    vkCmdDispatch(cmdbuf, downscale1_num_wg,
+                  downscale1_num_wg, 1);
 
     VkImageMemoryBarrier2 finalize_intermediate = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -305,8 +325,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_READ_BIT,
-        downscaling_imagelayout,
-        downscaling_imagelayout,
+        VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].intermediate_downscale_img.img,
@@ -320,7 +340,7 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_IMAGE_LAYOUT_UNDEFINED,
-        downscaling_imagelayout, // could maybe improve this
+        VK_IMAGE_LAYOUT_GENERAL, // could maybe improve this
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].fft_img.img,
@@ -341,21 +361,24 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
 
     vkCmdPipelineBarrier2(cmdbuf, &downscale1_dep);
 
-    const u32 postdownscale1_res = RCS_RESOLUTION / TR_FIRST_DOWNSCALESIZE;
+    const u32 postdownscale1_res = RCS_RESOLUTION / downscale1_plan.scaling;
 
     VkWriteDescriptorSet downscale2_descwrites[2] = {intermed_in_descwrite,
                                                      postfft_out_descwrite};
 
     vkCmdPushDescriptorSet(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                           ctx->rcs_resources.downscale_pipeline_layout, 0, 2,
+                           ctx->rcs_resources.downscale.downscale_pipeline_layout, 0, 2,
                            downscale2_descwrites);
 
 #if TR_FIRST_DOWNSCALESIZE != TR_SECOND_DOWNSCALESIZE
-    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, seconddownscalepipeline);
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, downscale2_plan.pipeline);
 #endif
 
-    vkCmdDispatch(cmdbuf, postdownscale1_res / TR_SECOND_DOWNSCALESIZE,
-                  postdownscale1_res / TR_SECOND_DOWNSCALESIZE, 1);
+    u32 downscale2_num_wg = postdownscale1_res / downscale2_plan.scaling;
+    // should be 32
+
+    vkCmdDispatch(cmdbuf, downscale2_num_wg,
+                  downscale2_num_wg, 1);
 
     VkImageMemoryBarrier2 downscale2 = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -364,8 +387,8 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
         VK_ACCESS_2_SHADER_WRITE_BIT,
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_READ_BIT,
-        downscaling_imagelayout,
-        downscaling_imagelayout,
+        VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_GENERAL,
         VK_QUEUE_FAMILY_IGNORED,
         VK_QUEUE_FAMILY_IGNORED,
         ctx->rcs_resources.sets[f].fft_img.img,
@@ -642,7 +665,12 @@ void record_rcs_cmdbuf(RenderContext* ctx, u32 f) {
     before_rendertoscreen[0].srcStageMask =
         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
     before_rendertoscreen[0].srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+#ifdef TR_CALCMODE_FFT
     before_rendertoscreen[0].oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+#endif
+#ifdef TR_CALCMODE_SUM
+    before_rendertoscreen[0].oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+#endif
 
     before_rendertoscreen[3] = (VkImageMemoryBarrier2){
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,

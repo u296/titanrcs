@@ -329,7 +329,7 @@ bool make_rcs_downscale_descset_layout(VkDevice dev,
                                        CleanupStack* cs) {
     VkDescriptorSetLayoutBinding in_img = {};
     in_img.binding = 0;
-    in_img.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    in_img.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     in_img.descriptorCount = 1;
     in_img.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     in_img.pImmutableSamplers = NULL;

@@ -58,12 +58,11 @@ bool make_buftoimg_pipeline(RenderBackend* rb,
                             VkPipeline* out_buftoimg_pipeline,
                             CleanupStack* cs);
 
+typedef struct DownscaleResources DownscaleResources;
 bool make_downscale_pipelines(RenderBackend* rb,
-                             VkDescriptorSetLayout desc_layout,
-                             VkPipelineLayout* out_downscale_pipeline_layout,
-                             VkPipeline* out_downscale16_pipeline,
-                             VkPipeline* out_downscale32_pipeline,
-                             CleanupStack* cs);
+                              VkDescriptorSetLayout desc_layout,
+                              DownscaleResources* out_downscaleres,
+                              CleanupStack* cs);
 
 bool make_rcs_reduction_pipeline_sum(RenderBackend* rb,
                                      VkDescriptorSetLayout desc_layout,

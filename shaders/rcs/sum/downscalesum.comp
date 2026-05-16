@@ -1,13 +1,16 @@
 #version 450
 #extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_EXT_samplerless_texture_functions: enable
 
 layout(constant_id = 0) const uint WORKGROUP_SIZE_X = 16;
 layout(constant_id = 1) const uint WORKGROUP_SIZE_Y = 16;
 layout(constant_id = 2) const uint USE_LOOP = 0;
+layout(constant_id = 3) const uint READ_SQUARESIZE = 1;
 
 layout(local_size_x_id = 0, local_size_y_id = 1) in;
 
-layout(set=0, binding = 0, rgba32f) uniform readonly image2D in_img;
+//layout(set=0, binding = 0, rgba32f) uniform readonly image2D in_img;
+layout(set=0, binding = 0) uniform texture2D in_img;
 
 layout(set=0, binding = 1, rgba32f) uniform writeonly image2D out_img;
 
@@ -15,7 +18,7 @@ layout(set=0, binding = 1, rgba32f) uniform writeonly image2D out_img;
 // This could fail on other hardware unless overridden by the host
 // but since the RX 5700XT has subgroup size 32 we get (16x16)/32=8 
 // subgroups per workgroup (or 4 if wave64)
-const uint MAX_SUBGROUPS_PER_WORKGROUP = WORKGROUP_SIZE_X * WORKGROUP_SIZE_Y / 8;
+const uint MAX_SUBGROUPS_PER_WORKGROUP = WORKGROUP_SIZE_X * WORKGROUP_SIZE_Y / 32;
 
 shared vec4 subgroup_sums[MAX_SUBGROUPS_PER_WORKGROUP];
 
@@ -23,7 +26,24 @@ void main() {
     const ivec2 in_uv = ivec2(gl_GlobalInvocationID.xy);
     const ivec2 out_uv = ivec2(gl_WorkGroupID.xy);
 
-    vec4 val = imageLoad(in_img, in_uv);
+    vec4 val = vec4(0,0,0,0);
+
+    for (uint i = 0; i < READ_SQUARESIZE; i++) {
+        for (uint j = 0; j < READ_SQUARESIZE; j++) {
+
+            ivec2 read_uv = int(READ_SQUARESIZE)*in_uv + ivec2(i,j);
+
+            val += texelFetch(in_img, read_uv, 0);
+        }
+    }
+
+    /*vec4 p0 = texelFetch(in_img, 2*in_uv + ivec2(0,0), 0);
+    vec4 p1 = texelFetch(in_img, 2*in_uv + ivec2(0,1), 0);
+    vec4 p2 = texelFetch(in_img, 2*in_uv + ivec2(1,0), 0);
+    vec4 p3 = texelFetch(in_img, 2*in_uv + ivec2(1,1), 0);
+
+    val = p0 + p1 + p2 + p3;*/
+
 
     vec4 subgroup_sum = subgroupAdd(val);
 
