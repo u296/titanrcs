@@ -7,18 +7,12 @@
 #define TR_CALCMODE_SUM
 
 #ifdef __APPLE__
-<<<<<<< HEAD
 #define RCS_RESOLUTION (4096ull)
-#else
-#define RCS_RESOLUTION (16384)
-=======
-constexpr u64 RCS_RESOLUTION = 4096ull;
 #define RCS_LINEWIDTH (1)
 #else
-constexpr u64 RCS_RESOLUTION = 8192ull;
-#define TR_USE_ADVANCED_LINES 1
+#define RCS_RESOLUTION (16384)
 #define RCS_LINEWIDTH (4)
->>>>>>> 69d7bba (support non-widelines)
+#define TR_USE_ADVANCED_LINES 1
 #endif
 #ifdef TR_CALCMODE_FFT
 constexpr u64 RCS_CROPFRACTION =
