@@ -100,6 +100,9 @@ bool make_instance(VkInstance* instance, struct Error* e_out, CleanupStack* cs) 
     ici.ppEnabledExtensionNames = all_ext;
     ici.enabledLayerCount = 0;
     ici.ppEnabledLayerNames = NULL;
+#ifdef __APPLE__
+    ici.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
     ici.pNext = &mci;
 
     const char* desired_layers[1] = {"VK_LAYER_KHRONOS_validation"};
